@@ -1,0 +1,295 @@
+{
+  "room_id": "band-room-recallops-bat-4421",
+  "incident_id": "INC-2026-06-16-BAT-4421",
+  "product": "Northstar Home Battery Pack",
+  "lot": "BAT-4421",
+  "defect": "customer-reported overheating during overnight charge",
+  "severity": "critical",
+  "exposure_clock": {
+    "label": "exposure-hours",
+    "units_in_market": 4800,
+    "hours_since_first_report": 31,
+    "unit_hours": 148800
+  },
+  "agents": [
+    {
+      "id": "agent-commander-01",
+      "name": "Incident Commander",
+      "handle": "@recallops/commander",
+      "framework": "Band SDK",
+      "role": "opens room, routes work, owns recall state"
+    },
+    {
+      "id": "agent-evidence-01",
+      "name": "Evidence Agent",
+      "handle": "@recallops/evidence",
+      "framework": "Pydantic AI",
+      "role": "extracts defect, product, lot, and severity"
+    },
+    {
+      "id": "agent-trace-01",
+      "name": "Traceability Agent",
+      "handle": "@recallops/traceability",
+      "framework": "LangGraph",
+      "role": "maps lots to shipments, regions, customers, and stock"
+    },
+    {
+      "id": "agent-risk-01",
+      "name": "Regulatory/Risk Officer",
+      "handle": "@recallops/risk",
+      "framework": "CrewAI",
+      "role": "vetoes unsafe decisions and approves recall path"
+    },
+    {
+      "id": "agent-comms-01",
+      "name": "Communications Agent",
+      "handle": "@recallops/comms",
+      "framework": "Band SDK",
+      "role": "drafts regulator, customer, and quarantine notices"
+    },
+    {
+      "id": "human-qa-01",
+      "name": "QA Director",
+      "handle": "@qa-director",
+      "framework": "Human",
+      "role": "final approval gate"
+    }
+  ],
+  "shipments": [
+    {
+      "distributor": "Direct Warehouse",
+      "region": "US-West",
+      "customers": 410,
+      "units": 760,
+      "traced": true
+    },
+    {
+      "distributor": "Direct Warehouse",
+      "region": "US-East",
+      "customers": 390,
+      "units": 720,
+      "traced": true
+    },
+    {
+      "distributor": "RetailNet",
+      "region": "EU-Central",
+      "customers": 460,
+      "units": 840,
+      "traced": true
+    },
+    {
+      "distributor": "RetailNet",
+      "region": "EU-North",
+      "customers": 415,
+      "units": 790,
+      "traced": true
+    },
+    {
+      "distributor": "Medina Distribution",
+      "region": "MEA",
+      "customers": 455,
+      "units": 826,
+      "traced": true
+    },
+    {
+      "distributor": "Kestrel Distributor",
+      "region": "LATAM",
+      "customers": 480,
+      "units": 864,
+      "traced": true
+    }
+  ],
+  "initial_traceability": {
+    "total_units": 5900,
+    "open_stock_units": 1100,
+    "shipped_units": 4800,
+    "traced_units": 3936,
+    "untraced_units": 864,
+    "coverage_percent": 82,
+    "regions": 6,
+    "affected_customers": 2130
+  },
+  "final_traceability": {
+    "total_units": 5900,
+    "open_stock_units": 1100,
+    "shipped_units": 4800,
+    "traced_units": 4800,
+    "untraced_units": 0,
+    "coverage_percent": 100,
+    "regions": 6,
+    "affected_customers": 2610
+  },
+  "events": [
+    {
+      "id": "msg-001",
+      "at": "2026-06-16T21:21:00+00:00",
+      "stage": "room_created",
+      "agent": "Incident Commander",
+      "message": "Opened Band room for BAT-4421 overheating reports.",
+      "mentions": [
+        "@recallops/evidence"
+      ],
+      "metadata": {
+        "room_id": "band-room-recallops-bat-4421"
+      }
+    },
+    {
+      "id": "msg-002",
+      "at": "2026-06-16T21:22:00+00:00",
+      "stage": "evidence_extracted",
+      "agent": "Evidence Agent",
+      "message": "Extracted product, defect, lot BAT-4421, and critical severity from 3 complaints.",
+      "mentions": [
+        "@recallops/commander"
+      ],
+      "metadata": {
+        "complaints": 3,
+        "lot": "BAT-4421"
+      }
+    },
+    {
+      "id": "msg-003",
+      "at": "2026-06-16T21:23:00+00:00",
+      "stage": "agent_recruited",
+      "agent": "Incident Commander",
+      "message": "Severity and multi-region exposure crossed threshold; recruited Traceability Agent.",
+      "mentions": [
+        "@recallops/traceability"
+      ],
+      "metadata": {
+        "recruited": "traceability"
+      }
+    },
+    {
+      "id": "msg-004",
+      "at": "2026-06-16T21:24:00+00:00",
+      "stage": "traceability_gap",
+      "agent": "Traceability Agent",
+      "message": "Mapped 4,800 shipped units, but only 82% of shipment records are traced.",
+      "mentions": [
+        "@recallops/commander",
+        "@recallops/risk"
+      ],
+      "metadata": {
+        "shipped_units": 4800,
+        "coverage_percent": 82,
+        "untraced_units": 864
+      }
+    },
+    {
+      "id": "msg-005",
+      "at": "2026-06-16T21:25:00+00:00",
+      "stage": "agent_recruited",
+      "agent": "Incident Commander",
+      "message": "Recruited Regulatory/Risk Officer for recall decision.",
+      "mentions": [
+        "@recallops/risk"
+      ],
+      "metadata": {
+        "recruited": "risk"
+      }
+    },
+    {
+      "id": "msg-006",
+      "at": "2026-06-16T21:26:00+00:00",
+      "stage": "regulatory_veto",
+      "agent": "Regulatory/Risk Officer",
+      "message": "VETO: customer notice cannot be approved while 864 units remain untraced.",
+      "mentions": [
+        "@recallops/traceability",
+        "@recallops/commander"
+      ],
+      "metadata": {
+        "veto": true,
+        "untraced_units": 864
+      }
+    },
+    {
+      "id": "msg-007",
+      "at": "2026-06-16T21:27:00+00:00",
+      "stage": "traceability_resolved",
+      "agent": "Traceability Agent",
+      "message": "Recovered missing Kestrel Distributor file; traceability coverage is now 100%.",
+      "mentions": [
+        "@recallops/risk",
+        "@recallops/commander"
+      ],
+      "metadata": {
+        "coverage_percent": 100,
+        "recovered_units": 864
+      }
+    },
+    {
+      "id": "msg-008",
+      "at": "2026-06-16T21:28:00+00:00",
+      "stage": "risk_approved",
+      "agent": "Regulatory/Risk Officer",
+      "message": "Approved immediate voluntary recall, stock quarantine, and customer notification.",
+      "mentions": [
+        "@recallops/comms",
+        "@qa-director"
+      ],
+      "metadata": {
+        "approved": true
+      }
+    },
+    {
+      "id": "msg-009",
+      "at": "2026-06-16T21:29:00+00:00",
+      "stage": "notice_drafted",
+      "agent": "Communications Agent",
+      "message": "Drafted regulator notice, customer notice, and warehouse quarantine order.",
+      "mentions": [
+        "@qa-director"
+      ],
+      "metadata": {
+        "notices": 3
+      }
+    },
+    {
+      "id": "msg-010",
+      "at": "2026-06-16T21:30:00+00:00",
+      "stage": "human_approved",
+      "agent": "QA Director",
+      "message": "Approved recall packet and locked final action plan.",
+      "mentions": [
+        "@recallops/commander"
+      ],
+      "metadata": {
+        "human_approved": true
+      }
+    }
+  ],
+  "decision": {
+    "status": "approved",
+    "action": "voluntary_recall",
+    "risk_level": "critical",
+    "human_approved": true,
+    "reason": "Full lot traceability restored and QA Director approved."
+  },
+  "notices": {
+    "regulator": "Notify regional product-safety authority of BAT-4421 overheating risk.",
+    "customer": "Stop using Northstar Home Battery Pack lot BAT-4421 pending replacement.",
+    "warehouse": "Quarantine 1,100 units of lot BAT-4421 and freeze outbound movement."
+  },
+  "band_proof": {
+    "room_id": "band-room-recallops-bat-4421",
+    "participant_count": 6,
+    "event_count": 10,
+    "message_ids": [
+      "msg-001",
+      "msg-002",
+      "msg-003",
+      "msg-004",
+      "msg-005",
+      "msg-006",
+      "msg-007",
+      "msg-008",
+      "msg-009",
+      "msg-010"
+    ],
+    "veto_message_id": "msg-006",
+    "approval_message_id": "msg-010"
+  },
+  "audit_hash": "ce0edbf95c41c8045c72ceab432358b3a94b55868a752941daff7a4681f372c8"
+}

@@ -1,0 +1,9 @@
+# Copy this file to agent_config.yaml and paste Band remote-agent credentials.
+# Do not commit agent_config.yaml.
+commander:
+  agent_id: "00000000-0000-0000-0000-000000000000"
+  api_key: "replace-with-commander-band-agent-api-key"
+
+evidence:
+  agent_id: "00000000-0000-0000-0000-000000000000"
+  api_key: "replace-with-evidence-band-agent-api-key"
