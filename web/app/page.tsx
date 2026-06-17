@@ -75,6 +75,7 @@ type Packet = {
   };
   notices: Record<string, string>;
   band_proof: {
+    proof_mode: string;
     room_id: string;
     participant_count: number;
     event_count: number;
@@ -86,6 +87,7 @@ type Packet = {
 };
 
 const packet = packetJson as unknown as Packet;
+const apiBase = "/recallops-api/api";
 
 const stageLabels: Record<EventStage, string> = {
   room_created: "room",
@@ -171,6 +173,7 @@ export default function Home() {
         <aside className="panel proof-panel">
           <p className="kicker">Band proof</p>
           <h2>Room evidence</h2>
+          <ProofRow label="mode" value={packet.band_proof.proof_mode} />
           <ProofRow label="room" value={packet.band_proof.room_id} />
           <ProofRow
             label="participants"
@@ -188,6 +191,11 @@ export default function Home() {
           <div className="hash-box">
             <span>audit seal</span>
             <code>{packet.audit_hash}</code>
+          </div>
+          <div className="api-actions">
+            <a href={`${apiBase}/packet`}>packet api</a>
+            <a href={`${apiBase}/proof`}>proof api</a>
+            <a href={`${apiBase}/packet.json`}>export json</a>
           </div>
         </aside>
       </section>

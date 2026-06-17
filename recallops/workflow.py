@@ -339,6 +339,7 @@ def _exposure_clock(snapshot: TraceabilitySnapshot) -> dict[str, int | str]:
 
 def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[str]]:
     return {
+        "proof_mode": "deterministic_demo",
         "room_id": "band-room-recallops-bat-4421",
         "participant_count": len(AGENTS),
         "event_count": len(events),

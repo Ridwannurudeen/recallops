@@ -33,3 +33,9 @@ def test_audit_hash_is_stable_for_same_packet() -> None:
 
     assert first.audit_hash == second.audit_hash
     assert len(first.audit_hash) == 64
+
+
+def test_packet_declares_deterministic_proof_mode() -> None:
+    packet = build_recall_packet()
+
+    assert packet.band_proof["proof_mode"] == "deterministic_demo"

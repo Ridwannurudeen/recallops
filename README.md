@@ -24,15 +24,17 @@ specialists to join, disagree, hand off work, and preserve the decision trail:
 - QA Director is the human approval gate.
 
 The command-room surface exposes room ID, participant count, event count,
-message IDs, veto ID, approval ID, and audit hash so the collaboration proof is
-visible during the demo.
+message IDs, veto ID, approval ID, proof mode, and audit hash so the
+collaboration proof is visible during the demo. Until live Band credentials are
+available, the public packet is marked `deterministic_demo` and the real Band
+spike harness remains ready in `scripts/band_spike.py`.
 
 ## Hackathon Alignment
 
 Track: Regulated & High-Stakes Workflows.
 
 - More than 3 agents: 5 agent roles plus a human approver.
-- Cross-framework architecture: Band SDK, Pydantic AI, LangGraph, and CrewAI roles.
+- Cross-framework target architecture: Band SDK, Pydantic-style extraction, LangGraph-style traceability flow, and CrewAI-style risk review roles.
 - Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and room transcript proof.
 - Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
 - Presentation hook: live exposure clock, visible veto, recovered missing distributor file, final sealed packet.
@@ -52,6 +54,20 @@ cd web
 npm install
 npm run dev -- --port 3068
 ```
+
+Run the local API:
+
+```powershell
+.venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098
+```
+
+Public API endpoints:
+
+- `https://ridwan.gudman.xyz/recallops-api/api/health`
+- `https://ridwan.gudman.xyz/recallops-api/api/packet`
+- `https://ridwan.gudman.xyz/recallops-api/api/transcript`
+- `https://ridwan.gudman.xyz/recallops-api/api/proof`
+- `https://ridwan.gudman.xyz/recallops-api/api/packet.json`
 
 Production check:
 

@@ -1,4 +1,11 @@
 agent_config.yaml
+.env
+.env.*
+*.secret
+*.pem
+*.key
+credentials*
+secrets.*
 .venv/
 __pycache__/
 .pytest_cache/

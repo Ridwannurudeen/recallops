@@ -16,6 +16,7 @@ Track 3: Regulated & High-Stakes Workflows.
 ## Links
 
 - Demo: https://ridwan.gudman.xyz/recallops
+- Packet API: https://ridwan.gudman.xyz/recallops-api/api/packet
 - Repository: https://github.com/Ridwannurudeen/recallops
 
 ## What The Demo Shows
@@ -30,7 +31,7 @@ The Incident Commander routes the work back to Traceability, the missing
 Kestrel Distributor file is recovered, coverage moves to 100%, Communications
 drafts the regulator/customer/quarantine notices, and the human QA Director
 approves the final packet. The packet closes with room proof, message IDs, the
-veto ID, the approval ID, and a SHA-256 audit seal.
+veto ID, the approval ID, the proof mode, and a SHA-256 audit seal.
 
 ## Agents
 
@@ -50,6 +51,7 @@ veto ID, the approval ID, and a SHA-256 audit seal.
 - Re-plan loop after the veto.
 - Human approval event.
 - Replayable transcript data sealed with a deterministic audit hash.
+- Public proof mode is `deterministic_demo` until Band remote-agent credentials are available; the live Band spike harness is included in `scripts/band_spike.py`.
 
 ## Verification
 

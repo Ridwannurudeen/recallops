@@ -48,7 +48,9 @@ Show the traceability panel and coverage bars.
 "Communications drafts the regulator notice, customer notice, and warehouse
 quarantine order. The QA Director approves the packet. The result is a sealed
 recall decision with room ID, participant count, event count, message IDs,
-veto ID, approval ID, and SHA-256 audit hash."
+veto ID, approval ID, proof mode, and SHA-256 audit hash. In this public build,
+the packet is marked deterministic demo while the live Band spike harness waits
+for remote-agent credentials."
 
 Show the final packet, notices, and audit seal.
 
