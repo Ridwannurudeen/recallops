@@ -24,13 +24,14 @@ specialists to join, disagree, hand off work, and preserve the decision trail:
 - Communications Agent drafts regulator, customer, and quarantine notices after approval.
 - QA Director is the human approval gate.
 
-The command-room surface exposes room ID, demo actor count, live Band agent
-count, event count, message IDs, veto ID, approval ID, proof mode, receipt
-chain, decision graph, and audit hash. The BAT-4421 transcript is deterministic,
-and `docs/band-spike-proof.json` captures a successful live Band room run:
-five configured Band identities, dynamic recruitment, `@mention` handoffs,
-traceability gap, risk veto, re-plan, risk approval, communications notice,
-and context fetch.
+The command-room surface exposes packet room ID, captured Band room ID,
+captured agent count, event count, message IDs, veto ID, approval ID, proof
+mode, receipt chain, decision graph, source citations, editable shipment CSV,
+computed traceability, approval receipt, and audit hash. The BAT-4421
+transcript is deterministic, and `docs/band-spike-proof.json` captures a
+successful Band room run: five configured Band identities, dynamic recruitment,
+`@mention` handoffs, traceability gap, risk veto, re-plan, risk approval,
+communications notice, and context fetch.
 
 ## Hackathon Alignment
 
@@ -38,9 +39,11 @@ Track: Regulated & High-Stakes Workflows.
 
 - More than 3 agents: 5 agent roles plus a human approver.
 - Cross-framework target architecture: current demo uses Band SDK plus deterministic role logic; the adapter target maps Evidence to Pydantic AI, Traceability to LangGraph, and Risk review to CrewAI.
-- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and room transcript proof.
+- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and captured room transcript proof.
+- Source-grounded evidence: complaint text and shipment CSV are parsed into facts, citations, coverage snapshots, source digests, and a recomputable approval receipt.
+- Partner AI path: `/api/source-evidence` can call Featherless for evidence extraction and AI/ML API for risk review through their OpenAI-compatible chat APIs when provider keys are configured; response hashes and compact JSON outputs are surfaced in the cockpit.
 - Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
-- Presentation hook: live drill mode, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
+- Presentation hook: live drill mode, source cockpit, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
 
 ## Product Demo
 
@@ -70,6 +73,13 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/packet`
 - `https://recallops.gudman.xyz/api/transcript`
 - `https://recallops.gudman.xyz/api/proof`
+- `https://recallops.gudman.xyz/api/band-proof`
+- `https://recallops.gudman.xyz/api/live-drill`
+- `https://recallops.gudman.xyz/api/source-evidence`
+- `https://recallops.gudman.xyz/api/source-evidence/verify`
+- `https://recallops.gudman.xyz/api/partner-ai/status`
+- `https://recallops.gudman.xyz/api/approval-receipt`
+- `https://recallops.gudman.xyz/api/submission-proof`
 - `https://recallops.gudman.xyz/api/receipts`
 - `https://recallops.gudman.xyz/api/decision-graph`
 - `https://recallops.gudman.xyz/api/verify`
@@ -91,6 +101,10 @@ Python verification:
 .venv\Scripts\python.exe -m ruff check --fix .
 .venv\Scripts\python.exe -m pytest
 ```
+
+`GET /api/submission-proof` returns a safe judge bundle without spending partner
+AI credits. `POST /api/submission-proof` runs the live partner AI proof path and
+returns the same bundle with partner provider usage.
 
 ## Band Live Workflow
 

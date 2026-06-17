@@ -30,12 +30,32 @@ coverage, 864 untraced units.
 Risk vetoes the plan, Traceability recovers the missing distributor file, and
 Judge Mode replays the room moving from blocked to approved.
 
-## 7. Audit Packet
+## 7. Source Cockpit
 
-Final output includes notices, affected coverage, room ID, message IDs, veto ID,
-approval ID, receipt chain, decision graph, and SHA-256 audit digest.
+Complaint text and shipment CSV are visible, editable, parsed into cited facts,
+and sealed with source digests. The approval receipt hashes the computed source
+packet. The partner AI action can call Featherless for evidence extraction and
+AI/ML API for risk review, then display model IDs and response hashes.
 
-## 8. Business Value
+## 8. Audit Packet
+
+Final output includes notices, affected coverage, packet room ID, captured Band
+room ID, message IDs, veto ID, approval ID, receipt chain, decision graph, and
+SHA-256 audit digest. `/api/submission-proof` bundles every judge proof surface
+into one JSON endpoint.
+
+## 9. Raw Band Proof
+
+The packet is deterministic for judge replay; the proof panel exposes the
+captured Band room UUID, participant count, context count, and every Band
+message ID used by the receipts.
+
+## 10. Fresh Drill
+
+When the live runtime is enabled, RecallOps can create a fresh Band room from
+the deployed app and render the new room, veto, approval, and notice IDs.
+
+## 11. Business Value
 
 RecallOps compresses high-stakes recall coordination into one auditable,
 human-approved agent room.

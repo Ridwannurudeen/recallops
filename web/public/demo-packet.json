@@ -126,7 +126,9 @@
       "stage": "room_created",
       "agent": "Incident Commander",
       "message": "Opened Band room for BAT-4421 overheating reports.",
-      "mentions": ["@recallops/evidence"],
+      "mentions": [
+        "@recallops/evidence"
+      ],
       "metadata": {
         "room_id": "band-room-recallops-bat-4421"
       }
@@ -137,7 +139,9 @@
       "stage": "evidence_extracted",
       "agent": "Evidence Agent",
       "message": "Extracted product, defect, lot BAT-4421, and critical severity from 3 complaints.",
-      "mentions": ["@recallops/commander"],
+      "mentions": [
+        "@recallops/commander"
+      ],
       "metadata": {
         "complaints": 3,
         "lot": "BAT-4421"
@@ -149,7 +153,9 @@
       "stage": "agent_recruited",
       "agent": "Incident Commander",
       "message": "Severity and multi-region exposure crossed threshold; recruited Traceability Agent.",
-      "mentions": ["@recallops/traceability"],
+      "mentions": [
+        "@recallops/traceability"
+      ],
       "metadata": {
         "recruited": "traceability"
       }
@@ -160,7 +166,10 @@
       "stage": "traceability_gap",
       "agent": "Traceability Agent",
       "message": "Mapped 4,800 shipped units, but only 82% of shipment records are traced.",
-      "mentions": ["@recallops/commander", "@recallops/risk"],
+      "mentions": [
+        "@recallops/commander",
+        "@recallops/risk"
+      ],
       "metadata": {
         "shipped_units": 4800,
         "coverage_percent": 82,
@@ -173,7 +182,9 @@
       "stage": "agent_recruited",
       "agent": "Incident Commander",
       "message": "Recruited Regulatory/Risk Officer for recall decision.",
-      "mentions": ["@recallops/risk"],
+      "mentions": [
+        "@recallops/risk"
+      ],
       "metadata": {
         "recruited": "risk"
       }
@@ -184,7 +195,10 @@
       "stage": "regulatory_veto",
       "agent": "Regulatory/Risk Officer",
       "message": "VETO: customer notice cannot be approved while 864 units remain untraced.",
-      "mentions": ["@recallops/traceability", "@recallops/commander"],
+      "mentions": [
+        "@recallops/traceability",
+        "@recallops/commander"
+      ],
       "metadata": {
         "veto": true,
         "untraced_units": 864
@@ -196,7 +210,10 @@
       "stage": "traceability_resolved",
       "agent": "Traceability Agent",
       "message": "Recovered missing Kestrel Distributor file; traceability coverage is now 100%.",
-      "mentions": ["@recallops/risk", "@recallops/commander"],
+      "mentions": [
+        "@recallops/risk",
+        "@recallops/commander"
+      ],
       "metadata": {
         "coverage_percent": 100,
         "recovered_units": 864
@@ -208,7 +225,10 @@
       "stage": "risk_approved",
       "agent": "Regulatory/Risk Officer",
       "message": "Approved immediate voluntary recall, stock quarantine, and customer notification.",
-      "mentions": ["@recallops/comms", "@qa-director"],
+      "mentions": [
+        "@recallops/comms",
+        "@qa-director"
+      ],
       "metadata": {
         "approved": true
       }
@@ -219,7 +239,9 @@
       "stage": "notice_drafted",
       "agent": "Communications Agent",
       "message": "Drafted regulator notice, customer notice, and warehouse quarantine order.",
-      "mentions": ["@qa-director"],
+      "mentions": [
+        "@qa-director"
+      ],
       "metadata": {
         "notices": 3
       }
@@ -230,7 +252,9 @@
       "stage": "human_approved",
       "agent": "QA Director",
       "message": "Approved recall packet and locked final action plan.",
-      "mentions": ["@recallops/commander"],
+      "mentions": [
+        "@recallops/commander"
+      ],
       "metadata": {
         "human_approved": true
       }
@@ -249,8 +273,9 @@
     "warehouse": "Quarantine 1,100 units of lot BAT-4421 and freeze outbound movement."
   },
   "band_proof": {
-    "proof_mode": "live_band_five_agent_workflow",
-    "room_id": "band-room-recallops-bat-4421",
+    "proof_mode": "deterministic_packet_with_captured_band_run",
+    "packet_room_id": "band-room-recallops-bat-4421",
+    "packet_room_type": "deterministic_replay",
     "participant_count": 6,
     "event_count": 10,
     "message_ids": [
@@ -267,27 +292,65 @@
     ],
     "veto_message_id": "msg-006",
     "approval_message_id": "msg-010",
-    "live_workflow_scope": "room_create,evidence_extract,traceability_gap,risk_veto,replan,risk_approval,communications_notice",
-    "live_workflow_room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
-    "live_workflow_participant_count": 5,
-    "live_workflow_context_items": 8,
-    "live_workflow_message_ids": [
-      "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
-      "b33c7424-87e1-40db-9b15-558a64f608d7",
-      "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
-      "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
-      "2d7195c3-6874-4e99-bf67-73dc1724a257",
-      "04b94bb6-d8eb-4816-9cc7-70b91093a145",
-      "db2e10f0-f8f6-4fc4-a324-c99929911500"
-    ],
-    "live_workflow_commander_event_id": "e16220f4-c936-4f59-b7ad-d7468182efb3",
-    "live_workflow_commander_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
-    "live_workflow_evidence_ack_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
-    "live_workflow_traceability_gap_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
-    "live_workflow_risk_veto_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
-    "live_workflow_traceability_resolved_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
-    "live_workflow_risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
-    "live_workflow_communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500"
+    "captured_band_run": {
+      "proof_mode": "captured_band_five_agent_run",
+      "captured_at": "2026-06-17T07:42:00+01:00",
+      "room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
+      "participant_count": 5,
+      "context_items": 8,
+      "commander_event_id": "e16220f4-c936-4f59-b7ad-d7468182efb3",
+      "commander_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+      "evidence_ack_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
+      "traceability_gap_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+      "risk_veto_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+      "traceability_resolved_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
+      "risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+      "communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500",
+      "stage_evidence": [
+        {
+          "stage": "room_created",
+          "label": "Commander message",
+          "band_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+          "proves": "Commander created the Band room and recruited Evidence."
+        },
+        {
+          "stage": "evidence_extracted",
+          "label": "Evidence ack",
+          "band_message_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
+          "proves": "Evidence responded in-room with product, defect, lot, and severity facts."
+        },
+        {
+          "stage": "traceability_gap",
+          "label": "Traceability gap",
+          "band_message_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+          "proves": "Traceability reported 82% shipment coverage and 864 untraced units."
+        },
+        {
+          "stage": "regulatory_veto",
+          "label": "Risk veto",
+          "band_message_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+          "proves": "Risk blocked customer notice until traceability recovered the missing units."
+        },
+        {
+          "stage": "traceability_resolved",
+          "label": "Re-plan result",
+          "band_message_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
+          "proves": "Traceability recovered the missing distributor file and restored coverage."
+        },
+        {
+          "stage": "risk_approved",
+          "label": "Risk approval",
+          "band_message_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+          "proves": "Risk cleared the recall path after the re-plan."
+        },
+        {
+          "stage": "notice_drafted",
+          "label": "Communications notice",
+          "band_message_id": "db2e10f0-f8f6-4fc4-a324-c99929911500",
+          "proves": "Communications completed the regulator, customer, and quarantine handoff."
+        }
+      ]
+    }
   },
   "receipts": [
     {
@@ -487,5 +550,5 @@
       }
     ]
   },
-  "audit_hash": "6085949e8ce61b7ef553c760a80aa2dd6ee8ecf6a1077bd470981f92fe7e0311"
+  "audit_hash": "a4a2fd3565b7d625daa8556e74fc6fa3f2675eb5683de391cb02ba893f487c04"
 }

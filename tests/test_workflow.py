@@ -36,16 +36,17 @@ def test_audit_hash_is_stable_for_same_packet() -> None:
     assert verify_packet_digest(first)["ok"] is True
 
 
-def test_packet_declares_live_five_agent_proof_mode() -> None:
+def test_packet_declares_captured_band_run() -> None:
     packet = build_recall_packet()
 
-    assert packet.band_proof["proof_mode"] == "live_band_five_agent_workflow"
-    assert packet.band_proof["live_workflow_participant_count"] == 5
-    assert packet.band_proof["live_workflow_context_items"] == 8
-    assert (
-        packet.band_proof["live_workflow_communications_notice_id"]
-        == "db2e10f0-f8f6-4fc4-a324-c99929911500"
-    )
+    captured_run = packet.band_proof["captured_band_run"]
+    assert isinstance(captured_run, dict)
+    assert packet.band_proof["proof_mode"] == "deterministic_packet_with_captured_band_run"
+    assert packet.band_proof["packet_room_type"] == "deterministic_replay"
+    assert captured_run["proof_mode"] == "captured_band_five_agent_run"
+    assert captured_run["participant_count"] == 5
+    assert captured_run["context_items"] == 8
+    assert captured_run["communications_notice_id"] == "db2e10f0-f8f6-4fc4-a324-c99929911500"
 
 
 def test_decision_receipts_are_hash_chained() -> None:
@@ -66,5 +67,5 @@ def test_decision_graph_captures_veto_replan_path() -> None:
     assert edge_labels["veto forces re-plan"].target == "trace-resolved"
     assert (
         edge_labels["veto forces re-plan"].band_message_id
-        == packet.band_proof["live_workflow_risk_veto_id"]
+        == packet.band_proof["captured_band_run"]["risk_veto_id"]
     )

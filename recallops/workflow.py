@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Literal
 
+from recallops.live_proof import captured_band_proof
+
 
 Stage = Literal[
     "room_created",
@@ -107,7 +109,7 @@ class RecallPacket:
     events: tuple[RecallEvent, ...]
     decision: dict[str, str | bool]
     notices: dict[str, str]
-    band_proof: dict[str, int | str | list[str]]
+    band_proof: dict[str, object]
     receipts: tuple[DecisionReceipt, ...]
     decision_graph: dict[str, tuple[DecisionGraphNode, ...] | tuple[DecisionGraphEdge, ...]]
     audit_hash: str
@@ -385,58 +387,39 @@ def _exposure_clock(snapshot: TraceabilitySnapshot) -> dict[str, int | str]:
     }
 
 
-def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[str]]:
+def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, object]:
     approval_message_id = next(
         (event.id for event in events if event.stage == "human_approved"),
         "none",
     )
+    captured_run = captured_band_proof()
     return {
-        "proof_mode": "live_band_five_agent_workflow",
-        "room_id": "band-room-recallops-bat-4421",
+        "proof_mode": "deterministic_packet_with_captured_band_run",
+        "packet_room_id": "band-room-recallops-bat-4421",
+        "packet_room_type": "deterministic_replay",
         "participant_count": len(AGENTS),
         "event_count": len(events),
         "message_ids": [event.id for event in events],
         "veto_message_id": next(event.id for event in events if event.stage == "regulatory_veto"),
         "approval_message_id": approval_message_id,
-        "live_workflow_scope": (
-            "room_create,evidence_extract,traceability_gap,risk_veto,"
-            "replan,risk_approval,communications_notice"
-        ),
-        "live_workflow_room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
-        "live_workflow_participant_count": 5,
-        "live_workflow_context_items": 8,
-        "live_workflow_message_ids": [
-            "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
-            "b33c7424-87e1-40db-9b15-558a64f608d7",
-            "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
-            "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
-            "2d7195c3-6874-4e99-bf67-73dc1724a257",
-            "04b94bb6-d8eb-4816-9cc7-70b91093a145",
-            "db2e10f0-f8f6-4fc4-a324-c99929911500",
-        ],
-        "live_workflow_commander_event_id": "e16220f4-c936-4f59-b7ad-d7468182efb3",
-        "live_workflow_commander_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
-        "live_workflow_evidence_ack_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
-        "live_workflow_traceability_gap_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
-        "live_workflow_risk_veto_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
-        "live_workflow_traceability_resolved_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
-        "live_workflow_risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
-        "live_workflow_communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500",
+        "captured_band_run": captured_run,
     }
 
 
 def _decision_receipts(
     events: tuple[RecallEvent, ...],
-    band_proof: dict[str, int | str | list[str]],
+    band_proof: dict[str, object],
 ) -> tuple[DecisionReceipt, ...]:
+    captured_run = band_proof["captured_band_run"]
+    assert isinstance(captured_run, dict)
     live_refs = {
-        "msg-001": str(band_proof["live_workflow_commander_message_id"]),
-        "msg-002": str(band_proof["live_workflow_evidence_ack_id"]),
-        "msg-004": str(band_proof["live_workflow_traceability_gap_id"]),
-        "msg-006": str(band_proof["live_workflow_risk_veto_id"]),
-        "msg-007": str(band_proof["live_workflow_traceability_resolved_id"]),
-        "msg-008": str(band_proof["live_workflow_risk_approved_id"]),
-        "msg-009": str(band_proof["live_workflow_communications_notice_id"]),
+        "msg-001": str(captured_run["commander_message_id"]),
+        "msg-002": str(captured_run["evidence_ack_id"]),
+        "msg-004": str(captured_run["traceability_gap_id"]),
+        "msg-006": str(captured_run["risk_veto_id"]),
+        "msg-007": str(captured_run["traceability_resolved_id"]),
+        "msg-008": str(captured_run["risk_approved_id"]),
+        "msg-009": str(captured_run["communications_notice_id"]),
     }
     previous_hash = "0" * 64
     receipts: list[DecisionReceipt] = []
@@ -492,8 +475,10 @@ def _receipt_status(stage: Stage) -> ReceiptStatus:
 
 def _decision_graph(
     events: tuple[RecallEvent, ...],
-    band_proof: dict[str, int | str | list[str]],
+    band_proof: dict[str, object],
 ) -> dict[str, tuple[DecisionGraphNode, ...] | tuple[DecisionGraphEdge, ...]]:
+    captured_run = band_proof["captured_band_run"]
+    assert isinstance(captured_run, dict)
     event_ids = {event.stage: event.id for event in events}
     recruitment_ids = [event.id for event in events if event.stage == "agent_recruited"]
     nodes = (
@@ -517,13 +502,13 @@ def _decision_graph(
             "trace-gap",
             "risk-veto",
             "risk review",
-            str(band_proof["live_workflow_traceability_gap_id"]),
+            str(captured_run["traceability_gap_id"]),
         ),
         DecisionGraphEdge(
             "risk-veto",
             "trace-resolved",
             "veto forces re-plan",
-            str(band_proof["live_workflow_risk_veto_id"]),
+            str(captured_run["risk_veto_id"]),
         ),
     ]
     if "traceability_resolved" in event_ids:

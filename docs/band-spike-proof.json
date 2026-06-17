@@ -1,7 +1,7 @@
 {
   "captured_at": "2026-06-17T07:42:00+01:00",
-  "proof_mode": "live_band_five_agent_workflow",
-  "proof_scope": "Live five-agent Band workflow proving room creation, dynamic recruitment, @mention handoffs, traceability gap, risk veto, re-plan, risk approval, communications notice, and context fetch.",
+  "proof_mode": "captured_band_five_agent_run",
+  "proof_scope": "Captured five-agent Band workflow proving room creation, dynamic recruitment, @mention handoffs, traceability gap, risk veto, re-plan, risk approval, communications notice, and context fetch.",
   "ok": true,
   "room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
   "participant_count": 5,
