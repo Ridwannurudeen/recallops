@@ -69,7 +69,8 @@ raw proof panel shows the captured Band run: five configured Band identities,
 real room creation, Evidence, Traceability, Risk, Communications, risk veto,
 communications notice, and context fetch."
 
-Show the final packet, notices, audit seal, and `/api/submission-proof` bundle.
+Show the final packet, notices, audit seal, production-readiness panel, and
+`/api/submission-proof` bundle.
 
 ## 3:00-3:10 - Close
 

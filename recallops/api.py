@@ -8,10 +8,15 @@ from pydantic import BaseModel
 
 from recallops import build_recall_packet, verify_packet_digest
 from recallops.approval import build_approval_receipt, verify_approval_receipt
+from recallops.cases import create_case_record, get_case_record, list_case_records
+from recallops.enterprise import integration_status, ops_readiness
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
+from recallops.notifications import build_dispatch_receipts
 from recallops.partner_ai import partner_ai_status as current_partner_ai_status
 from recallops.partner_ai import run_partner_ai
+from recallops.rate_limit import SpendLimitError, acquire_spend_permit, spend_limit_status
+from recallops.rules import assess_rules
 from recallops.source_evidence import (
     DEFAULT_COMPLAINT_TEXT,
     DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -44,6 +49,10 @@ class ApprovalReceiptRequest(BaseModel):
 
 class SubmissionProofRequest(BaseModel):
     run_partner_ai: bool = True
+
+
+class CreateCaseRequest(SourceEvidenceRequest):
+    pass
 
 
 @app.get("/api/health")
@@ -134,7 +143,7 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
         shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
         recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
         partner_ai = (
-            run_partner_ai(
+            _run_partner_ai_guarded(
                 complaint_text=complaint_text,
                 shipment_csv=shipment_csv,
                 recovered_shipment_csv=recovered_shipment_csv,
@@ -174,6 +183,84 @@ def source_evidence_verify() -> dict[str, object]:
 @app.get("/api/partner-ai/status")
 def partner_ai_status() -> dict[str, object]:
     return current_partner_ai_status()
+
+
+@app.get("/api/spend-limits")
+def spend_limits() -> dict[str, object]:
+    return {"partner_ai": spend_limit_status()}
+
+
+@app.get("/api/integrations")
+def integrations() -> dict[str, object]:
+    return integration_status()
+
+
+@app.get("/api/ops-readiness")
+def readiness() -> dict[str, object]:
+    return {**ops_readiness(), "spend_limits": spend_limits()}
+
+
+@app.get("/api/rules")
+def rules() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    return assess_rules(source_packet)
+
+
+@app.get("/api/notifications/dry-run")
+def notification_dry_run() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    receipts = build_dispatch_receipts(source_packet)
+    return {
+        "mode": "dry_run_no_external_send",
+        "receipts": [receipt.to_dict() for receipt in receipts],
+    }
+
+
+@app.get("/api/cases")
+def cases() -> dict[str, object]:
+    return {"cases": list_case_records()}
+
+
+@app.post("/api/cases")
+def create_case(request: CreateCaseRequest) -> dict[str, object]:
+    try:
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        source_packet = build_source_evidence_packet(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    record = create_case_record(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+    )
+    return {"case": record}
+
+
+@app.get("/api/cases/{case_id}")
+def case_detail(case_id: str) -> dict[str, object]:
+    record = get_case_record(case_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    return {"case": record}
 
 
 @app.post("/api/approval-receipt")
@@ -250,7 +337,7 @@ def packet_download() -> Response:
 def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     recall_packet = build_recall_packet()
     partner_ai = (
-        run_partner_ai(
+        _run_partner_ai_guarded(
             complaint_text=DEFAULT_COMPLAINT_TEXT,
             shipment_csv=DEFAULT_SHIPMENT_CSV,
             recovered_shipment_csv=DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -259,6 +346,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         else current_partner_ai_status()
     )
     source_packet = build_source_evidence_packet(partner_ai=partner_ai)
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
     approval = build_approval_receipt(
         approver="QA Director",
         decision="approved",
@@ -307,6 +396,9 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "partner_ai": source_packet.partner_ai,
             "verification": source_verification,
         },
+        "rule_assessment": rule_assessment,
+        "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
+        "production_readiness": ops_readiness(),
         "approval_receipt": {
             "receipt": approval.to_dict(),
             "verification": approval_verification,
@@ -324,5 +416,51 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "fresh_band_run_available": latest_fresh_run is not None,
             "partner_ai_used_count": partner_ai_used_count,
             "partner_ai_used_both": partner_ai_used_count == 2,
+            "rules_approval_ready": rule_assessment["approval_ready"],
+            "dispatch_receipts_prepared": all(
+                receipt.status == "prepared" for receipt in dispatch_receipts
+            ),
         },
     }
+
+
+def _run_partner_ai_guarded(
+    *,
+    complaint_text: str,
+    shipment_csv: str,
+    recovered_shipment_csv: str,
+) -> dict[str, object]:
+    status = current_partner_ai_status()
+    providers = status["providers"]
+    assert isinstance(providers, dict)
+    configured = any(
+        isinstance(provider, dict) and provider.get("configured") is True
+        for provider in providers.values()
+    )
+    if not configured:
+        return run_partner_ai(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+        )
+
+    permit = None
+    try:
+        permit = acquire_spend_permit()
+        partner_ai = run_partner_ai(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+        )
+        permit.record(
+            {
+                "mode": partner_ai["mode"],
+                "used_count": partner_ai["used_count"],
+            }
+        )
+        return partner_ai
+    except SpendLimitError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    finally:
+        if permit is not None:
+            permit.release()

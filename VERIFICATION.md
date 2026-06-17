@@ -10,11 +10,12 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `40 passed`, including API endpoint tests, source parser coverage,
+Result: `51 passed`, including API endpoint tests, source parser coverage,
 citation integrity, partner AI missing-key checks, mocked partner AI execution,
-submission proof bundle checks, approval receipt hashing, static packet drift
-protection, workflow gates, receipt hash chaining, decision graph checks, digest
-verification, and mocked Band spike ordering.
+submission proof bundle checks, SQLite case persistence, jurisdiction rules,
+dispatch receipts, integration readiness, spend-limit checks, approval receipt
+hashing, static packet drift protection, workflow gates, receipt hash chaining,
+decision graph checks, digest verification, and mocked Band spike ordering.
 
 ## Live Band Workflow
 
@@ -54,6 +55,11 @@ curl.exe -fsSL https://recallops.gudman.xyz/api/proof
 curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence
 curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence/verify
 curl.exe -fsSL https://recallops.gudman.xyz/api/partner-ai/status
+curl.exe -fsSL https://recallops.gudman.xyz/api/spend-limits
+curl.exe -fsSL https://recallops.gudman.xyz/api/integrations
+curl.exe -fsSL https://recallops.gudman.xyz/api/ops-readiness
+curl.exe -fsSL https://recallops.gudman.xyz/api/rules
+curl.exe -fsSL https://recallops.gudman.xyz/api/notifications/dry-run
 curl.exe -fsSL https://recallops.gudman.xyz/api/submission-proof
 curl.exe -fsSL https://recallops.gudman.xyz/api/receipts
 curl.exe -fsSL https://recallops.gudman.xyz/api/decision-graph

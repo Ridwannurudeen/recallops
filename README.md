@@ -78,6 +78,12 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/source-evidence`
 - `https://recallops.gudman.xyz/api/source-evidence/verify`
 - `https://recallops.gudman.xyz/api/partner-ai/status`
+- `https://recallops.gudman.xyz/api/spend-limits`
+- `https://recallops.gudman.xyz/api/integrations`
+- `https://recallops.gudman.xyz/api/ops-readiness`
+- `https://recallops.gudman.xyz/api/rules`
+- `https://recallops.gudman.xyz/api/notifications/dry-run`
+- `https://recallops.gudman.xyz/api/cases`
 - `https://recallops.gudman.xyz/api/approval-receipt`
 - `https://recallops.gudman.xyz/api/submission-proof`
 - `https://recallops.gudman.xyz/api/receipts`
@@ -105,6 +111,14 @@ Python verification:
 `GET /api/submission-proof` returns a safe judge bundle without spending partner
 AI credits. `POST /api/submission-proof` runs the live partner AI proof path and
 returns the same bundle with partner provider usage.
+
+Production hardening surfaces:
+
+- SQLite case records via `/api/cases`.
+- Deterministic jurisdiction checks via `/api/rules`.
+- Dispatch-ready dry-run notification receipts via `/api/notifications/dry-run`.
+- Enterprise adapter readiness via `/api/integrations`.
+- Credit-spend guardrails via `/api/spend-limits`.
 
 ## Band Live Workflow
 

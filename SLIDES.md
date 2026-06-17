@@ -42,7 +42,8 @@ AI/ML API for risk review, then display model IDs and response hashes.
 Final output includes notices, affected coverage, packet room ID, captured Band
 room ID, message IDs, veto ID, approval ID, receipt chain, decision graph, and
 SHA-256 audit digest. `/api/submission-proof` bundles every judge proof surface
-into one JSON endpoint.
+into one JSON endpoint, including rules, dispatch receipts, adapter readiness,
+and spend controls.
 
 ## 9. Raw Band Proof
 

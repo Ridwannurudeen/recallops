@@ -131,6 +131,60 @@ def test_partner_ai_status_is_honest_about_usage() -> None:
     assert body["providers"]["featherless"]["used"] is False
 
 
+def test_spend_limits_endpoint_reports_partner_ai_guard() -> None:
+    response = get("/api/spend-limits")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "partner_ai" in body
+    assert "daily_limit" in body["partner_ai"]
+
+
+def test_integrations_and_ops_readiness_are_explicit() -> None:
+    integrations = get("/api/integrations")
+    readiness = get("/api/ops-readiness")
+
+    assert integrations.status_code == 200
+    assert readiness.status_code == 200
+    assert integrations.json()["mode"] == "adapter_registry"
+    assert readiness.json()["persistence"]["mode"] == "sqlite_case_store"
+    assert "production_blockers_remaining" in readiness.json()
+
+
+def test_rules_endpoint_returns_recall_gates() -> None:
+    response = get("/api/rules")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["approval_ready"] is True
+    assert body["initial_blockers"][0]["id"] == "TRACEABILITY-BELOW-100"
+
+
+def test_notification_dry_run_returns_dispatch_receipts() -> None:
+    response = get("/api/notifications/dry-run")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "dry_run_no_external_send"
+    assert len(body["receipts"]) == 3
+    assert body["receipts"][0]["status"] == "prepared"
+
+
+def test_case_endpoints_persist_case(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("RECALLOPS_CASE_DB", str(tmp_path / "api-cases.sqlite3"))
+    created = post("/api/cases", {})
+
+    assert created.status_code == 200
+    case_id = created.json()["case"]["case_id"]
+    listed = get("/api/cases")
+    detail = get(f"/api/cases/{case_id}")
+
+    assert listed.status_code == 200
+    assert listed.json()["cases"][0]["case_id"] == case_id
+    assert detail.status_code == 200
+    assert detail.json()["case"]["source_packet"]["incident_id"] == "INC-SOURCE-BAT-4421"
+
+
 def test_source_evidence_partner_ai_request_reports_missing_keys() -> None:
     response = post("/api/source-evidence", {"use_partner_ai": True})
 
@@ -172,6 +226,10 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["source_evidence"]["verification"]["ok"] is True
     assert body["approval_receipt"]["verification"]["ok"] is True
     assert body["checks"]["captured_band_has_five_agents"] is True
+    assert body["checks"]["rules_approval_ready"] is True
+    assert body["checks"]["dispatch_receipts_prepared"] is True
+    assert len(body["dispatch_receipts"]) == 3
+    assert body["production_readiness"]["persistence"]["mode"] == "sqlite_case_store"
     assert body["submission_gates"]["repo_visibility"] == "private_until_user_approves_public_flip"
 
 
