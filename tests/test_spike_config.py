@@ -83,8 +83,8 @@ async def test_run_spike_orders_room_recruit_handoff_and_context(
             self.room_id = room_id
             self.rest = rest
 
-        async def create_chatroom(self, task_id: str) -> str:
-            assert task_id == "recallops-day0-spike"
+        async def create_chatroom(self, task_id: str | None = None) -> str:
+            assert task_id is None
             calls.append("room.create")
             return "room-123"
 

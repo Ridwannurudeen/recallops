@@ -273,7 +273,7 @@
     "warehouse": "Quarantine 1,100 units of lot BAT-4421 and freeze outbound movement."
   },
   "band_proof": {
-    "proof_mode": "deterministic_demo",
+    "proof_mode": "deterministic_demo_plus_live_band_spike",
     "room_id": "band-room-recallops-bat-4421",
     "participant_count": 6,
     "event_count": 10,
@@ -290,7 +290,17 @@
       "msg-010"
     ],
     "veto_message_id": "msg-006",
-    "approval_message_id": "msg-010"
+    "approval_message_id": "msg-010",
+    "live_spike_scope": "room_create,recruit,mention_handoff,evidence_ack,context_fetch",
+    "live_spike_room_id": "9729673d-d6ce-4715-83e9-8cfaa17885f2",
+    "live_spike_participant_count": 2,
+    "live_spike_context_items": 3,
+    "live_spike_message_ids": [
+      "ce539322-ed3a-4957-9ef9-45aef27b37a7",
+      "6cc0a722-521d-414e-a3a4-81a240a9b92d",
+      "23fcfb46-0f78-4b73-b842-35c054ac4d58"
+    ],
+    "live_spike_ack_id": "23fcfb46-0f78-4b73-b842-35c054ac4d58"
   },
-  "audit_hash": "b60337cd0f962e8ef11eeb4fa21787172f8362da27d1e2b8df904d39aaa526ca"
+  "audit_hash": "5cdb656baa3ccd47d7b455c256158cad0db91a258bf1e76e49e5130dd523dbbc"
 }

@@ -82,6 +82,12 @@ type Packet = {
     message_ids: string[];
     veto_message_id: string;
     approval_message_id: string;
+    live_spike_scope: string;
+    live_spike_room_id: string;
+    live_spike_participant_count: number;
+    live_spike_context_items: number;
+    live_spike_message_ids: string[];
+    live_spike_ack_id: string;
   };
   audit_hash: string;
 };
@@ -187,6 +193,18 @@ export default function Home() {
           <ProofRow
             label="approval"
             value={packet.band_proof.approval_message_id}
+          />
+          <ProofRow
+            label="live room"
+            value={packet.band_proof.live_spike_room_id}
+          />
+          <ProofRow
+            label="live ack"
+            value={packet.band_proof.live_spike_ack_id}
+          />
+          <ProofRow
+            label="context"
+            value={`${packet.band_proof.live_spike_context_items} items`}
           />
           <div className="hash-box">
             <span>audit seal</span>

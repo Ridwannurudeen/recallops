@@ -161,7 +161,7 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
             base_url=config.rest_url,
         )
         bootstrap_tools = AgentTools(room_id="", rest=commander_rest)
-        room_id = await bootstrap_tools.create_chatroom(task_id="recallops-day0-spike")
+        room_id = await bootstrap_tools.create_chatroom()
         tools = AgentTools(room_id=room_id, rest=commander_rest)
 
         recruited = await tools.add_participant(config.evidence.agent_id)

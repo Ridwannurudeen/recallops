@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-06-17T06:18:13+01:00",
+  "proof_scope": "Live two-agent Band spike proving room creation, Evidence recruitment, @mention handoff, Evidence acknowledgement, and room context fetch. The full BAT-4421 recall packet remains a deterministic demo transcript.",
+  "ok": true,
+  "room_id": "9729673d-d6ce-4715-83e9-8cfaa17885f2",
+  "participant_count": 2,
+  "context_items": 3,
+  "commander_event_id": "ce539322-ed3a-4957-9ef9-45aef27b37a7",
+  "commander_message_id": "6cc0a722-521d-414e-a3a4-81a240a9b92d",
+  "evidence_ack_id": "23fcfb46-0f78-4b73-b842-35c054ac4d58",
+  "recruited": {
+    "id": "65dbb3fb-6f5b-4dd0-90e0-37946f1371b6",
+    "name": "RecallOps Evidence",
+    "role": "member",
+    "status": "added"
+  }
+}

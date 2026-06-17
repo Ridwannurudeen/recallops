@@ -38,4 +38,6 @@ def test_audit_hash_is_stable_for_same_packet() -> None:
 def test_packet_declares_deterministic_proof_mode() -> None:
     packet = build_recall_packet()
 
-    assert packet.band_proof["proof_mode"] == "deterministic_demo"
+    assert packet.band_proof["proof_mode"] == "deterministic_demo_plus_live_band_spike"
+    assert packet.band_proof["live_spike_context_items"] == 3
+    assert packet.band_proof["live_spike_ack_id"] == "23fcfb46-0f78-4b73-b842-35c054ac4d58"
