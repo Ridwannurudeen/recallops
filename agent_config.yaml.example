@@ -7,3 +7,15 @@ commander:
 evidence:
   agent_id: "00000000-0000-0000-0000-000000000000"
   api_key: "replace-with-evidence-band-agent-api-key"
+
+traceability:
+  agent_id: "00000000-0000-0000-0000-000000000000"
+  api_key: "replace-with-traceability-band-agent-api-key"
+
+risk:
+  agent_id: "00000000-0000-0000-0000-000000000000"
+  api_key: "replace-with-risk-band-agent-api-key"
+
+communications:
+  agent_id: "00000000-0000-0000-0000-000000000000"
+  api_key: "replace-with-communications-band-agent-api-key"

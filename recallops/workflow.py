@@ -339,23 +339,37 @@ def _exposure_clock(snapshot: TraceabilitySnapshot) -> dict[str, int | str]:
 
 def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[str]]:
     return {
-        "proof_mode": "deterministic_demo_plus_live_band_spike",
+        "proof_mode": "live_band_five_agent_workflow",
         "room_id": "band-room-recallops-bat-4421",
         "participant_count": len(AGENTS),
         "event_count": len(events),
         "message_ids": [event.id for event in events],
         "veto_message_id": next(event.id for event in events if event.stage == "regulatory_veto"),
         "approval_message_id": events[-1].id,
-        "live_spike_scope": "room_create,recruit,mention_handoff,evidence_ack,context_fetch",
-        "live_spike_room_id": "9729673d-d6ce-4715-83e9-8cfaa17885f2",
-        "live_spike_participant_count": 2,
-        "live_spike_context_items": 3,
-        "live_spike_message_ids": [
-            "ce539322-ed3a-4957-9ef9-45aef27b37a7",
-            "6cc0a722-521d-414e-a3a4-81a240a9b92d",
-            "23fcfb46-0f78-4b73-b842-35c054ac4d58",
+        "live_workflow_scope": (
+            "room_create,evidence_extract,traceability_gap,risk_veto,"
+            "replan,risk_approval,communications_notice"
+        ),
+        "live_workflow_room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
+        "live_workflow_participant_count": 5,
+        "live_workflow_context_items": 8,
+        "live_workflow_message_ids": [
+            "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+            "b33c7424-87e1-40db-9b15-558a64f608d7",
+            "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+            "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+            "2d7195c3-6874-4e99-bf67-73dc1724a257",
+            "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+            "db2e10f0-f8f6-4fc4-a324-c99929911500",
         ],
-        "live_spike_ack_id": "23fcfb46-0f78-4b73-b842-35c054ac4d58",
+        "live_workflow_commander_event_id": "e16220f4-c936-4f59-b7ad-d7468182efb3",
+        "live_workflow_commander_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+        "live_workflow_evidence_ack_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
+        "live_workflow_traceability_gap_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+        "live_workflow_risk_veto_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+        "live_workflow_traceability_resolved_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
+        "live_workflow_risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+        "live_workflow_communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500",
     }
 
 

@@ -19,6 +19,7 @@ from band.runtime.tools import AgentTools
 DEFAULT_REST_URL = "https://app.band.ai"
 DEFAULT_WS_URL = "wss://app.band.ai/api/v1/socket/websocket"
 PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000"
+AGENT_KEYS = ("commander", "evidence", "traceability", "risk", "communications")
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,9 @@ class BandAgentCredentials:
 class SpikeConfig:
     commander: BandAgentCredentials
     evidence: BandAgentCredentials
+    traceability: BandAgentCredentials
+    risk: BandAgentCredentials
+    communications: BandAgentCredentials
     rest_url: str
     ws_url: str
 
@@ -40,6 +44,11 @@ class ConfigError(ValueError):
 
 
 class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
+    def __init__(self, *, commander_id: str, traceability_id: str) -> None:
+        super().__init__()
+        self.commander_id = commander_id
+        self.traceability_id = traceability_id
+
     async def on_message(
         self,
         msg: PlatformMessage,
@@ -53,47 +62,220 @@ class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
     ) -> None:
         del history, participants_msg, contacts_msg, is_session_bootstrap, room_id
 
-        if "RECALLOPS_SPIKE" not in msg.content:
+        if "RECALLOPS_EVIDENCE" not in msg.content:
             return
 
         await tools.send_event(
-            content="Evidence agent received the RecallOps spike handoff.",
+            content="Evidence extracted product, defect, lot BAT-4421, and critical severity.",
             message_type="task",
-            metadata={"spike": "recallops", "stage": "evidence_received"},
+            metadata={"spike": "recallops", "stage": "evidence_extracted"},
         )
-        participant = await _find_participant_by_id_or_name(
-            tools,
-            participant_id=msg.sender_id,
-            participant_name=msg.sender_name,
+        await tools.add_participant(self.traceability_id)
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
         )
-        mention = _participant_mention(participant)
+        traceability = _participant_mention(
+            _find_configured_participant(participants, self.traceability_id)
+        )
         await tools.send_message(
             content=(
-                "SPIKE_ACK Evidence agent joined the room, received the handoff, "
-                "and can answer through Band."
+                "LIVE_EVIDENCE_ACK extracted three overheating complaints for BAT-4421. "
+                "RECALLOPS_TRACEABILITY Please map shipped units, open stock, and gaps."
             ),
-            mentions=[mention],
+            mentions=[commander, traceability],
         )
 
 
-async def _find_participant_by_id_or_name(
-    tools: AgentToolsProtocol,
-    *,
-    participant_id: str,
-    participant_name: str | None,
-) -> Any:
-    participants = await tools.get_participants()
-    for participant in participants:
-        if getattr(participant, "id", None) == participant_id:
-            return participant
+class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
+    def __init__(self, *, commander_id: str, risk_id: str) -> None:
+        super().__init__()
+        self.commander_id = commander_id
+        self.risk_id = risk_id
 
-    if participant_name:
-        lowered = participant_name.lower()
-        for participant in participants:
-            if (getattr(participant, "name", "") or "").lower() == lowered:
-                return participant
+    async def on_message(
+        self,
+        msg: PlatformMessage,
+        tools: AgentToolsProtocol,
+        history: HistoryProvider,
+        participants_msg: str | None,
+        contacts_msg: str | None,
+        *,
+        is_session_bootstrap: bool,
+        room_id: str,
+    ) -> None:
+        del history, participants_msg, contacts_msg, is_session_bootstrap, room_id
 
-    raise RuntimeError("Could not resolve message sender as a Band room participant.")
+        if "RECALLOPS_TRACEABILITY" in msg.content:
+            await self._send_gap(tools)
+            return
+
+        if "RECALLOPS_REPLAN" in msg.content:
+            await self._send_resolution(tools)
+
+    async def _send_gap(self, tools: AgentToolsProtocol) -> None:
+        await tools.send_event(
+            content="Traceability found 4,800 shipped units but only 82% shipment coverage.",
+            message_type="task",
+            metadata={
+                "spike": "recallops",
+                "stage": "traceability_gap",
+                "coverage_percent": 82,
+                "untraced_units": 864,
+            },
+        )
+        await tools.add_participant(self.risk_id)
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
+        )
+        risk = _participant_mention(_find_configured_participant(participants, self.risk_id))
+        await tools.send_message(
+            content=(
+                "LIVE_TRACEABILITY_GAP mapped 4,800 shipped units across 6 regions, "
+                "but 864 units are still untraced. RECALLOPS_RISK Please review recall readiness."
+            ),
+            mentions=[commander, risk],
+        )
+
+    async def _send_resolution(self, tools: AgentToolsProtocol) -> None:
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
+        )
+        risk = _participant_mention(_find_configured_participant(participants, self.risk_id))
+        await tools.send_event(
+            content="Traceability recovered the Kestrel Distributor file and restored 100% coverage.",
+            message_type="task",
+            metadata={
+                "spike": "recallops",
+                "stage": "traceability_resolved",
+                "coverage_percent": 100,
+                "recovered_units": 864,
+            },
+        )
+        await tools.send_message(
+            content=(
+                "LIVE_TRACEABILITY_RESOLVED recovered the missing distributor file; coverage is 100%. "
+                "RECALLOPS_APPROVAL Please clear the regulated recall path."
+            ),
+            mentions=[commander, risk],
+        )
+
+
+class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
+    def __init__(self, *, commander_id: str, traceability_id: str, communications_id: str) -> None:
+        super().__init__()
+        self.commander_id = commander_id
+        self.traceability_id = traceability_id
+        self.communications_id = communications_id
+
+    async def on_message(
+        self,
+        msg: PlatformMessage,
+        tools: AgentToolsProtocol,
+        history: HistoryProvider,
+        participants_msg: str | None,
+        contacts_msg: str | None,
+        *,
+        is_session_bootstrap: bool,
+        room_id: str,
+    ) -> None:
+        del history, participants_msg, contacts_msg, is_session_bootstrap, room_id
+
+        if "RECALLOPS_RISK" in msg.content:
+            await self._send_veto(tools)
+            return
+
+        if "RECALLOPS_APPROVAL" in msg.content:
+            await self._send_approval(tools)
+
+    async def _send_veto(self, tools: AgentToolsProtocol) -> None:
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
+        )
+        traceability = _participant_mention(
+            _find_configured_participant(participants, self.traceability_id)
+        )
+        await tools.send_event(
+            content="Risk vetoed the recall plan while 864 units remained untraced.",
+            message_type="task",
+            metadata={
+                "spike": "recallops",
+                "stage": "regulatory_veto",
+                "veto": True,
+                "untraced_units": 864,
+            },
+        )
+        await tools.send_message(
+            content=(
+                "LIVE_RISK_VETO customer notice is blocked while 864 units remain untraced. "
+                "RECALLOPS_REPLAN Traceability must close the distributor gap."
+            ),
+            mentions=[commander, traceability],
+        )
+
+    async def _send_approval(self, tools: AgentToolsProtocol) -> None:
+        await tools.add_participant(self.communications_id)
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
+        )
+        communications = _participant_mention(
+            _find_configured_participant(participants, self.communications_id)
+        )
+        await tools.send_event(
+            content="Risk approved immediate recall, stock quarantine, and customer notification.",
+            message_type="task",
+            metadata={"spike": "recallops", "stage": "risk_approved", "approved": True},
+        )
+        await tools.send_message(
+            content=(
+                "LIVE_RISK_APPROVED coverage is complete; RECALLOPS_COMMS draft regulator, "
+                "customer, and warehouse notices."
+            ),
+            mentions=[commander, communications],
+        )
+
+
+class CommunicationsSpikeAdapter(SimpleAdapter[HistoryProvider]):
+    def __init__(self, *, commander_id: str) -> None:
+        super().__init__()
+        self.commander_id = commander_id
+
+    async def on_message(
+        self,
+        msg: PlatformMessage,
+        tools: AgentToolsProtocol,
+        history: HistoryProvider,
+        participants_msg: str | None,
+        contacts_msg: str | None,
+        *,
+        is_session_bootstrap: bool,
+        room_id: str,
+    ) -> None:
+        del history, participants_msg, contacts_msg, is_session_bootstrap, room_id
+
+        if "RECALLOPS_COMMS" not in msg.content:
+            return
+
+        participants = await tools.get_participants()
+        commander = _participant_mention(
+            _find_configured_participant(participants, self.commander_id)
+        )
+        await tools.send_event(
+            content="Communications drafted regulator, customer, and warehouse notices.",
+            message_type="task",
+            metadata={"spike": "recallops", "stage": "notice_drafted", "notices": 3},
+        )
+        await tools.send_message(
+            content=(
+                "SPIKE_DONE LIVE_COMMS_NOTICE drafted regulator notice, customer stop-use notice, "
+                "and warehouse quarantine order for BAT-4421."
+            ),
+            mentions=[commander],
+        )
 
 
 def _participant_mention(participant: Any) -> str:
@@ -121,14 +303,16 @@ def _load_config(path: Path, rest_url: str, ws_url: str) -> SpikeConfig:
 
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     try:
-        commander = _load_agent(raw, "commander")
-        evidence = _load_agent(raw, "evidence")
+        agents = {key: _load_agent(raw, key) for key in AGENT_KEYS}
     except KeyError as exc:
         raise ConfigError(f"Missing {exc.args[0]!r} in {path}.") from exc
 
     return SpikeConfig(
-        commander=commander,
-        evidence=evidence,
+        commander=agents["commander"],
+        evidence=agents["evidence"],
+        traceability=agents["traceability"],
+        risk=agents["risk"],
+        communications=agents["communications"],
         rest_url=raw.get("rest_url") or rest_url,
         ws_url=raw.get("ws_url") or ws_url,
     )
@@ -146,15 +330,50 @@ def _load_agent(raw: dict[str, Any], key: str) -> BandAgentCredentials:
 
 
 async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, Any]:
-    evidence_agent = Agent.create(
-        adapter=EvidenceSpikeAdapter(),
-        agent_id=config.evidence.agent_id,
-        api_key=config.evidence.api_key,
-        ws_url=config.ws_url,
-        rest_url=config.rest_url,
-    )
+    agents = [
+        Agent.create(
+            adapter=EvidenceSpikeAdapter(
+                commander_id=config.commander.agent_id,
+                traceability_id=config.traceability.agent_id,
+            ),
+            agent_id=config.evidence.agent_id,
+            api_key=config.evidence.api_key,
+            ws_url=config.ws_url,
+            rest_url=config.rest_url,
+        ),
+        Agent.create(
+            adapter=TraceabilitySpikeAdapter(
+                commander_id=config.commander.agent_id,
+                risk_id=config.risk.agent_id,
+            ),
+            agent_id=config.traceability.agent_id,
+            api_key=config.traceability.api_key,
+            ws_url=config.ws_url,
+            rest_url=config.rest_url,
+        ),
+        Agent.create(
+            adapter=RiskSpikeAdapter(
+                commander_id=config.commander.agent_id,
+                traceability_id=config.traceability.agent_id,
+                communications_id=config.communications.agent_id,
+            ),
+            agent_id=config.risk.agent_id,
+            api_key=config.risk.api_key,
+            ws_url=config.ws_url,
+            rest_url=config.rest_url,
+        ),
+        Agent.create(
+            adapter=CommunicationsSpikeAdapter(commander_id=config.commander.agent_id),
+            agent_id=config.communications.agent_id,
+            api_key=config.communications.api_key,
+            ws_url=config.ws_url,
+            rest_url=config.rest_url,
+        ),
+    ]
 
-    await evidence_agent.start()
+    for agent in agents:
+        await agent.start()
+
     try:
         commander_rest = AsyncRestClient(
             api_key=config.commander.api_key,
@@ -164,71 +383,95 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
         room_id = await bootstrap_tools.create_chatroom()
         tools = AgentTools(room_id=room_id, rest=commander_rest)
 
-        recruited = await tools.add_participant(config.evidence.agent_id)
+        await tools.add_participant(config.evidence.agent_id)
         participants = await tools.get_participants()
         evidence_participant = _find_configured_participant(participants, config.evidence.agent_id)
         evidence_mention = _participant_mention(evidence_participant)
 
-        event = await tools.send_event(
-            content="Commander created the RecallOps spike room and recruited Evidence.",
+        commander_event = await tools.send_event(
+            content="Commander created the RecallOps live workflow room and recruited Evidence.",
             message_type="task",
             metadata={"spike": "recallops", "stage": "commander_recruited_evidence"},
         )
-        message = await tools.send_message(
+        commander_message = await tools.send_message(
             content=(
-                "RECALLOPS_SPIKE Please acknowledge this Band handoff. "
-                "This proves room creation, recruitment, @mention routing, and reply."
+                "RECALLOPS_EVIDENCE Start the BAT-4421 live Band workflow. "
+                "Extract incident facts and recruit Traceability if severity requires it."
             ),
             mentions=[evidence_mention],
         )
 
-        ack = await _poll_for_ack(tools, room_id=room_id, timeout_seconds=timeout_seconds)
-        context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=50)
+        done = await _poll_for_marker(
+            tools,
+            room_id=room_id,
+            marker="SPIKE_DONE",
+            timeout_seconds=timeout_seconds,
+        )
+        context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=100)
+        participants = await tools.get_participants()
+        context_items = context["data"]
         return {
             "ok": True,
+            "proof_mode": "live_band_five_agent_workflow",
             "room_id": room_id,
-            "recruited": recruited,
             "participant_count": len(participants),
-            "commander_event_id": getattr(event, "id", None),
-            "commander_message_id": getattr(message, "id", None),
-            "evidence_ack_id": ack.get("id"),
-            "context_items": len(context["data"]),
+            "context_items": len(context_items),
+            "commander_event_id": getattr(commander_event, "id", None),
+            "commander_message_id": getattr(commander_message, "id", None),
+            "evidence_ack_id": _find_context_id(context_items, "LIVE_EVIDENCE_ACK"),
+            "traceability_gap_id": _find_context_id(context_items, "LIVE_TRACEABILITY_GAP"),
+            "risk_veto_id": _find_context_id(context_items, "LIVE_RISK_VETO"),
+            "traceability_resolved_id": _find_context_id(
+                context_items, "LIVE_TRACEABILITY_RESOLVED"
+            ),
+            "risk_approved_id": _find_context_id(context_items, "LIVE_RISK_APPROVED"),
+            "communications_notice_id": done.get("id"),
         }
     finally:
-        await evidence_agent.stop(timeout=2.0)
+        for agent in reversed(agents):
+            await agent.stop(timeout=2.0)
 
 
 def _find_configured_participant(participants: Any, agent_id: str) -> Any:
     for participant in participants:
         if getattr(participant, "id", None) == agent_id:
             return participant
-    raise RuntimeError("Configured Evidence agent was not found in room participants.")
+    raise RuntimeError(f"Configured agent {agent_id} was not found in room participants.")
 
 
-async def _poll_for_ack(
+async def _poll_for_marker(
     tools: AgentTools,
     *,
     room_id: str,
+    marker: str,
     timeout_seconds: float,
 ) -> dict[str, Any]:
     deadline = asyncio.get_running_loop().time() + timeout_seconds
     while asyncio.get_running_loop().time() < deadline:
-        context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=50)
+        context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=100)
         for item in context["data"]:
             content = str(item.get("content") or "")
-            if "SPIKE_ACK" in content:
+            if marker in content:
                 return item
         await asyncio.sleep(2)
 
-    raise TimeoutError("Evidence agent did not reply with SPIKE_ACK before timeout.")
+    raise TimeoutError(f"Band workflow did not emit {marker} before timeout.")
+
+
+def _find_context_id(context_items: list[dict[str, Any]], marker: str) -> str | None:
+    for item in context_items:
+        content = str(item.get("content") or "")
+        if marker in content:
+            return str(item.get("id") or "")
+    return None
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the RecallOps Band Day-0 spike.")
+    parser = argparse.ArgumentParser(description="Run the RecallOps Band live workflow.")
     parser.add_argument("--config", default="agent_config.yaml")
     parser.add_argument("--rest-url", default=DEFAULT_REST_URL)
     parser.add_argument("--ws-url", default=DEFAULT_WS_URL)
-    parser.add_argument("--timeout", type=float, default=45.0)
+    parser.add_argument("--timeout", type=float, default=90.0)
     parser.add_argument(
         "--check-config",
         action="store_true",
@@ -241,7 +484,12 @@ async def async_main() -> None:
     args = parse_args()
     config = _load_config(Path(args.config), rest_url=args.rest_url, ws_url=args.ws_url)
     if args.check_config:
-        print(json.dumps({"ok": True, "checked": str(Path(args.config))}, indent=2))
+        print(
+            json.dumps(
+                {"ok": True, "checked": str(Path(args.config)), "agents": list(AGENT_KEYS)},
+                indent=2,
+            )
+        )
         return
 
     result = await run_spike(config, timeout_seconds=args.timeout)

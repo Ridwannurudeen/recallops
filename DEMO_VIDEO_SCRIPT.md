@@ -49,9 +49,9 @@ Show the traceability panel and coverage bars.
 quarantine order. The QA Director approves the packet. The result is a sealed
 recall decision with room ID, participant count, event count, message IDs,
 veto ID, approval ID, proof mode, and SHA-256 audit hash. The BAT-4421 packet
-is deterministic for a clean demo, and the proof panel also shows the live Band
-spike: real room creation, Evidence recruitment, handoff message, ack message,
-and context fetch."
+is deterministic for a clean demo, and the proof panel also shows the live
+five-agent Band workflow: real room creation, Evidence, Traceability, Risk,
+Communications, risk veto, communications notice, and context fetch."
 
 Show the final packet, notices, and audit seal.
 

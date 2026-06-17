@@ -82,12 +82,19 @@ type Packet = {
     message_ids: string[];
     veto_message_id: string;
     approval_message_id: string;
-    live_spike_scope: string;
-    live_spike_room_id: string;
-    live_spike_participant_count: number;
-    live_spike_context_items: number;
-    live_spike_message_ids: string[];
-    live_spike_ack_id: string;
+    live_workflow_scope: string;
+    live_workflow_room_id: string;
+    live_workflow_participant_count: number;
+    live_workflow_context_items: number;
+    live_workflow_message_ids: string[];
+    live_workflow_commander_event_id: string;
+    live_workflow_commander_message_id: string;
+    live_workflow_evidence_ack_id: string;
+    live_workflow_traceability_gap_id: string;
+    live_workflow_risk_veto_id: string;
+    live_workflow_traceability_resolved_id: string;
+    live_workflow_risk_approved_id: string;
+    live_workflow_communications_notice_id: string;
   };
   audit_hash: string;
 };
@@ -196,15 +203,19 @@ export default function Home() {
           />
           <ProofRow
             label="live room"
-            value={packet.band_proof.live_spike_room_id}
+            value={packet.band_proof.live_workflow_room_id}
           />
           <ProofRow
-            label="live ack"
-            value={packet.band_proof.live_spike_ack_id}
+            label="live veto"
+            value={packet.band_proof.live_workflow_risk_veto_id}
+          />
+          <ProofRow
+            label="live notice"
+            value={packet.band_proof.live_workflow_communications_notice_id}
           />
           <ProofRow
             label="context"
-            value={`${packet.band_proof.live_spike_context_items} items`}
+            value={`${packet.band_proof.live_workflow_context_items} items`}
           />
           <div className="hash-box">
             <span>audit seal</span>

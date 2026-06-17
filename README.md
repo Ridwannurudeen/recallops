@@ -27,8 +27,9 @@ The command-room surface exposes room ID, participant count, event count,
 message IDs, veto ID, approval ID, proof mode, and audit hash so the
 collaboration proof is visible during the demo. The BAT-4421 recall transcript
 is a deterministic demo packet, and `docs/band-spike-proof.json` captures a
-successful live Band spike: room creation, Evidence recruitment, `@mention`
-handoff, Evidence acknowledgement, and context fetch.
+successful live five-agent Band workflow: room creation, dynamic recruitment,
+`@mention` handoffs, traceability gap, risk veto, re-plan, risk approval,
+communications notice, and context fetch.
 
 ## Hackathon Alignment
 
@@ -87,14 +88,14 @@ Python verification:
 .venv\Scripts\python.exe -m pytest
 ```
 
-## Band Spike
+## Band Live Workflow
 
-Day-0 spike goal:
+Live workflow goal:
 
 - create a real Band room as the Commander agent
-- recruit an Evidence agent into that room
-- send an `@mention` handoff
-- receive an Evidence reply through the Band WebSocket runtime
+- recruit Evidence, Traceability, Risk, and Communications into that room
+- send `@mention` handoffs between each specialist
+- execute a veto, re-plan, approval, and notice chain
 - fetch Band room context and print a proof summary with room/message IDs
 
 ## Spike Setup
@@ -105,12 +106,15 @@ Install dependencies:
 uv sync --extra dev
 ```
 
-Create `agent_config.yaml` from `agent_config.yaml.example` and fill in two Band remote-agent credentials:
+Create `agent_config.yaml` from `agent_config.yaml.example` and fill in five Band remote-agent credentials:
 
 - `commander`
 - `evidence`
+- `traceability`
+- `risk`
+- `communications`
 
-Run the live spike:
+Run the live workflow:
 
 ```powershell
 uv run python scripts/band_spike.py
@@ -118,8 +122,10 @@ uv run python scripts/band_spike.py
 
 Latest live proof captured:
 
-- room: `9729673d-d6ce-4715-83e9-8cfaa17885f2`
-- Evidence ack: `23fcfb46-0f78-4b73-b842-35c054ac4d58`
-- context items: `3`
+- room: `6dcd1018-bce3-481f-88d6-1ab67f6db452`
+- Risk veto: `bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9`
+- Communications notice: `db2e10f0-f8f6-4fc4-a324-c99929911500`
+- participants: `5`
+- context items: `8`
 
 No final hackathon submission will be made without explicit approval.

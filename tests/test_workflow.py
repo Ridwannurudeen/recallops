@@ -35,9 +35,13 @@ def test_audit_hash_is_stable_for_same_packet() -> None:
     assert len(first.audit_hash) == 64
 
 
-def test_packet_declares_deterministic_proof_mode() -> None:
+def test_packet_declares_live_five_agent_proof_mode() -> None:
     packet = build_recall_packet()
 
-    assert packet.band_proof["proof_mode"] == "deterministic_demo_plus_live_band_spike"
-    assert packet.band_proof["live_spike_context_items"] == 3
-    assert packet.band_proof["live_spike_ack_id"] == "23fcfb46-0f78-4b73-b842-35c054ac4d58"
+    assert packet.band_proof["proof_mode"] == "live_band_five_agent_workflow"
+    assert packet.band_proof["live_workflow_participant_count"] == 5
+    assert packet.band_proof["live_workflow_context_items"] == 8
+    assert (
+        packet.band_proof["live_workflow_communications_notice_id"]
+        == "db2e10f0-f8f6-4fc4-a324-c99929911500"
+    )
