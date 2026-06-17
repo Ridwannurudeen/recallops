@@ -32,10 +32,17 @@ Judge Mode replays the room moving from blocked to approved.
 
 ## 7. Audit Packet
 
-Final output includes notices, affected coverage, room ID, message IDs, veto ID,
-approval ID, receipt chain, decision graph, and SHA-256 audit digest.
+Final output includes notices, affected coverage, packet room ID, captured Band
+room ID, message IDs, veto ID, approval ID, receipt chain, decision graph, and
+SHA-256 audit digest.
 
-## 8. Business Value
+## 8. Raw Band Proof
+
+The packet is deterministic for judge replay; the proof panel exposes the
+captured Band room UUID, participant count, context count, and every Band
+message ID used by the receipts.
+
+## 9. Business Value
 
 RecallOps compresses high-stakes recall coordination into one auditable,
 human-approved agent room.

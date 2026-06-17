@@ -48,13 +48,13 @@ Show the traceability panel and coverage bars.
 
 "Communications drafts the regulator notice, customer notice, and warehouse
 quarantine order. The QA Director approves the packet. The result is a recall
-decision with room ID, demo actor count, live Band agent count, event count,
-message IDs, veto ID, approval ID, proof mode, hash-linked receipts, a decision
-graph, and a SHA-256 audit digest that the API can recompute. The BAT-4421
-packet is deterministic for a clean demo, and the proof panel also shows the
-captured live Band workflow: five configured Band identities, real room
-creation, Evidence, Traceability, Risk, Communications, risk veto,
-communications notice, and context fetch."
+decision with packet room ID, captured Band room ID, event count, message IDs,
+veto ID, approval ID, proof mode, hash-linked receipts, a decision graph, and a
+SHA-256 audit digest that the API can recompute. The BAT-4421 packet is
+deterministic for a clean demo, and the raw proof panel shows the captured Band
+run: five configured Band identities, real room creation, Evidence,
+Traceability, Risk, Communications, risk veto, communications notice, and
+context fetch."
 
 Show the final packet, notices, and audit seal.
 

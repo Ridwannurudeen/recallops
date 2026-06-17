@@ -24,10 +24,10 @@ specialists to join, disagree, hand off work, and preserve the decision trail:
 - Communications Agent drafts regulator, customer, and quarantine notices after approval.
 - QA Director is the human approval gate.
 
-The command-room surface exposes room ID, demo actor count, live Band agent
-count, event count, message IDs, veto ID, approval ID, proof mode, receipt
-chain, decision graph, and audit hash. The BAT-4421 transcript is deterministic,
-and `docs/band-spike-proof.json` captures a successful live Band room run:
+The command-room surface exposes packet room ID, captured Band room ID,
+captured agent count, event count, message IDs, veto ID, approval ID, proof
+mode, receipt chain, decision graph, and audit hash. The BAT-4421 transcript is
+deterministic, and `docs/band-spike-proof.json` captures a successful Band room run:
 five configured Band identities, dynamic recruitment, `@mention` handoffs,
 traceability gap, risk veto, re-plan, risk approval, communications notice,
 and context fetch.
@@ -38,7 +38,7 @@ Track: Regulated & High-Stakes Workflows.
 
 - More than 3 agents: 5 agent roles plus a human approver.
 - Cross-framework target architecture: current demo uses Band SDK plus deterministic role logic; the adapter target maps Evidence to Pydantic AI, Traceability to LangGraph, and Risk review to CrewAI.
-- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and room transcript proof.
+- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and captured room transcript proof.
 - Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
 - Presentation hook: live drill mode, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
 
@@ -70,6 +70,7 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/packet`
 - `https://recallops.gudman.xyz/api/transcript`
 - `https://recallops.gudman.xyz/api/proof`
+- `https://recallops.gudman.xyz/api/band-proof`
 - `https://recallops.gudman.xyz/api/receipts`
 - `https://recallops.gudman.xyz/api/decision-graph`
 - `https://recallops.gudman.xyz/api/verify`

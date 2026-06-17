@@ -30,9 +30,9 @@ units remain untraced.
 The Incident Commander routes the work back to Traceability, the missing
 Kestrel Distributor file is recovered, coverage moves to 100%, Communications
 drafts the regulator/customer/quarantine notices, and the human QA Director
-approves the final packet. The packet closes with room proof, message IDs, the
-veto ID, the approval ID, the proof mode, a hash-linked receipt chain, a
-decision graph, and a SHA-256 audit digest.
+approves the final packet. The packet closes with packet-room proof, captured
+Band room proof, message IDs, the veto ID, the approval ID, the proof mode, a
+hash-linked receipt chain, a decision graph, and a SHA-256 audit digest.
 
 ## Agents
 
@@ -52,7 +52,7 @@ decision graph, and a SHA-256 audit digest.
 - Re-plan loop after the veto.
 - Human approval event.
 - Hash-linked decision receipts and a decision graph showing which handoff changed state.
-- Public proof mode is `live_band_five_agent_workflow`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful live Band room where Commander drove the room, Evidence recruited Traceability, Traceability recruited Risk, Risk vetoed and forced a re-plan, Risk recruited Communications, and Communications completed the notice handoff.
+- Public proof mode is `deterministic_packet_with_captured_band_run`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful captured Band room where Commander drove the room, Evidence recruited Traceability, Traceability recruited Risk, Risk vetoed and forced a re-plan, Risk recruited Communications, and Communications completed the notice handoff.
 - Cross-framework support is the target adapter architecture: current demo logic runs through Band SDK and deterministic role logic, with Evidence mapped to a Pydantic AI adapter target, Traceability to a LangGraph adapter target, and Risk review to a CrewAI adapter target.
 
 ## Verification

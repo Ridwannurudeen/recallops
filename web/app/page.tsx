@@ -49,6 +49,30 @@ type Traceability = {
   affected_customers: number;
 };
 
+type BandStageEvidence = {
+  stage: string;
+  label: string;
+  band_message_id: string;
+  proves: string;
+};
+
+type CapturedBandRun = {
+  proof_mode: string;
+  captured_at: string;
+  room_id: string;
+  participant_count: number;
+  context_items: number;
+  commander_event_id: string;
+  commander_message_id: string;
+  evidence_ack_id: string;
+  traceability_gap_id: string;
+  risk_veto_id: string;
+  traceability_resolved_id: string;
+  risk_approved_id: string;
+  communications_notice_id: string;
+  stage_evidence: BandStageEvidence[];
+};
+
 type Packet = {
   room_id: string;
   incident_id: string;
@@ -77,25 +101,14 @@ type Packet = {
   notices: Record<string, string>;
   band_proof: {
     proof_mode: string;
-    room_id: string;
+    packet_room_id: string;
+    packet_room_type: string;
     participant_count: number;
     event_count: number;
     message_ids: string[];
     veto_message_id: string;
     approval_message_id: string;
-    live_workflow_scope: string;
-    live_workflow_room_id: string;
-    live_workflow_participant_count: number;
-    live_workflow_context_items: number;
-    live_workflow_message_ids: string[];
-    live_workflow_commander_event_id: string;
-    live_workflow_commander_message_id: string;
-    live_workflow_evidence_ack_id: string;
-    live_workflow_traceability_gap_id: string;
-    live_workflow_risk_veto_id: string;
-    live_workflow_traceability_resolved_id: string;
-    live_workflow_risk_approved_id: string;
-    live_workflow_communications_notice_id: string;
+    captured_band_run: CapturedBandRun;
   };
   receipts: {
     id: string;
@@ -144,6 +157,7 @@ export default function Home() {
   const approval = packet.events.find(
     (event) => event.stage === "human_approved",
   );
+  const capturedRun = packet.band_proof.captured_band_run;
 
   return (
     <main className="shell">
@@ -154,9 +168,10 @@ export default function Home() {
             {packet.lot} is live. The room decides before exposure compounds.
           </h1>
           <p className="lede">
-            Quality, traceability, risk, communications, and a human QA director
-            coordinate through one Band room. The regulator cannot approve the
-            packet until the missing lot coverage is resolved.
+            A deterministic recall packet is paired with a captured five-agent
+            Band run. The regulator cannot approve the packet until the missing
+            lot coverage is resolved, the veto clears, and the audit seal
+            recomputes.
           </p>
         </div>
         <aside className="exposure">
@@ -211,17 +226,24 @@ export default function Home() {
         </article>
 
         <aside className="panel proof-panel">
-          <p className="kicker">Band proof</p>
+          <p className="kicker">Packet proof</p>
           <h2>Room evidence</h2>
           <ProofRow label="mode" value={packet.band_proof.proof_mode} />
-          <ProofRow label="room" value={packet.band_proof.room_id} />
           <ProofRow
-            label="demo actors"
+            label="packet room"
+            value={packet.band_proof.packet_room_id}
+          />
+          <ProofRow
+            label="packet type"
+            value={packet.band_proof.packet_room_type}
+          />
+          <ProofRow
+            label="replay actors"
             value={packet.band_proof.participant_count.toString()}
           />
           <ProofRow
-            label="live agents"
-            value={packet.band_proof.live_workflow_participant_count.toString()}
+            label="captured agents"
+            value={capturedRun.participant_count.toString()}
           />
           <ProofRow
             label="events"
@@ -236,21 +258,16 @@ export default function Home() {
             label="approval"
             value={packet.band_proof.approval_message_id}
           />
+          <ProofRow label="captured room" value={capturedRun.room_id} />
+          <ProofRow label="captured at" value={capturedRun.captured_at} />
+          <ProofRow label="captured veto" value={capturedRun.risk_veto_id} />
           <ProofRow
-            label="live room"
-            value={packet.band_proof.live_workflow_room_id}
-          />
-          <ProofRow
-            label="live veto"
-            value={packet.band_proof.live_workflow_risk_veto_id}
-          />
-          <ProofRow
-            label="live notice"
-            value={packet.band_proof.live_workflow_communications_notice_id}
+            label="captured notice"
+            value={capturedRun.communications_notice_id}
           />
           <ProofRow
             label="context"
-            value={`${packet.band_proof.live_workflow_context_items} items`}
+            value={`${capturedRun.context_items} items`}
           />
           <div className="hash-box">
             <span>audit seal</span>
@@ -259,12 +276,38 @@ export default function Home() {
           <div className="api-actions">
             <a href={`${apiBase}/packet`}>packet api</a>
             <a href={`${apiBase}/proof`}>proof api</a>
+            <a href={`${apiBase}/band-proof`}>band proof</a>
             <a href={`${apiBase}/packet.json`}>export json</a>
             <a href={`${apiBase}/receipts`}>receipts api</a>
             <a href={`${apiBase}/decision-graph`}>graph api</a>
             <a href={`${apiBase}/verify`}>verify digest</a>
           </div>
         </aside>
+      </section>
+
+      <section className="panel raw-proof">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">raw Band proof</p>
+            <h2>Captured run, not a claim</h2>
+          </div>
+          <a href={`${apiBase}/band-proof`}>download proof</a>
+        </div>
+        <p className="proof-disclosure">
+          Judge Mode replays the deterministic BAT-4421 packet for a stable
+          walkthrough. These rows expose the real Band room IDs captured from
+          the five-agent spike that the packet receipts reference.
+        </p>
+        <div className="proof-ledger">
+          {capturedRun.stage_evidence.map((evidence) => (
+            <article key={evidence.band_message_id}>
+              <span>{evidence.stage.replaceAll("_", " ")}</span>
+              <strong>{evidence.label}</strong>
+              <code>{evidence.band_message_id}</code>
+              <p>{evidence.proves}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="lower-grid">

@@ -28,6 +28,7 @@ def test_packet_endpoint_returns_sealed_packet() -> None:
 
     assert response.status_code == 200
     packet = response.json()
+    assert packet["band_proof"]["proof_mode"] == "deterministic_packet_with_captured_band_run"
     assert packet["band_proof"]["veto_message_id"] == "msg-006"
     assert packet["decision"]["status"] == "approved"
 
@@ -47,6 +48,23 @@ def test_packet_download_headers_are_submission_ready() -> None:
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
     assert "recallops-bat-4421-packet.json" in response.headers["content-disposition"]
+
+
+def test_band_proof_endpoint_exposes_captured_run() -> None:
+    response = get("/api/band-proof")
+
+    assert response.status_code == 200
+    body = response.json()
+    captured_run = body["captured_band_run"]
+    assert body["proof_kind"] == "captured_live_band_run"
+    assert captured_run["proof_mode"] == "captured_band_five_agent_run"
+    assert captured_run["room_id"] == "6dcd1018-bce3-481f-88d6-1ab67f6db452"
+    assert captured_run["participant_count"] == 5
+    assert captured_run["stage_evidence"][3]["stage"] == "regulatory_veto"
+    assert (
+        captured_run["stage_evidence"][3]["band_message_id"]
+        == "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9"
+    )
 
 
 def test_receipts_endpoint_returns_hash_chain() -> None:

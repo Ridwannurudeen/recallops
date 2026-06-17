@@ -5,6 +5,7 @@ import json
 from fastapi import FastAPI, Response
 
 from recallops import build_recall_packet, verify_packet_digest
+from recallops.live_proof import captured_band_proof
 
 app = FastAPI(
     title="RecallOps API",
@@ -52,6 +53,18 @@ def proof() -> dict[str, object]:
         "final_traceability": packet.final_traceability.__dict__,
         "band_proof": packet.band_proof,
         "audit_hash": packet.audit_hash,
+    }
+
+
+@app.get("/api/band-proof")
+def band_proof() -> dict[str, object]:
+    return {
+        "proof_kind": "captured_live_band_run",
+        "disclosure": (
+            "The BAT-4421 packet is deterministic for judge replay. "
+            "This endpoint exposes the real Band room run captured from the five-agent spike."
+        ),
+        "captured_band_run": captured_band_proof(),
     }
 
 
