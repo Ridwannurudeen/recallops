@@ -1,6 +1,7 @@
 import packetJson from "../public/demo-packet.json";
 import LiveBandRunner from "./live-band-runner";
 import LiveDrill from "./live-drill";
+import SourceEvidenceCockpit from "./source-evidence-cockpit";
 
 type Agent = {
   id: string;
@@ -199,6 +200,8 @@ export default function Home() {
 
       <LiveDrill packet={packet} />
 
+      <SourceEvidenceCockpit apiBase={apiBase} />
+
       <section className="command-grid">
         <article className="panel timeline-panel">
           <div className="panel-head">
@@ -282,6 +285,8 @@ export default function Home() {
             <a href={`${apiBase}/receipts`}>receipts api</a>
             <a href={`${apiBase}/decision-graph`}>graph api</a>
             <a href={`${apiBase}/verify`}>verify digest</a>
+            <a href={`${apiBase}/source-evidence`}>source api</a>
+            <a href={`${apiBase}/partner-ai/status`}>ai status</a>
           </div>
         </aside>
       </section>

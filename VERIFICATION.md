@@ -10,9 +10,10 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `20 passed`, including API endpoint tests, static packet drift
-protection, workflow gates, receipt hash chaining, decision graph checks,
-digest verification, and mocked Band spike ordering.
+Result: `34 passed`, including API endpoint tests, source parser coverage,
+citation integrity, approval receipt hashing, static packet drift protection,
+workflow gates, receipt hash chaining, decision graph checks, digest
+verification, and mocked Band spike ordering.
 
 ## Live Band Workflow
 
@@ -49,6 +50,9 @@ curl.exe -fsSL https://recallops.gudman.xyz
 curl.exe -fsSL https://recallops.gudman.xyz/api/health
 curl.exe -fsSL https://recallops.gudman.xyz/api/packet
 curl.exe -fsSL https://recallops.gudman.xyz/api/proof
+curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence
+curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence/verify
+curl.exe -fsSL https://recallops.gudman.xyz/api/partner-ai/status
 curl.exe -fsSL https://recallops.gudman.xyz/api/receipts
 curl.exe -fsSL https://recallops.gudman.xyz/api/decision-graph
 curl.exe -fsSL https://recallops.gudman.xyz/api/verify
@@ -58,7 +62,9 @@ Playwright desktop and mobile smoke should show `RecallOps Command Room`, zero
 fresh console warnings/errors, and no horizontal overflow.
 
 Result: `recallops.service` and `recallops-api.service` were active on the VPS.
-Public web and API `curl` checks passed. Playwright confirmed
-`RecallOps Command Room`, visible proof mode, visible API links, packet API
-click-through, zero fresh console warnings/errors, and no horizontal overflow at
-desktop and mobile widths.
+Public web and API checks passed, including source evidence, stable source audit
+hash across repeated reads, source digest verification, partner AI status, and
+approval receipt hashing. Playwright confirmed `RecallOps Command Room`, source
+cockpit, approval receipt flow, visible proof mode, visible API links, zero
+fresh console warnings/errors, and no horizontal overflow at desktop and mobile
+widths.

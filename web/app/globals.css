@@ -579,6 +579,309 @@ h2 {
   margin-top: 20px;
 }
 
+.source-cockpit {
+  margin-top: 20px;
+}
+
+.source-grid {
+  display: grid;
+  grid-template-columns: minmax(360px, 1.05fr) minmax(320px, 0.95fr);
+  gap: 16px;
+}
+
+.source-inputs {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.source-inputs label,
+.approval-strip label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.source-inputs span,
+.approval-strip span,
+.trace-card span,
+.source-hash span,
+.digest-grid span,
+.provider-grid span,
+.fact-grid span,
+.shipment-ledger small,
+.shipment-ledger code,
+.citation-ledger span,
+.approval-receipt span,
+.approval-receipt small {
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.source-inputs textarea,
+.approval-strip input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 6px;
+  color: #f4fffd;
+  background: rgba(7, 16, 19, 0.72);
+  font-family: Consolas, "Courier New", monospace;
+}
+
+.source-inputs textarea {
+  min-height: 96px;
+  resize: vertical;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.approval-strip input {
+  height: 40px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-actions button,
+.source-actions a,
+.approval-strip button {
+  border: 1px solid rgba(125, 211, 252, 0.28);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: #e8fbff;
+  background: rgba(125, 211, 252, 0.08);
+  cursor: pointer;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.source-actions a {
+  border-color: rgba(212, 168, 95, 0.24);
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+}
+
+.source-actions button:hover:not(:disabled),
+.approval-strip button:hover:not(:disabled) {
+  border-color: rgba(125, 211, 252, 0.56);
+  background: rgba(125, 211, 252, 0.14);
+}
+
+.source-actions a:hover {
+  border-color: rgba(212, 168, 95, 0.52);
+  background: rgba(184, 137, 58, 0.12);
+}
+
+.source-actions button:disabled,
+.approval-strip button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.source-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.trace-card,
+.source-hash,
+.digest-grid div,
+.provider-grid div,
+.fact-grid article,
+.shipment-ledger article,
+.citation-ledger article,
+.approval-receipt {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 6px;
+  background: rgba(230, 252, 248, 0.035);
+}
+
+.trace-card {
+  min-height: 126px;
+  padding: 14px;
+}
+
+.trace-card strong {
+  display: block;
+  margin-top: 12px;
+  color: #fff7e8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 38px;
+  line-height: 1;
+}
+
+.trace-card small,
+.provider-grid small,
+.fact-grid small {
+  display: block;
+  margin-top: 8px;
+  color: #91c4bd;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.trace-card-gap {
+  border-color: rgba(239, 91, 91, 0.34);
+  background: rgba(239, 91, 91, 0.06);
+}
+
+.trace-card-clear {
+  border-color: rgba(85, 214, 138, 0.34);
+  background: rgba(85, 214, 138, 0.06);
+}
+
+.source-hash {
+  grid-column: 1 / -1;
+  padding: 12px;
+}
+
+.source-hash code,
+.digest-grid code,
+.approval-receipt code {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: #fff7e8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+}
+
+.digest-grid,
+.provider-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.provider-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.digest-grid div,
+.provider-grid div {
+  padding: 10px;
+}
+
+.provider-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: #fff7e8;
+  font-size: 13px;
+}
+
+.fact-grid,
+.shipment-ledger,
+.citation-ledger {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fact-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.shipment-ledger {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.citation-ledger {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fact-grid article,
+.shipment-ledger article,
+.citation-ledger article {
+  padding: 12px;
+}
+
+.fact-grid strong,
+.shipment-ledger strong,
+.citation-ledger strong,
+.approval-receipt strong {
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  color: #fff7e8;
+  font-size: 13px;
+}
+
+.shipment-ledger article {
+  position: relative;
+  min-height: 112px;
+  padding-right: 28px;
+}
+
+.shipment-ledger p,
+.citation-ledger p {
+  margin: 7px 0 0;
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.shipment-ledger code {
+  display: block;
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+  color: #91c4bd;
+}
+
+.approval-strip {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.35fr) minmax(260px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+  border-top: 1px solid rgba(125, 211, 252, 0.14);
+  padding-top: 14px;
+}
+
+.approval-strip button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+.approval-receipt {
+  margin-top: 14px;
+  padding: 12px;
+  border-color: rgba(85, 214, 138, 0.3);
+  background: rgba(85, 214, 138, 0.06);
+}
+
+.approval-receipt small {
+  display: block;
+  margin-top: 8px;
+  color: #91c4bd;
+}
+
+.risk-stat {
+  flex: 0 0 auto;
+  border: 1px solid rgba(239, 91, 91, 0.42);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: #ffb0a8;
+  background: rgba(239, 91, 91, 0.1);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+}
+
 .raw-proof .panel-head a {
   flex: 0 0 auto;
   border: 1px solid rgba(212, 168, 95, 0.28);
@@ -910,7 +1213,8 @@ h2 {
   .mast,
   .command-grid,
   .lower-grid,
-  .drill-grid {
+  .drill-grid,
+  .source-grid {
     grid-template-columns: 1fr;
   }
 
@@ -918,6 +1222,10 @@ h2 {
   .shipment-grid,
   .proof-ledger,
   .live-runner,
+  .fact-grid,
+  .shipment-ledger,
+  .citation-ledger,
+  .approval-strip,
   .fresh-proof dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -956,6 +1264,13 @@ h2 {
   .drill-monitor dl,
   .proof-ledger,
   .live-runner,
+  .source-results,
+  .digest-grid,
+  .provider-grid,
+  .fact-grid,
+  .shipment-ledger,
+  .citation-ledger,
+  .approval-strip,
   .fresh-proof dl {
     grid-template-columns: 1fr;
   }

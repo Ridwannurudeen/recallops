@@ -14,6 +14,15 @@ def get(path: str) -> httpx.Response:
     return asyncio.run(request())
 
 
+def post(path: str, body: dict[str, object]) -> httpx.Response:
+    async def request() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.post(path, json=body)
+
+    return asyncio.run(request())
+
+
 def test_health_exposes_packet_identity() -> None:
     response = get("/api/health")
 
@@ -74,6 +83,71 @@ def test_live_drill_status_endpoint_is_safe_by_default() -> None:
     body = response.json()
     assert body["enabled"] is False
     assert body["runnable"] is False
+
+
+def test_source_evidence_endpoint_returns_computed_packet() -> None:
+    response = get("/api/source-evidence")
+
+    assert response.status_code == 200
+    body = response.json()
+    packet = body["packet"]
+    assert body["verification"]["ok"] is True
+    assert packet["incident_id"] == "INC-SOURCE-BAT-4421"
+    assert packet["initial_traceability"]["coverage_percent"] == 82
+    assert packet["final_traceability"]["coverage_percent"] == 100
+    assert packet["missing_sources"] == ["SHIP-006"]
+    assert packet["partner_ai"]["mode"] == "deterministic_source_parser"
+
+
+def test_source_evidence_recompute_rejects_bad_csv() -> None:
+    response = post(
+        "/api/source-evidence",
+        {
+            "shipment_csv": "source,distributor,region,customers,units,status\nSHIP-1,D,R,1,1,bad",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "unsupported status" in response.json()["detail"]
+
+
+def test_source_evidence_verify_endpoint_recomputes_digest() -> None:
+    response = get("/api/source-evidence/verify")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["incident_id"] == "INC-SOURCE-BAT-4421"
+    assert body["expected_hash"] == body["actual_hash"]
+
+
+def test_partner_ai_status_is_honest_about_usage() -> None:
+    response = get("/api/partner-ai/status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "deterministic_source_parser"
+    assert body["providers"]["ai_ml_api"]["used"] is False
+    assert body["providers"]["featherless"]["used"] is False
+
+
+def test_approval_receipt_endpoint_hashes_human_decision() -> None:
+    source = get("/api/source-evidence").json()["packet"]
+    response = post(
+        "/api/approval-receipt",
+        {
+            "approver": "QA Director",
+            "decision": "approved",
+            "reason": "Traceability reached 100% and the veto cleared.",
+            "source_audit_hash": source["audit_hash"],
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verification"]["ok"] is True
+    assert body["receipt"]["source_audit_hash"] == source["audit_hash"]
+    assert "not a digital signature" in body["disclosure"]
 
 
 def test_receipts_endpoint_returns_hash_chain() -> None:
