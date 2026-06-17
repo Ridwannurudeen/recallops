@@ -44,10 +44,10 @@ production build succeeded.
 ## Public Smoke
 
 ```powershell
-curl.exe -fsSL https://ridwan.gudman.xyz/recallops
-curl.exe -fsSL https://ridwan.gudman.xyz/recallops-api/api/health
-curl.exe -fsSL https://ridwan.gudman.xyz/recallops-api/api/packet
-curl.exe -fsSL https://ridwan.gudman.xyz/recallops-api/api/proof
+curl.exe -fsSL https://recallops.gudman.xyz
+curl.exe -fsSL https://recallops.gudman.xyz/api/health
+curl.exe -fsSL https://recallops.gudman.xyz/api/packet
+curl.exe -fsSL https://recallops.gudman.xyz/api/proof
 ```
 
 Playwright desktop and mobile smoke should show `RecallOps Command Room`, zero

@@ -2,7 +2,7 @@
 
 Band-native command room for live product-recall decisions.
 
-Public demo: https://ridwan.gudman.xyz/recallops
+Public demo: https://recallops.gudman.xyz
 
 ![RecallOps command room](docs/cover.png)
 
@@ -65,11 +65,11 @@ Run the local API:
 
 Public API endpoints:
 
-- `https://ridwan.gudman.xyz/recallops-api/api/health`
-- `https://ridwan.gudman.xyz/recallops-api/api/packet`
-- `https://ridwan.gudman.xyz/recallops-api/api/transcript`
-- `https://ridwan.gudman.xyz/recallops-api/api/proof`
-- `https://ridwan.gudman.xyz/recallops-api/api/packet.json`
+- `https://recallops.gudman.xyz/api/health`
+- `https://recallops.gudman.xyz/api/packet`
+- `https://recallops.gudman.xyz/api/transcript`
+- `https://recallops.gudman.xyz/api/proof`
+- `https://recallops.gudman.xyz/api/packet.json`
 
 Production check:
 

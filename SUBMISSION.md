@@ -15,8 +15,8 @@ Track 3: Regulated & High-Stakes Workflows.
 
 ## Links
 
-- Demo: https://ridwan.gudman.xyz/recallops
-- Packet API: https://ridwan.gudman.xyz/recallops-api/api/packet
+- Demo: https://recallops.gudman.xyz
+- Packet API: https://recallops.gudman.xyz/api/packet
 - Repository: https://github.com/Ridwannurudeen/recallops
 
 ## What The Demo Shows

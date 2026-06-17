@@ -100,7 +100,7 @@ type Packet = {
 };
 
 const packet = packetJson as unknown as Packet;
-const apiBase = "/recallops-api/api";
+const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 const stageLabels: Record<EventStage, string> = {
   room_created: "room",
