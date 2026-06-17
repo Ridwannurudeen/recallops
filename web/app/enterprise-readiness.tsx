@@ -8,6 +8,17 @@ type AdapterStatus = {
   role: string;
   configured: boolean;
   status: string;
+  execution_ready?: boolean;
+  target_configured?: boolean;
+};
+
+type EnterpriseSyncTarget = {
+  id: string;
+  label: string;
+  operation: string;
+  execution_ready: boolean;
+  live_write_enabled: boolean;
+  status: string;
 };
 
 type Readiness = {
@@ -20,7 +31,14 @@ type Readiness = {
   };
   integrations: {
     configured_count: number;
+    execution_ready_count: number;
     adapters: AdapterStatus[];
+    enterprise_sync: {
+      live_writes_enabled: boolean;
+      admin_key_configured: boolean;
+      execution_ready_count: number;
+      targets: EnterpriseSyncTarget[];
+    };
   };
   production_blockers_remaining: string[];
   spend_limits: {
@@ -64,7 +82,10 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
           <p className="kicker">production readiness</p>
           <h2>Case store, rules, adapter gates</h2>
         </div>
-        <a href={`${apiBase}/ops-readiness`}>readiness api</a>
+        <div className="readiness-links">
+          <a href={`${apiBase}/ops-readiness`}>readiness api</a>
+          <a href={`${apiBase}/enterprise-sync`}>sap/oracle proof</a>
+        </div>
       </div>
       {readiness ? (
         <>
@@ -88,9 +109,36 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
             </article>
             <article>
               <span>enterprise adapters</span>
-              <strong>{readiness.integrations.configured_count}</strong>
+              <strong>{readiness.integrations.execution_ready_count}/2</strong>
               <small>{readiness.access_control.mode}</small>
             </article>
+            <article>
+              <span>erp write gate</span>
+              <strong>
+                {readiness.integrations.enterprise_sync.live_writes_enabled
+                  ? "enabled"
+                  : "dry-run"}
+              </strong>
+              <small>
+                {readiness.integrations.enterprise_sync.admin_key_configured
+                  ? "admin key set"
+                  : "admin key absent"}
+              </small>
+            </article>
+          </div>
+          <div className="sync-ledger">
+            {readiness.integrations.enterprise_sync.targets.map((target) => (
+              <article key={target.id}>
+                <span>{target.status}</span>
+                <strong>{target.label}</strong>
+                <p>{target.operation}</p>
+                <small>
+                  {target.execution_ready
+                    ? "tenant endpoint ready"
+                    : "tenant endpoint missing"}
+                </small>
+              </article>
+            ))}
           </div>
           <div className="adapter-ledger">
             {readiness.integrations.adapters.map((adapter) => (
@@ -98,6 +146,15 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
                 <span>{adapter.status}</span>
                 <strong>{adapter.label}</strong>
                 <p>{adapter.role}</p>
+                {adapter.id === "sap" || adapter.id === "oracle" ? (
+                  <small>
+                    {adapter.execution_ready
+                      ? "live endpoint ready"
+                      : adapter.target_configured
+                        ? "credential check pending"
+                        : "write endpoint missing"}
+                  </small>
+                ) : null}
               </article>
             ))}
           </div>

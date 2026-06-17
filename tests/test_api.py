@@ -146,9 +146,30 @@ def test_integrations_and_ops_readiness_are_explicit() -> None:
 
     assert integrations.status_code == 200
     assert readiness.status_code == 200
-    assert integrations.json()["mode"] == "adapter_registry"
+    assert integrations.json()["mode"] == "credential_gated_adapter_registry"
     assert readiness.json()["persistence"]["mode"] == "sqlite_case_store"
     assert "production_blockers_remaining" in readiness.json()
+
+
+def test_enterprise_sync_get_returns_dry_run_payloads() -> None:
+    response = get("/api/enterprise-sync")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["sync"]["mode"] == "dry_run_no_external_write"
+    assert body["sync"]["external_write"] is False
+    assert body["sync"]["payload"]["lotNumber"] == "BAT-4421"
+    assert [target["id"] for target in body["sync"]["targets"]] == ["sap", "oracle"]
+
+
+def test_enterprise_sync_live_requires_admin_gate(monkeypatch) -> None:
+    monkeypatch.delenv("RECALLOPS_ENABLE_ENTERPRISE_WRITES", raising=False)
+    monkeypatch.delenv("RECALLOPS_ADMIN_ACTION_KEY", raising=False)
+
+    response = post("/api/enterprise-sync", {"dry_run": False})
+
+    assert response.status_code == 403
+    assert "disabled" in response.json()["detail"]
 
 
 def test_rules_endpoint_returns_recall_gates() -> None:
@@ -228,7 +249,9 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["checks"]["captured_band_has_five_agents"] is True
     assert body["checks"]["rules_approval_ready"] is True
     assert body["checks"]["dispatch_receipts_prepared"] is True
+    assert body["checks"]["sap_oracle_payloads_prepared"] is True
     assert len(body["dispatch_receipts"]) == 3
+    assert body["enterprise_sync"]["mode"] == "dry_run_no_external_write"
     assert body["production_readiness"]["persistence"]["mode"] == "sqlite_case_store"
     assert body["submission_gates"]["repo_visibility"] == "private_until_user_approves_public_flip"
 

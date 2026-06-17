@@ -3,13 +3,20 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from recallops import build_recall_packet, verify_packet_digest
 from recallops.approval import build_approval_receipt, verify_approval_receipt
 from recallops.cases import create_case_record, get_case_record, list_case_records
-from recallops.enterprise import integration_status, ops_readiness
+from recallops.enterprise import (
+    EnterpriseSyncError,
+    enterprise_sync_status,
+    integration_status,
+    ops_readiness,
+    require_enterprise_write_authorization,
+    run_enterprise_sync,
+)
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
 from recallops.notifications import build_dispatch_receipts
@@ -53,6 +60,11 @@ class SubmissionProofRequest(BaseModel):
 
 class CreateCaseRequest(SourceEvidenceRequest):
     pass
+
+
+class EnterpriseSyncRequest(SourceEvidenceRequest):
+    dry_run: bool = True
+    targets: tuple[Literal["sap", "oracle"], ...] = ("sap", "oracle")
 
 
 @app.get("/api/health")
@@ -198,6 +210,52 @@ def integrations() -> dict[str, object]:
 @app.get("/api/ops-readiness")
 def readiness() -> dict[str, object]:
     return {**ops_readiness(), "spend_limits": spend_limits()}
+
+
+@app.get("/api/enterprise-sync")
+def enterprise_sync_dry_run() -> dict[str, object]:
+    return _enterprise_sync_from_inputs(
+        complaint_text=DEFAULT_COMPLAINT_TEXT,
+        shipment_csv=DEFAULT_SHIPMENT_CSV,
+        recovered_shipment_csv=DEFAULT_RECOVERED_SHIPMENT_CSV,
+        partner_ai=None,
+        dry_run=True,
+        targets=("sap", "oracle"),
+    )
+
+
+@app.post("/api/enterprise-sync")
+def enterprise_sync(
+    request: EnterpriseSyncRequest,
+    x_recallops_admin_key: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        if not request.dry_run:
+            require_enterprise_write_authorization(x_recallops_admin_key)
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        return _enterprise_sync_from_inputs(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+            dry_run=request.dry_run,
+            targets=request.targets,
+        )
+    except EnterpriseSyncError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/rules")
@@ -348,6 +406,12 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     source_packet = build_source_evidence_packet(partner_ai=partner_ai)
     rule_assessment = assess_rules(source_packet)
     dispatch_receipts = build_dispatch_receipts(source_packet)
+    enterprise_sync = run_enterprise_sync(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+        dry_run=True,
+    )
     approval = build_approval_receipt(
         approver="QA Director",
         decision="approved",
@@ -373,6 +437,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "source_evidence": "https://recallops.gudman.xyz/api/source-evidence",
             "band_proof": "https://recallops.gudman.xyz/api/band-proof",
             "live_drill": "https://recallops.gudman.xyz/api/live-drill",
+            "enterprise_sync": "https://recallops.gudman.xyz/api/enterprise-sync",
         },
         "submission_gates": {
             "demo_url": "ready",
@@ -398,6 +463,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         },
         "rule_assessment": rule_assessment,
         "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
+        "enterprise_sync": enterprise_sync,
         "production_readiness": ops_readiness(),
         "approval_receipt": {
             "receipt": approval.to_dict(),
@@ -420,7 +486,39 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "dispatch_receipts_prepared": all(
                 receipt.status == "prepared" for receipt in dispatch_receipts
             ),
+            "sap_oracle_payloads_prepared": all(
+                target["status"] == "prepared" for target in enterprise_sync["targets"]
+            ),
         },
+    }
+
+
+def _enterprise_sync_from_inputs(
+    *,
+    complaint_text: str,
+    shipment_csv: str,
+    recovered_shipment_csv: str,
+    partner_ai: dict[str, object] | None,
+    dry_run: bool,
+    targets: tuple[Literal["sap", "oracle"], ...],
+) -> dict[str, object]:
+    source_packet = build_source_evidence_packet(
+        complaint_text=complaint_text,
+        shipment_csv=shipment_csv,
+        recovered_shipment_csv=recovered_shipment_csv,
+        partner_ai=partner_ai,
+    )
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    return {
+        "sync": run_enterprise_sync(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            dispatch_receipts=dispatch_receipts,
+            dry_run=dry_run,
+            targets=targets,
+        ),
+        "status": enterprise_sync_status(),
     }
 
 

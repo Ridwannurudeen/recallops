@@ -10,10 +10,10 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `51 passed`, including API endpoint tests, source parser coverage,
+Result: `57 passed`, including API endpoint tests, source parser coverage,
 citation integrity, partner AI missing-key checks, mocked partner AI execution,
 submission proof bundle checks, SQLite case persistence, jurisdiction rules,
-dispatch receipts, integration readiness, spend-limit checks, approval receipt
+dispatch receipts, SAP/Oracle sync payloads, integration readiness, spend-limit checks, approval receipt
 hashing, static packet drift protection, workflow gates, receipt hash chaining,
 decision graph checks, digest verification, and mocked Band spike ordering.
 
@@ -58,6 +58,7 @@ curl.exe -fsSL https://recallops.gudman.xyz/api/partner-ai/status
 curl.exe -fsSL https://recallops.gudman.xyz/api/spend-limits
 curl.exe -fsSL https://recallops.gudman.xyz/api/integrations
 curl.exe -fsSL https://recallops.gudman.xyz/api/ops-readiness
+curl.exe -fsSL https://recallops.gudman.xyz/api/enterprise-sync
 curl.exe -fsSL https://recallops.gudman.xyz/api/rules
 curl.exe -fsSL https://recallops.gudman.xyz/api/notifications/dry-run
 curl.exe -fsSL https://recallops.gudman.xyz/api/submission-proof
@@ -86,6 +87,8 @@ hashes and compact JSON outputs.
 The submission proof bundle GET returns packet digest verification, source
 digest verification, approval receipt verification, captured Band proof, latest
 fresh Band drill status, partner AI readiness, and explicit submission gates.
+The enterprise sync dry-run endpoint returns SAP and Oracle recall payloads with
+payload hashes and no external ERP write.
 Live `POST /api/submission-proof` returned `partner_ai_assisted`,
 `partner_ai_used_count: 2`, and `partner_ai_used_both: true`. `/favicon.ico`
 returns HTTP 200 so opening the raw JSON endpoint does not create a browser

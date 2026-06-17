@@ -81,6 +81,7 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/spend-limits`
 - `https://recallops.gudman.xyz/api/integrations`
 - `https://recallops.gudman.xyz/api/ops-readiness`
+- `https://recallops.gudman.xyz/api/enterprise-sync`
 - `https://recallops.gudman.xyz/api/rules`
 - `https://recallops.gudman.xyz/api/notifications/dry-run`
 - `https://recallops.gudman.xyz/api/cases`
@@ -118,7 +119,15 @@ Production hardening surfaces:
 - Deterministic jurisdiction checks via `/api/rules`.
 - Dispatch-ready dry-run notification receipts via `/api/notifications/dry-run`.
 - Enterprise adapter readiness via `/api/integrations`.
+- SAP/Oracle recall payloads and credential-gated live write path via `/api/enterprise-sync`.
 - Credit-spend guardrails via `/api/spend-limits`.
+
+SAP/Oracle live adapter configuration:
+
+- SAP: set `RECALLOPS_SAP_BASE_URL`, `RECALLOPS_SAP_API_KEY` or SAP basic-auth envs, and `RECALLOPS_SAP_RECALL_PATH` or `RECALLOPS_SAP_RECALL_URL`.
+- Oracle SCM: set `RECALLOPS_ORACLE_SCM_URL`, `RECALLOPS_ORACLE_SCM_TOKEN` or Oracle basic-auth envs, and `RECALLOPS_ORACLE_SCM_RECALL_PATH` or `RECALLOPS_ORACLE_SCM_RECALL_URL`.
+- Live writes additionally require `RECALLOPS_ENABLE_ENTERPRISE_WRITES=1` and an admin action key sent as `X-RecallOps-Admin-Key`.
+- Without those tenant settings, `/api/enterprise-sync` stays in dry-run mode and exposes the exact payload hash without writing to external ERP systems.
 
 ## Band Live Workflow
 

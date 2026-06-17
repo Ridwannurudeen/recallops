@@ -43,20 +43,27 @@ Final output includes notices, affected coverage, packet room ID, captured Band
 room ID, message IDs, veto ID, approval ID, receipt chain, decision graph, and
 SHA-256 audit digest. `/api/submission-proof` bundles every judge proof surface
 into one JSON endpoint, including rules, dispatch receipts, adapter readiness,
-and spend controls.
+SAP/Oracle sync payloads, and spend controls.
 
-## 9. Raw Band Proof
+## 9. SAP / Oracle Gate
+
+RecallOps prepares the same recall-hold payload for SAP S/4HANA and Oracle SCM
+in dry-run mode. Live writes require real tenant endpoints, credentials, and a
+server-side admin action key, so the demo proves the integration contract
+without pretending to own a customer ERP tenant.
+
+## 10. Raw Band Proof
 
 The packet is deterministic for judge replay; the proof panel exposes the
 captured Band room UUID, participant count, context count, and every Band
 message ID used by the receipts.
 
-## 10. Fresh Drill
+## 11. Fresh Drill
 
 When the live runtime is enabled, RecallOps can create a fresh Band room from
 the deployed app and render the new room, veto, approval, and notice IDs.
 
-## 11. Business Value
+## 12. Business Value
 
 RecallOps compresses high-stakes recall coordination into one auditable,
 human-approved agent room.
