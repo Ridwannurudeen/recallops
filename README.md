@@ -2,10 +2,38 @@
 
 Band-native command room for live product-recall decisions.
 
+Public demo: https://ridwan.gudman.xyz/recallops
+
 The demo models a battery-pack recall for lot `BAT-4421`: Evidence extracts the
 incident, Traceability finds an 82% coverage gap, Regulatory/Risk vetoes the plan,
 Traceability recovers the missing distributor file, Communications drafts notices,
 and the QA Director approves a SHA-256 sealed packet.
+
+## Why It Fits Band
+
+RecallOps is built around a room, not a single assistant. The workflow needs
+specialists to join, disagree, hand off work, and preserve the decision trail:
+
+- Incident Commander opens the room and recruits specialists as risk increases.
+- Evidence Agent extracts product, defect, lot, and severity.
+- Traceability Agent maps lot `BAT-4421` across shipments, stock, customers, and regions.
+- Regulatory/Risk Officer vetoes the recall plan while 864 units remain untraced.
+- Communications Agent drafts regulator, customer, and quarantine notices after approval.
+- QA Director is the human approval gate.
+
+The command-room surface exposes room ID, participant count, event count,
+message IDs, veto ID, approval ID, and audit hash so the collaboration proof is
+visible during the demo.
+
+## Hackathon Alignment
+
+Track: Regulated & High-Stakes Workflows.
+
+- More than 3 agents: 5 agent roles plus a human approver.
+- Cross-framework architecture: Band SDK, Pydantic AI, LangGraph, and CrewAI roles.
+- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and room transcript proof.
+- Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
+- Presentation hook: live exposure clock, visible veto, recovered missing distributor file, final sealed packet.
 
 ## Product Demo
 

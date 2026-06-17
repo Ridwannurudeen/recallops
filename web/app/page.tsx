@@ -160,7 +160,7 @@ export default function Home() {
                   </span>
                   <p>{event.message}</p>
                   <small>
-                    {event.id} · {event.agent} · {event.mentions.join(", ")}
+                    {event.id} | {event.agent} | {event.mentions.join(", ")}
                   </small>
                 </div>
               </div>

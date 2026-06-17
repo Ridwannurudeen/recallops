@@ -1,0 +1,40 @@
+# Slide Outline
+
+## 1. RecallOps
+
+Band-native command room for live product-recall decisions.
+
+## 2. The Enterprise Pain
+
+Product recalls split evidence, traceability, regulatory risk, communications,
+and QA approval across meetings, spreadsheets, and inboxes.
+
+## 3. Why Band
+
+Recall decisions need multiple specialists in one shared room: recruitment,
+handoffs, veto, re-plan, human approval, and transcript proof.
+
+## 4. Agent Room
+
+Commander, Evidence, Traceability, Regulatory/Risk, Communications, and QA
+Director coordinate around one recall case.
+
+## 5. Demo Incident
+
+Lot `BAT-4421`: 4,800 shipped units, 6 regions, 31 exposure hours, 82% initial
+coverage, 864 untraced units.
+
+## 6. The Winning Moment
+
+Risk vetoes the plan, Traceability recovers the missing distributor file, and
+the room moves from blocked to approved.
+
+## 7. Audit Packet
+
+Final output includes notices, affected coverage, room ID, message IDs, veto ID,
+approval ID, and SHA-256 seal.
+
+## 8. Business Value
+
+RecallOps compresses high-stakes recall coordination into one auditable,
+human-approved agent room.
