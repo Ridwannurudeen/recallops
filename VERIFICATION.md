@@ -10,8 +10,9 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `14 passed`, including API endpoint tests, static packet drift
-protection, workflow gates, and mocked Band spike ordering.
+Result: `20 passed`, including API endpoint tests, static packet drift
+protection, workflow gates, receipt hash chaining, decision graph checks,
+digest verification, and mocked Band spike ordering.
 
 ## Live Band Workflow
 
@@ -48,6 +49,9 @@ curl.exe -fsSL https://recallops.gudman.xyz
 curl.exe -fsSL https://recallops.gudman.xyz/api/health
 curl.exe -fsSL https://recallops.gudman.xyz/api/packet
 curl.exe -fsSL https://recallops.gudman.xyz/api/proof
+curl.exe -fsSL https://recallops.gudman.xyz/api/receipts
+curl.exe -fsSL https://recallops.gudman.xyz/api/decision-graph
+curl.exe -fsSL https://recallops.gudman.xyz/api/verify
 ```
 
 Playwright desktop and mobile smoke should show `RecallOps Command Room`, zero

@@ -4,7 +4,7 @@ import json
 
 from fastapi import FastAPI, Response
 
-from recallops import build_recall_packet
+from recallops import build_recall_packet, verify_packet_digest
 
 app = FastAPI(
     title="RecallOps API",
@@ -52,6 +52,36 @@ def proof() -> dict[str, object]:
         "final_traceability": packet.final_traceability.__dict__,
         "band_proof": packet.band_proof,
         "audit_hash": packet.audit_hash,
+    }
+
+
+@app.get("/api/receipts")
+def receipts() -> dict[str, object]:
+    packet = build_recall_packet()
+    return {
+        "room_id": packet.room_id,
+        "audit_hash": packet.audit_hash,
+        "receipts": [receipt.__dict__ for receipt in packet.receipts],
+    }
+
+
+@app.get("/api/decision-graph")
+def decision_graph() -> dict[str, object]:
+    packet = build_recall_packet()
+    return {
+        "room_id": packet.room_id,
+        "nodes": [node.__dict__ for node in packet.decision_graph["nodes"]],
+        "edges": [edge.__dict__ for edge in packet.decision_graph["edges"]],
+    }
+
+
+@app.get("/api/verify")
+def verify() -> dict[str, object]:
+    packet = build_recall_packet()
+    return {
+        "room_id": packet.room_id,
+        "incident_id": packet.incident_id,
+        **verify_packet_digest(packet),
     }
 
 

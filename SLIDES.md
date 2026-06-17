@@ -12,7 +12,8 @@ and QA approval across meetings, spreadsheets, and inboxes.
 ## 3. Why Band
 
 Recall decisions need multiple specialists in one shared room: recruitment,
-handoffs, veto, re-plan, human approval, and transcript proof.
+handoffs, veto, re-plan, human approval, hash-linked receipts, and transcript
+proof.
 
 ## 4. Agent Room
 
@@ -27,12 +28,12 @@ coverage, 864 untraced units.
 ## 6. The Winning Moment
 
 Risk vetoes the plan, Traceability recovers the missing distributor file, and
-the room moves from blocked to approved.
+Judge Mode replays the room moving from blocked to approved.
 
 ## 7. Audit Packet
 
 Final output includes notices, affected coverage, room ID, message IDs, veto ID,
-approval ID, and SHA-256 seal.
+approval ID, receipt chain, decision graph, and SHA-256 audit digest.
 
 ## 8. Business Value
 

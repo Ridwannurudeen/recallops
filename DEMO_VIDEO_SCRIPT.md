@@ -9,7 +9,7 @@ defective product hits the market, the company does not need one chatbot. It
 needs quality, traceability, regulatory risk, communications, and a human QA
 director deciding in one auditable room."
 
-Show the full command room and exposure clock.
+Show Judge Mode running above the command room, then the exposure clock.
 
 ## 0:15-0:40 - Incident
 
@@ -25,7 +25,8 @@ Point at the exposure clock and lot headline.
 lot, and critical severity. Because the issue is critical and multi-region, the
 Commander recruits Traceability, then Regulatory/Risk."
 
-Scroll the Band transcript through `msg-001` to `msg-005`.
+Show agents joining in Judge Mode, then scroll the Band transcript through
+`msg-001` to `msg-005`.
 
 ## 1:10-1:40 - Veto
 
@@ -39,19 +40,21 @@ Pause on `msg-006` and the Band proof panel showing the veto message ID.
 
 "That veto forces a re-plan. Traceability recovers the missing Kestrel
 Distributor file, coverage moves from 82% to 100%, and Risk approves the recall
-path."
+path. Every state change is linked into the receipt chain."
 
 Show the traceability panel and coverage bars.
 
 ## 2:10-2:35 - Human Gate And Packet
 
 "Communications drafts the regulator notice, customer notice, and warehouse
-quarantine order. The QA Director approves the packet. The result is a sealed
-recall decision with room ID, participant count, event count, message IDs,
-veto ID, approval ID, proof mode, and SHA-256 audit hash. The BAT-4421 packet
-is deterministic for a clean demo, and the proof panel also shows the live
-five-agent Band workflow: real room creation, Evidence, Traceability, Risk,
-Communications, risk veto, communications notice, and context fetch."
+quarantine order. The QA Director approves the packet. The result is a recall
+decision with room ID, demo actor count, live Band agent count, event count,
+message IDs, veto ID, approval ID, proof mode, hash-linked receipts, a decision
+graph, and a SHA-256 audit digest that the API can recompute. The BAT-4421
+packet is deterministic for a clean demo, and the proof panel also shows the
+captured live Band workflow: five configured Band identities, real room
+creation, Evidence, Traceability, Risk, Communications, risk veto,
+communications notice, and context fetch."
 
 Show the final packet, notices, and audit seal.
 
