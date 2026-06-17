@@ -69,3 +69,10 @@ approval receipt hashing. Playwright confirmed `RecallOps Command Room`, source
 cockpit, approval receipt flow, visible proof mode, visible API links, zero
 fresh console warnings/errors, and no horizontal overflow at desktop and mobile
 widths.
+
+Partner AI keys were configured on the VPS after the adapter path landed.
+Public `/api/source-evidence` with `use_partner_ai: true` returned
+`partner_ai_assisted`, `used_count: 2`, AI/ML API status `used`, Featherless
+status `used`, and 64-character response hashes for both providers. The browser
+`run partner ai` button shows both provider cards as `used` with response
+hashes and compact JSON outputs.

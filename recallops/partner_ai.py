@@ -10,7 +10,7 @@ from typing import Any
 
 AIML_BASE_URL = "https://api.aimlapi.com/v1"
 FEATHERLESS_BASE_URL = "https://api.featherless.ai/v1"
-DEFAULT_AIML_MODEL = "o3-mini"
+DEFAULT_AIML_MODEL = "gpt-4o-mini"
 DEFAULT_FEATHERLESS_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 
 
@@ -162,7 +162,9 @@ def _chat_completion(
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "authorization": f"Bearer {api_key}",
+            "accept": "application/json",
             "content-type": "application/json",
+            "user-agent": "RecallOps/0.1 (+https://recallops.gudman.xyz)",
         },
         method="POST",
     )
@@ -171,9 +173,11 @@ def _chat_completion(
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
+        detail = detail.replace(api_key, "[redacted]")
         raise PartnerAIError(f"HTTP {exc.code}: {_truncate(detail)}") from exc
     except (OSError, json.JSONDecodeError) as exc:
-        raise PartnerAIError(_truncate(str(exc))) from exc
+        detail = str(exc).replace(api_key, "[redacted]")
+        raise PartnerAIError(_truncate(detail)) from exc
 
     try:
         content = body["choices"][0]["message"]["content"]
