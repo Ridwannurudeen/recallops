@@ -51,14 +51,14 @@ veto ID, the approval ID, the proof mode, and a SHA-256 audit seal.
 - Re-plan loop after the veto.
 - Human approval event.
 - Replayable transcript data sealed with a deterministic audit hash.
-- Public proof mode is `deterministic_demo` until Band remote-agent credentials are available; the live Band spike harness is included in `scripts/band_spike.py`.
+- Public proof mode is `deterministic_demo_plus_live_band_spike`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful live Band room where the Commander created a room, recruited Evidence, sent an `@mention` handoff, received an Evidence acknowledgement, and fetched room context.
 
 ## Verification
 
 - Python tests cover the traceability gap, veto ordering, approval gate, and stable audit hash.
 - Frontend typecheck and production build are clean.
 - Public deployment is smoke-tested on desktop and mobile with no console warnings and no horizontal overflow.
-- Live Band spike harness exists in `scripts/band_spike.py`; it requires untracked Band remote-agent credentials in `agent_config.yaml`.
+- Live Band spike succeeded with room `9729673d-d6ce-4715-83e9-8cfaa17885f2`, Commander message `6cc0a722-521d-414e-a3a4-81a240a9b92d`, Evidence ack `23fcfb46-0f78-4b73-b842-35c054ac4d58`, 2 participants, and 3 context items.
 
 ## Why It Matters
 

@@ -25,9 +25,10 @@ specialists to join, disagree, hand off work, and preserve the decision trail:
 
 The command-room surface exposes room ID, participant count, event count,
 message IDs, veto ID, approval ID, proof mode, and audit hash so the
-collaboration proof is visible during the demo. Until live Band credentials are
-available, the public packet is marked `deterministic_demo` and the real Band
-spike harness remains ready in `scripts/band_spike.py`.
+collaboration proof is visible during the demo. The BAT-4421 recall transcript
+is a deterministic demo packet, and `docs/band-spike-proof.json` captures a
+successful live Band spike: room creation, Evidence recruitment, `@mention`
+handoff, Evidence acknowledgement, and context fetch.
 
 ## Hackathon Alignment
 
@@ -115,8 +116,10 @@ Run the live spike:
 uv run python scripts/band_spike.py
 ```
 
-Current gate: a human Band API key or manual Band UI agent creation is required
-to obtain the two remote-agent credentials. The local product demo remains
-deterministic until `agent_config.yaml` exists.
+Latest live proof captured:
+
+- room: `9729673d-d6ce-4715-83e9-8cfaa17885f2`
+- Evidence ack: `23fcfb46-0f78-4b73-b842-35c054ac4d58`
+- context items: `3`
 
 No final hackathon submission will be made without explicit approval.

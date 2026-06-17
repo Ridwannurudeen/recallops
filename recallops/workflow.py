@@ -339,13 +339,23 @@ def _exposure_clock(snapshot: TraceabilitySnapshot) -> dict[str, int | str]:
 
 def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[str]]:
     return {
-        "proof_mode": "deterministic_demo",
+        "proof_mode": "deterministic_demo_plus_live_band_spike",
         "room_id": "band-room-recallops-bat-4421",
         "participant_count": len(AGENTS),
         "event_count": len(events),
         "message_ids": [event.id for event in events],
         "veto_message_id": next(event.id for event in events if event.stage == "regulatory_veto"),
         "approval_message_id": events[-1].id,
+        "live_spike_scope": "room_create,recruit,mention_handoff,evidence_ack,context_fetch",
+        "live_spike_room_id": "9729673d-d6ce-4715-83e9-8cfaa17885f2",
+        "live_spike_participant_count": 2,
+        "live_spike_context_items": 3,
+        "live_spike_message_ids": [
+            "ce539322-ed3a-4957-9ef9-45aef27b37a7",
+            "6cc0a722-521d-414e-a3a4-81a240a9b92d",
+            "23fcfb46-0f78-4b73-b842-35c054ac4d58",
+        ],
+        "live_spike_ack_id": "23fcfb46-0f78-4b73-b842-35c054ac4d58",
     }
 
 
