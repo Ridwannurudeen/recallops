@@ -161,6 +161,62 @@ def test_approval_receipt_endpoint_hashes_human_decision() -> None:
     assert "not a digital signature" in body["disclosure"]
 
 
+def test_submission_proof_endpoint_returns_safe_bundle() -> None:
+    response = get("/api/submission-proof")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["proof_kind"] == "recallops_submission_bundle"
+    assert body["run_partner_ai"] is False
+    assert body["packet"]["verification"]["ok"] is True
+    assert body["source_evidence"]["verification"]["ok"] is True
+    assert body["approval_receipt"]["verification"]["ok"] is True
+    assert body["checks"]["captured_band_has_five_agents"] is True
+    assert body["submission_gates"]["repo_visibility"] == "private_until_user_approves_public_flip"
+
+
+def test_submission_proof_post_can_run_partner_ai(monkeypatch) -> None:
+    def fake_partner_ai(**_: str) -> dict[str, object]:
+        return {
+            "mode": "partner_ai_assisted",
+            "used_count": 2,
+            "providers": {
+                "ai_ml_api": {
+                    "provider": "AI/ML API",
+                    "configured": True,
+                    "used": True,
+                    "status": "used",
+                    "model": "gpt-4o-mini",
+                    "role": "risk-decision adapter",
+                    "response_hash": "a" * 64,
+                    "output": {"decision": "approve"},
+                },
+                "featherless": {
+                    "provider": "Featherless",
+                    "configured": True,
+                    "used": True,
+                    "status": "used",
+                    "model": "Qwen/Qwen2.5-7B-Instruct",
+                    "role": "evidence-extraction adapter",
+                    "response_hash": "b" * 64,
+                    "output": {"lot": "BAT-4421"},
+                },
+            },
+        }
+
+    monkeypatch.setattr("recallops.api.run_partner_ai", fake_partner_ai)
+
+    response = post("/api/submission-proof", {})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["run_partner_ai"] is True
+    assert body["source_evidence"]["partner_ai"]["mode"] == "partner_ai_assisted"
+    assert body["checks"]["partner_ai_used_count"] == 2
+    assert body["checks"]["partner_ai_used_both"] is True
+    assert body["approval_receipt"]["verification"]["ok"] is True
+
+
 def test_receipts_endpoint_returns_hash_chain() -> None:
     response = get("/api/receipts")
 

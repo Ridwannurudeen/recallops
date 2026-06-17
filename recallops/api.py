@@ -42,6 +42,10 @@ class ApprovalReceiptRequest(BaseModel):
     previous_hash: str = "0" * 64
 
 
+class SubmissionProofRequest(BaseModel):
+    run_partner_ai: bool = True
+
+
 @app.get("/api/health")
 def health() -> dict[str, int | str | bool]:
     packet = build_recall_packet()
@@ -192,6 +196,17 @@ def approval_receipt(request: ApprovalReceiptRequest) -> dict[str, object]:
     }
 
 
+@app.get("/api/submission-proof")
+def submission_proof() -> dict[str, object]:
+    return _submission_proof(run_partner_ai_proof=False)
+
+
+@app.post("/api/submission-proof")
+def run_submission_proof(request: SubmissionProofRequest | None = None) -> dict[str, object]:
+    run_partner_ai_proof = True if request is None else request.run_partner_ai
+    return _submission_proof(run_partner_ai_proof=run_partner_ai_proof)
+
+
 @app.get("/api/receipts")
 def receipts() -> dict[str, object]:
     packet = build_recall_packet()
@@ -230,3 +245,84 @@ def packet_download() -> Response:
         media_type="application/json",
         headers={"Content-Disposition": 'attachment; filename="recallops-bat-4421-packet.json"'},
     )
+
+
+def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
+    recall_packet = build_recall_packet()
+    partner_ai = (
+        run_partner_ai(
+            complaint_text=DEFAULT_COMPLAINT_TEXT,
+            shipment_csv=DEFAULT_SHIPMENT_CSV,
+            recovered_shipment_csv=DEFAULT_RECOVERED_SHIPMENT_CSV,
+        )
+        if run_partner_ai_proof
+        else current_partner_ai_status()
+    )
+    source_packet = build_source_evidence_packet(partner_ai=partner_ai)
+    approval = build_approval_receipt(
+        approver="QA Director",
+        decision="approved",
+        reason="Traceability reached 100%, partner evidence was reviewed, and the risk veto cleared.",
+        source_audit_hash=source_packet.audit_hash,
+    )
+    packet_verification = verify_packet_digest(recall_packet)
+    source_verification = verify_source_evidence_digest(source_packet)
+    approval_verification = verify_approval_receipt(approval)
+    fresh_band_status = live_drill_status()
+    latest_fresh_run = fresh_band_status["latest_run"]
+    captured_run = captured_band_proof()
+    partner_ai_used_count = int(partner_ai.get("used_count", 0))
+    captured_participants = int(captured_run["participant_count"])
+
+    return {
+        "proof_kind": "recallops_submission_bundle",
+        "run_partner_ai": run_partner_ai_proof,
+        "links": {
+            "demo": "https://recallops.gudman.xyz",
+            "repository": "https://github.com/Ridwannurudeen/recallops",
+            "packet": "https://recallops.gudman.xyz/api/packet",
+            "source_evidence": "https://recallops.gudman.xyz/api/source-evidence",
+            "band_proof": "https://recallops.gudman.xyz/api/band-proof",
+            "live_drill": "https://recallops.gudman.xyz/api/live-drill",
+        },
+        "submission_gates": {
+            "demo_url": "ready",
+            "repo_visibility": "private_until_user_approves_public_flip",
+            "video": "record_before_submission",
+            "submit": "requires_explicit_user_approval",
+        },
+        "packet": {
+            "room_id": recall_packet.room_id,
+            "incident_id": recall_packet.incident_id,
+            "decision": recall_packet.decision,
+            "audit_hash": recall_packet.audit_hash,
+            "verification": packet_verification,
+        },
+        "source_evidence": {
+            "incident_id": source_packet.incident_id,
+            "audit_hash": source_packet.audit_hash,
+            "initial_traceability": source_packet.initial_traceability.__dict__,
+            "final_traceability": source_packet.final_traceability.__dict__,
+            "missing_sources": source_packet.missing_sources,
+            "partner_ai": source_packet.partner_ai,
+            "verification": source_verification,
+        },
+        "approval_receipt": {
+            "receipt": approval.to_dict(),
+            "verification": approval_verification,
+            "disclosure": "Receipt hash covers the approval payload; it is not a digital signature.",
+        },
+        "band": {
+            "captured_run": captured_run,
+            "fresh_run_status": fresh_band_status,
+        },
+        "checks": {
+            "packet_digest_ok": packet_verification["ok"],
+            "source_digest_ok": source_verification["ok"],
+            "approval_receipt_ok": approval_verification["ok"],
+            "captured_band_has_five_agents": captured_participants == 5,
+            "fresh_band_run_available": latest_fresh_run is not None,
+            "partner_ai_used_count": partner_ai_used_count,
+            "partner_ai_used_both": partner_ai_used_count == 2,
+        },
+    }

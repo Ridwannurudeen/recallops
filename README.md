@@ -79,6 +79,7 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/source-evidence/verify`
 - `https://recallops.gudman.xyz/api/partner-ai/status`
 - `https://recallops.gudman.xyz/api/approval-receipt`
+- `https://recallops.gudman.xyz/api/submission-proof`
 - `https://recallops.gudman.xyz/api/receipts`
 - `https://recallops.gudman.xyz/api/decision-graph`
 - `https://recallops.gudman.xyz/api/verify`
@@ -100,6 +101,10 @@ Python verification:
 .venv\Scripts\python.exe -m ruff check --fix .
 .venv\Scripts\python.exe -m pytest
 ```
+
+`GET /api/submission-proof` returns a safe judge bundle without spending partner
+AI credits. `POST /api/submission-proof` runs the live partner AI proof path and
+returns the same bundle with partner provider usage.
 
 ## Band Live Workflow
 

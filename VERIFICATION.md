@@ -10,11 +10,11 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `38 passed`, including API endpoint tests, source parser coverage,
+Result: `40 passed`, including API endpoint tests, source parser coverage,
 citation integrity, partner AI missing-key checks, mocked partner AI execution,
-approval receipt hashing, static packet drift protection, workflow gates,
-receipt hash chaining, decision graph checks, digest verification, and mocked
-Band spike ordering.
+submission proof bundle checks, approval receipt hashing, static packet drift
+protection, workflow gates, receipt hash chaining, decision graph checks, digest
+verification, and mocked Band spike ordering.
 
 ## Live Band Workflow
 
@@ -54,6 +54,7 @@ curl.exe -fsSL https://recallops.gudman.xyz/api/proof
 curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence
 curl.exe -fsSL https://recallops.gudman.xyz/api/source-evidence/verify
 curl.exe -fsSL https://recallops.gudman.xyz/api/partner-ai/status
+curl.exe -fsSL https://recallops.gudman.xyz/api/submission-proof
 curl.exe -fsSL https://recallops.gudman.xyz/api/receipts
 curl.exe -fsSL https://recallops.gudman.xyz/api/decision-graph
 curl.exe -fsSL https://recallops.gudman.xyz/api/verify
@@ -76,3 +77,10 @@ Public `/api/source-evidence` with `use_partner_ai: true` returned
 status `used`, and 64-character response hashes for both providers. The browser
 `run partner ai` button shows both provider cards as `used` with response
 hashes and compact JSON outputs.
+The submission proof bundle GET returns packet digest verification, source
+digest verification, approval receipt verification, captured Band proof, latest
+fresh Band drill status, partner AI readiness, and explicit submission gates.
+Live `POST /api/submission-proof` returned `partner_ai_assisted`,
+`partner_ai_used_count: 2`, and `partner_ai_used_both: true`. `/favicon.ico`
+returns HTTP 200 so opening the raw JSON endpoint does not create a browser
+console 404.

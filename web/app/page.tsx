@@ -287,6 +287,7 @@ export default function Home() {
             <a href={`${apiBase}/verify`}>verify digest</a>
             <a href={`${apiBase}/source-evidence`}>source api</a>
             <a href={`${apiBase}/partner-ai/status`}>ai status</a>
+            <a href={`${apiBase}/submission-proof`}>proof bundle</a>
           </div>
         </aside>
       </section>
