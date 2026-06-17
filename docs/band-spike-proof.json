@@ -1,17 +1,17 @@
 {
-  "captured_at": "2026-06-17T06:18:13+01:00",
-  "proof_scope": "Live two-agent Band spike proving room creation, Evidence recruitment, @mention handoff, Evidence acknowledgement, and room context fetch. The full BAT-4421 recall packet remains a deterministic demo transcript.",
+  "captured_at": "2026-06-17T07:42:00+01:00",
+  "proof_mode": "live_band_five_agent_workflow",
+  "proof_scope": "Live five-agent Band workflow proving room creation, dynamic recruitment, @mention handoffs, traceability gap, risk veto, re-plan, risk approval, communications notice, and context fetch.",
   "ok": true,
-  "room_id": "9729673d-d6ce-4715-83e9-8cfaa17885f2",
-  "participant_count": 2,
-  "context_items": 3,
-  "commander_event_id": "ce539322-ed3a-4957-9ef9-45aef27b37a7",
-  "commander_message_id": "6cc0a722-521d-414e-a3a4-81a240a9b92d",
-  "evidence_ack_id": "23fcfb46-0f78-4b73-b842-35c054ac4d58",
-  "recruited": {
-    "id": "65dbb3fb-6f5b-4dd0-90e0-37946f1371b6",
-    "name": "RecallOps Evidence",
-    "role": "member",
-    "status": "added"
-  }
+  "room_id": "6dcd1018-bce3-481f-88d6-1ab67f6db452",
+  "participant_count": 5,
+  "context_items": 8,
+  "commander_event_id": "e16220f4-c936-4f59-b7ad-d7468182efb3",
+  "commander_message_id": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+  "evidence_ack_id": "b33c7424-87e1-40db-9b15-558a64f608d7",
+  "traceability_gap_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+  "risk_veto_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+  "traceability_resolved_id": "2d7195c3-6874-4e99-bf67-73dc1724a257",
+  "risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+  "communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500"
 }

@@ -51,14 +51,14 @@ veto ID, the approval ID, the proof mode, and a SHA-256 audit seal.
 - Re-plan loop after the veto.
 - Human approval event.
 - Replayable transcript data sealed with a deterministic audit hash.
-- Public proof mode is `deterministic_demo_plus_live_band_spike`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful live Band room where the Commander created a room, recruited Evidence, sent an `@mention` handoff, received an Evidence acknowledgement, and fetched room context.
+- Public proof mode is `live_band_five_agent_workflow`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful live Band room where Commander recruited Evidence, Evidence recruited Traceability, Traceability recruited Risk, Risk vetoed and forced a re-plan, Risk recruited Communications, and Communications completed the notice handoff.
 
 ## Verification
 
 - Python tests cover the traceability gap, veto ordering, approval gate, and stable audit hash.
 - Frontend typecheck and production build are clean.
 - Public deployment is smoke-tested on desktop and mobile with no console warnings and no horizontal overflow.
-- Live Band spike succeeded with room `9729673d-d6ce-4715-83e9-8cfaa17885f2`, Commander message `6cc0a722-521d-414e-a3a4-81a240a9b92d`, Evidence ack `23fcfb46-0f78-4b73-b842-35c054ac4d58`, 2 participants, and 3 context items.
+- Live Band workflow succeeded with room `6dcd1018-bce3-481f-88d6-1ab67f6db452`, Commander message `da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5`, Evidence ack `b33c7424-87e1-40db-9b15-558a64f608d7`, Risk veto `bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9`, Communications notice `db2e10f0-f8f6-4fc4-a324-c99929911500`, 5 participants, and 8 context items.
 
 ## Why It Matters
 

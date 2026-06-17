@@ -13,18 +13,21 @@ Last full local verification: 2026-06-17.
 Result: `14 passed`, including API endpoint tests, static packet drift
 protection, workflow gates, and mocked Band spike ordering.
 
-## Live Band Spike
+## Live Band Workflow
 
 ```powershell
 .venv\Scripts\python.exe scripts\band_spike.py --check-config
-.venv\Scripts\python.exe scripts\band_spike.py --timeout 60
+.venv\Scripts\python.exe scripts\band_spike.py --timeout 120
 ```
 
-Result: config validation passed. The live Band spike created room
-`9729673d-d6ce-4715-83e9-8cfaa17885f2`, recruited `RecallOps Evidence`,
-sent Commander message `6cc0a722-521d-414e-a3a4-81a240a9b92d`, received
-Evidence ack `23fcfb46-0f78-4b73-b842-35c054ac4d58`, and fetched 3 context
-items.
+Result: config validation passed. The live Band workflow created room
+`6dcd1018-bce3-481f-88d6-1ab67f6db452`, recruited Evidence, Traceability,
+Risk, and Communications, sent Commander message
+`da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5`, received Evidence ack
+`b33c7424-87e1-40db-9b15-558a64f608d7`, captured Risk veto
+`bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9`, captured Communications notice
+`db2e10f0-f8f6-4fc4-a324-c99929911500`, and fetched 8 context items with
+5 participants.
 
 ## Frontend
 
