@@ -4,6 +4,8 @@ Band-native command room for live product-recall decisions.
 
 Public demo: https://ridwan.gudman.xyz/recallops
 
+![RecallOps command room](docs/cover.png)
+
 The demo models a battery-pack recall for lot `BAT-4421`: Evidence extracts the
 incident, Traceability finds an 82% coverage gap, Regulatory/Risk vetoes the plan,
 Traceability recovers the missing distributor file, Communications drafts notices,
