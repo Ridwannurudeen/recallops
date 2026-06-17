@@ -53,6 +53,7 @@ hash-linked receipt chain, a decision graph, and a SHA-256 audit digest.
 - Human approval event.
 - Hash-linked decision receipts and a decision graph showing which handoff changed state.
 - Public proof mode is `deterministic_packet_with_captured_band_run`: the BAT-4421 packet is deterministic, and `docs/band-spike-proof.json` records a successful captured Band room where Commander drove the room, Evidence recruited Traceability, Traceability recruited Risk, Risk vetoed and forced a re-plan, Risk recruited Communications, and Communications completed the notice handoff.
+- A guarded live rerun endpoint can create a fresh Band room from the deployed app when server-side Band credentials are enabled, with lock, cooldown, and daily cap protection.
 - Cross-framework support is the target adapter architecture: current demo logic runs through Band SDK and deterministic role logic, with Evidence mapped to a Pydantic AI adapter target, Traceability to a LangGraph adapter target, and Risk review to a CrewAI adapter target.
 
 ## Verification

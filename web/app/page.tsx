@@ -1,4 +1,5 @@
 import packetJson from "../public/demo-packet.json";
+import LiveBandRunner from "./live-band-runner";
 import LiveDrill from "./live-drill";
 
 type Agent = {
@@ -308,6 +309,7 @@ export default function Home() {
             </article>
           ))}
         </div>
+        <LiveBandRunner apiBase={apiBase} />
       </section>
 
       <section className="lower-grid">

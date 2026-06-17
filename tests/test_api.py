@@ -67,6 +67,15 @@ def test_band_proof_endpoint_exposes_captured_run() -> None:
     )
 
 
+def test_live_drill_status_endpoint_is_safe_by_default() -> None:
+    response = get("/api/live-drill")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["enabled"] is False
+    assert body["runnable"] is False
+
+
 def test_receipts_endpoint_returns_hash_chain() -> None:
     response = get("/api/receipts")
 

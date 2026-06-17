@@ -42,7 +42,12 @@ The packet is deterministic for judge replay; the proof panel exposes the
 captured Band room UUID, participant count, context count, and every Band
 message ID used by the receipts.
 
-## 9. Business Value
+## 9. Fresh Drill
+
+When the live runtime is enabled, RecallOps can create a fresh Band room from
+the deployed app and render the new room, veto, approval, and notice IDs.
+
+## 10. Business Value
 
 RecallOps compresses high-stakes recall coordination into one auditable,
 human-approved agent room.

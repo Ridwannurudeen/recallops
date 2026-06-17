@@ -71,6 +71,7 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/transcript`
 - `https://recallops.gudman.xyz/api/proof`
 - `https://recallops.gudman.xyz/api/band-proof`
+- `https://recallops.gudman.xyz/api/live-drill`
 - `https://recallops.gudman.xyz/api/receipts`
 - `https://recallops.gudman.xyz/api/decision-graph`
 - `https://recallops.gudman.xyz/api/verify`

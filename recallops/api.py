@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, HTTPException, Response
 
 from recallops import build_recall_packet, verify_packet_digest
+from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
 
 app = FastAPI(
@@ -66,6 +67,19 @@ def band_proof() -> dict[str, object]:
         ),
         "captured_band_run": captured_band_proof(),
     }
+
+
+@app.get("/api/live-drill")
+def live_drill() -> dict[str, object]:
+    return live_drill_status()
+
+
+@app.post("/api/live-drill")
+async def run_live_drill_endpoint() -> dict[str, object]:
+    try:
+        return await run_live_drill()
+    except LiveDrillError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @app.get("/api/receipts")
