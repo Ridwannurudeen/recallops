@@ -24,11 +24,13 @@ Point at the exposure clock and lot headline.
 "This is not only a replayed packet. The source cockpit exposes the complaint
 text and shipment CSV. RecallOps parses the visible rows into cited facts,
 computes the 82% initial coverage gap, recomputes the 100% recovered coverage,
-and seals the source packet with SHA-256 digests. Partner AI providers are shown
-as status targets; this run is honest that the deterministic parser handled the
-packet."
+and seals the source packet with SHA-256 digests. The partner AI button is the
+live path: when keys are configured, Featherless reviews the complaint text as
+Evidence and AI/ML API reviews the shipment CSVs as Risk, with response hashes
+shown in the packet."
 
-Show the source-grounded evidence panel, citation rows, and source audit hash.
+Show the source-grounded evidence panel, partner AI status, citation rows, and
+source audit hash.
 
 ## 1:10-1:40 - Agent Collaboration
 

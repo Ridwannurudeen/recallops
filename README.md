@@ -41,7 +41,7 @@ Track: Regulated & High-Stakes Workflows.
 - Cross-framework target architecture: current demo uses Band SDK plus deterministic role logic; the adapter target maps Evidence to Pydantic AI, Traceability to LangGraph, and Risk review to CrewAI.
 - Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and captured room transcript proof.
 - Source-grounded evidence: complaint text and shipment CSV are parsed into facts, citations, coverage snapshots, source digests, and a recomputable approval receipt.
-- Partner AI status is exposed honestly: AI/ML API and Featherless are adapter targets; this public packet uses the deterministic parser unless provider keys are configured.
+- Partner AI path: `/api/source-evidence` can call Featherless for evidence extraction and AI/ML API for risk review through their OpenAI-compatible chat APIs when provider keys are configured; response hashes and compact JSON outputs are surfaced in the cockpit.
 - Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
 - Presentation hook: live drill mode, source cockpit, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
 

@@ -10,10 +10,11 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `34 passed`, including API endpoint tests, source parser coverage,
-citation integrity, approval receipt hashing, static packet drift protection,
-workflow gates, receipt hash chaining, decision graph checks, digest
-verification, and mocked Band spike ordering.
+Result: `38 passed`, including API endpoint tests, source parser coverage,
+citation integrity, partner AI missing-key checks, mocked partner AI execution,
+approval receipt hashing, static packet drift protection, workflow gates,
+receipt hash chaining, decision graph checks, digest verification, and mocked
+Band spike ordering.
 
 ## Live Band Workflow
 

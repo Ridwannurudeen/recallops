@@ -752,6 +752,7 @@ h2 {
 
 .source-hash code,
 .digest-grid code,
+.provider-grid code,
 .approval-receipt code {
   display: block;
   margin-top: 8px;
@@ -759,6 +760,15 @@ h2 {
   color: #fff7e8;
   font-family: Consolas, "Courier New", monospace;
   font-size: 11px;
+}
+
+.provider-grid p {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  color: #d9c8a8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.42;
 }
 
 .digest-grid,

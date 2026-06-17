@@ -34,7 +34,8 @@ Judge Mode replays the room moving from blocked to approved.
 
 Complaint text and shipment CSV are visible, editable, parsed into cited facts,
 and sealed with source digests. The approval receipt hashes the computed source
-packet.
+packet. The partner AI action can call Featherless for evidence extraction and
+AI/ML API for risk review, then display model IDs and response hashes.
 
 ## 8. Audit Packet
 

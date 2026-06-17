@@ -4,8 +4,9 @@ import csv
 import hashlib
 import io
 import json
-import os
 from dataclasses import asdict, dataclass
+
+from recallops.partner_ai import partner_ai_status
 
 
 DEFAULT_COMPLAINT_TEXT = """C-117 | product: Northstar Home Battery Pack | lot: BAT-4421 | defect: overheating during overnight charge | severity: critical
@@ -92,6 +93,7 @@ def build_source_evidence_packet(
     complaint_text: str = DEFAULT_COMPLAINT_TEXT,
     shipment_csv: str = DEFAULT_SHIPMENT_CSV,
     recovered_shipment_csv: str = DEFAULT_RECOVERED_SHIPMENT_CSV,
+    partner_ai: dict[str, object] | None = None,
 ) -> SourceEvidencePacket:
     complaint_facts, complaint_citations = _parse_complaints(complaint_text)
     initial_shipments, initial_citations = _parse_shipments(shipment_csv, source_name="shipment")
@@ -117,7 +119,7 @@ def build_source_evidence_packet(
         "final_traceability": _traceability(final_shipments),
         "missing_sources": missing_sources,
         "citations": complaint_citations + initial_citations + final_citations,
-        "partner_ai": _partner_ai_status(),
+        "partner_ai": partner_ai or partner_ai_status(),
     }
     audit_hash = _audit_hash(_serialize(packet_fields))
     return SourceEvidencePacket(audit_hash=audit_hash, **packet_fields)
@@ -263,25 +265,6 @@ def _audit_hash(payload: dict[str, object]) -> str:
 
 def _text_hash(text: str) -> str:
     return hashlib.sha256(text.strip().encode("utf-8")).hexdigest()
-
-
-def _partner_ai_status() -> dict[str, object]:
-    return {
-        "mode": "deterministic_source_parser",
-        "disclosure": "Partner LLM adapters are ready, but this packet used the deterministic parser.",
-        "providers": {
-            "ai_ml_api": {
-                "configured": bool(os.getenv("AIML_API_KEY") or os.getenv("AI_ML_API_KEY")),
-                "used": False,
-                "role": "risk-decision adapter target",
-            },
-            "featherless": {
-                "configured": bool(os.getenv("FEATHERLESS_API_KEY")),
-                "used": False,
-                "role": "evidence-extraction adapter target",
-            },
-        },
-    }
 
 
 def _serialize(payload: dict[str, object]) -> dict[str, object]:

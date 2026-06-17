@@ -8,6 +8,7 @@ AI was used for:
 - researching Band SDK usage and Codeband source patterns
 - drafting implementation code for the deterministic recall workflow
 - drafting implementation code for source evidence parsing, citation display, and approval receipts
+- drafting key-gated Featherless and AI/ML API adapter calls for the source evidence workflow
 - drafting frontend UI code for the command-room demo
 - generating test cases and verification checklists
 

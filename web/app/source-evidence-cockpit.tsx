@@ -41,9 +41,15 @@ type SourceTraceability = {
 };
 
 type PartnerProvider = {
+  provider: string;
   configured: boolean;
   used: boolean;
+  status: string;
+  model: string;
   role: string;
+  response_hash?: string;
+  output?: Record<string, unknown>;
+  error?: string;
 };
 
 type SourceEvidencePacket = {
@@ -136,7 +142,7 @@ export default function SourceEvidenceCockpit({
     }
   }
 
-  async function recompute() {
+  async function recompute(usePartnerAi = false) {
     setLoading(true);
     setError(null);
     setReceipt(null);
@@ -144,7 +150,7 @@ export default function SourceEvidenceCockpit({
       const response = await fetch(`${apiBase}/source-evidence`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(inputs),
+        body: JSON.stringify({ ...inputs, use_partner_ai: usePartnerAi }),
       });
       const body = await response.json();
       if (!response.ok) {
@@ -237,8 +243,19 @@ export default function SourceEvidenceCockpit({
             />
           </label>
           <div className="source-actions">
-            <button type="button" disabled={loading} onClick={recompute}>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => recompute()}
+            >
               {loading ? "computing" : "recompute"}
+            </button>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => recompute(true)}
+            >
+              {loading ? "running" : "run partner ai"}
             </button>
             <a href={`${apiBase}/source-evidence`}>source api</a>
             <a href={`${apiBase}/source-evidence/verify`}>verify api</a>
@@ -280,10 +297,17 @@ export default function SourceEvidenceCockpit({
                 ([key, provider]) => (
                   <div key={key}>
                     <span>{key.replaceAll("_", " ")}</span>
-                    <strong>
-                      {provider.configured ? "configured" : "offline"}
-                    </strong>
-                    <small>{provider.used ? "used" : provider.role}</small>
+                    <strong>{provider.used ? "used" : provider.status}</strong>
+                    <small>
+                      {provider.configured ? provider.model : provider.role}
+                    </small>
+                    {provider.response_hash ? (
+                      <code>{provider.response_hash}</code>
+                    ) : null}
+                    {provider.output ? (
+                      <p>{JSON.stringify(provider.output)}</p>
+                    ) : null}
+                    {provider.error ? <p>{provider.error}</p> : null}
                   </div>
                 ),
               )}

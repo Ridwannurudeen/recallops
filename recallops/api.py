@@ -10,6 +10,8 @@ from recallops import build_recall_packet, verify_packet_digest
 from recallops.approval import build_approval_receipt, verify_approval_receipt
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
+from recallops.partner_ai import partner_ai_status as current_partner_ai_status
+from recallops.partner_ai import run_partner_ai
 from recallops.source_evidence import (
     DEFAULT_COMPLAINT_TEXT,
     DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -29,6 +31,7 @@ class SourceEvidenceRequest(BaseModel):
     complaint_text: str | None = None
     shipment_csv: str | None = None
     recovered_shipment_csv: str | None = None
+    use_partner_ai: bool = False
 
 
 class ApprovalReceiptRequest(BaseModel):
@@ -126,10 +129,20 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
         complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
         shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
         recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            run_partner_ai(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
         packet = build_source_evidence_packet(
             complaint_text=complaint_text,
             shipment_csv=shipment_csv,
             recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -156,7 +169,7 @@ def source_evidence_verify() -> dict[str, object]:
 
 @app.get("/api/partner-ai/status")
 def partner_ai_status() -> dict[str, object]:
-    return build_source_evidence_packet().partner_ai
+    return current_partner_ai_status()
 
 
 @app.post("/api/approval-receipt")

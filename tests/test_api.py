@@ -131,6 +131,17 @@ def test_partner_ai_status_is_honest_about_usage() -> None:
     assert body["providers"]["featherless"]["used"] is False
 
 
+def test_source_evidence_partner_ai_request_reports_missing_keys() -> None:
+    response = post("/api/source-evidence", {"use_partner_ai": True})
+
+    assert response.status_code == 200
+    partner_ai = response.json()["packet"]["partner_ai"]
+    assert partner_ai["mode"] == "deterministic_source_parser"
+    assert partner_ai["used_count"] == 0
+    assert partner_ai["providers"]["ai_ml_api"]["status"] == "missing_key"
+    assert partner_ai["providers"]["featherless"]["status"] == "missing_key"
+
+
 def test_approval_receipt_endpoint_hashes_human_decision() -> None:
     source = get("/api/source-evidence").json()["packet"]
     response = post(
