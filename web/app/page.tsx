@@ -1,4 +1,5 @@
 import packetJson from "../public/demo-packet.json";
+import LiveDrill from "./live-drill";
 
 type Agent = {
   id: string;
@@ -96,11 +97,35 @@ type Packet = {
     live_workflow_risk_approved_id: string;
     live_workflow_communications_notice_id: string;
   };
+  receipts: {
+    id: string;
+    event_id: string;
+    agent: string;
+    check: string;
+    status: "recorded" | "blocked" | "cleared" | "sealed";
+    band_reference: string;
+    previous_hash: string;
+    receipt_hash: string;
+  }[];
+  decision_graph: {
+    nodes: {
+      id: string;
+      label: string;
+      owner: string;
+      state: string;
+    }[];
+    edges: {
+      source: string;
+      target: string;
+      label: string;
+      band_message_id: string;
+    }[];
+  };
   audit_hash: string;
 };
 
 const packet = packetJson as unknown as Packet;
-const apiBase = "/recallops-api/api";
+const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
 const stageLabels: Record<EventStage, string> = {
   room_created: "room",
@@ -156,6 +181,8 @@ export default function Home() {
         </aside>
       </section>
 
+      <LiveDrill packet={packet} />
+
       <section className="command-grid">
         <article className="panel timeline-panel">
           <div className="panel-head">
@@ -189,12 +216,20 @@ export default function Home() {
           <ProofRow label="mode" value={packet.band_proof.proof_mode} />
           <ProofRow label="room" value={packet.band_proof.room_id} />
           <ProofRow
-            label="participants"
+            label="demo actors"
             value={packet.band_proof.participant_count.toString()}
+          />
+          <ProofRow
+            label="live agents"
+            value={packet.band_proof.live_workflow_participant_count.toString()}
           />
           <ProofRow
             label="events"
             value={packet.band_proof.event_count.toString()}
+          />
+          <ProofRow
+            label="receipts"
+            value={packet.receipts.length.toString()}
           />
           <ProofRow label="veto" value={packet.band_proof.veto_message_id} />
           <ProofRow
@@ -225,6 +260,9 @@ export default function Home() {
             <a href={`${apiBase}/packet`}>packet api</a>
             <a href={`${apiBase}/proof`}>proof api</a>
             <a href={`${apiBase}/packet.json`}>export json</a>
+            <a href={`${apiBase}/receipts`}>receipts api</a>
+            <a href={`${apiBase}/decision-graph`}>graph api</a>
+            <a href={`${apiBase}/verify`}>verify digest</a>
           </div>
         </aside>
       </section>

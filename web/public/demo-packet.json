@@ -23,21 +23,21 @@
       "id": "agent-evidence-01",
       "name": "Evidence Agent",
       "handle": "@recallops/evidence",
-      "framework": "Pydantic AI",
+      "framework": "Pydantic AI adapter target",
       "role": "extracts defect, product, lot, and severity"
     },
     {
       "id": "agent-trace-01",
       "name": "Traceability Agent",
       "handle": "@recallops/traceability",
-      "framework": "LangGraph",
+      "framework": "LangGraph adapter target",
       "role": "maps lots to shipments, regions, customers, and stock"
     },
     {
       "id": "agent-risk-01",
       "name": "Regulatory/Risk Officer",
       "handle": "@recallops/risk",
-      "framework": "CrewAI",
+      "framework": "CrewAI adapter target",
       "role": "vetoes unsafe decisions and approves recall path"
     },
     {
@@ -126,9 +126,7 @@
       "stage": "room_created",
       "agent": "Incident Commander",
       "message": "Opened Band room for BAT-4421 overheating reports.",
-      "mentions": [
-        "@recallops/evidence"
-      ],
+      "mentions": ["@recallops/evidence"],
       "metadata": {
         "room_id": "band-room-recallops-bat-4421"
       }
@@ -139,9 +137,7 @@
       "stage": "evidence_extracted",
       "agent": "Evidence Agent",
       "message": "Extracted product, defect, lot BAT-4421, and critical severity from 3 complaints.",
-      "mentions": [
-        "@recallops/commander"
-      ],
+      "mentions": ["@recallops/commander"],
       "metadata": {
         "complaints": 3,
         "lot": "BAT-4421"
@@ -153,9 +149,7 @@
       "stage": "agent_recruited",
       "agent": "Incident Commander",
       "message": "Severity and multi-region exposure crossed threshold; recruited Traceability Agent.",
-      "mentions": [
-        "@recallops/traceability"
-      ],
+      "mentions": ["@recallops/traceability"],
       "metadata": {
         "recruited": "traceability"
       }
@@ -166,10 +160,7 @@
       "stage": "traceability_gap",
       "agent": "Traceability Agent",
       "message": "Mapped 4,800 shipped units, but only 82% of shipment records are traced.",
-      "mentions": [
-        "@recallops/commander",
-        "@recallops/risk"
-      ],
+      "mentions": ["@recallops/commander", "@recallops/risk"],
       "metadata": {
         "shipped_units": 4800,
         "coverage_percent": 82,
@@ -182,9 +173,7 @@
       "stage": "agent_recruited",
       "agent": "Incident Commander",
       "message": "Recruited Regulatory/Risk Officer for recall decision.",
-      "mentions": [
-        "@recallops/risk"
-      ],
+      "mentions": ["@recallops/risk"],
       "metadata": {
         "recruited": "risk"
       }
@@ -195,10 +184,7 @@
       "stage": "regulatory_veto",
       "agent": "Regulatory/Risk Officer",
       "message": "VETO: customer notice cannot be approved while 864 units remain untraced.",
-      "mentions": [
-        "@recallops/traceability",
-        "@recallops/commander"
-      ],
+      "mentions": ["@recallops/traceability", "@recallops/commander"],
       "metadata": {
         "veto": true,
         "untraced_units": 864
@@ -210,10 +196,7 @@
       "stage": "traceability_resolved",
       "agent": "Traceability Agent",
       "message": "Recovered missing Kestrel Distributor file; traceability coverage is now 100%.",
-      "mentions": [
-        "@recallops/risk",
-        "@recallops/commander"
-      ],
+      "mentions": ["@recallops/risk", "@recallops/commander"],
       "metadata": {
         "coverage_percent": 100,
         "recovered_units": 864
@@ -225,10 +208,7 @@
       "stage": "risk_approved",
       "agent": "Regulatory/Risk Officer",
       "message": "Approved immediate voluntary recall, stock quarantine, and customer notification.",
-      "mentions": [
-        "@recallops/comms",
-        "@qa-director"
-      ],
+      "mentions": ["@recallops/comms", "@qa-director"],
       "metadata": {
         "approved": true
       }
@@ -239,9 +219,7 @@
       "stage": "notice_drafted",
       "agent": "Communications Agent",
       "message": "Drafted regulator notice, customer notice, and warehouse quarantine order.",
-      "mentions": [
-        "@qa-director"
-      ],
+      "mentions": ["@qa-director"],
       "metadata": {
         "notices": 3
       }
@@ -252,9 +230,7 @@
       "stage": "human_approved",
       "agent": "QA Director",
       "message": "Approved recall packet and locked final action plan.",
-      "mentions": [
-        "@recallops/commander"
-      ],
+      "mentions": ["@recallops/commander"],
       "metadata": {
         "human_approved": true
       }
@@ -313,5 +289,203 @@
     "live_workflow_risk_approved_id": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
     "live_workflow_communications_notice_id": "db2e10f0-f8f6-4fc4-a324-c99929911500"
   },
-  "audit_hash": "6696203afb2e7eb9c3702004049bbcd893d7eeb5666f3bade485afbc486b14d3"
+  "receipts": [
+    {
+      "id": "receipt-001",
+      "event_id": "msg-001",
+      "agent": "Incident Commander",
+      "check": "room-opened",
+      "status": "recorded",
+      "band_reference": "da91fc15-fd3f-4b5a-8af1-a0b2c005c5d5",
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "receipt_hash": "42fb2cb424944fa28464d2a25c7967eb0a6cada729be29ede42d320e5c1ea6e5"
+    },
+    {
+      "id": "receipt-002",
+      "event_id": "msg-002",
+      "agent": "Evidence Agent",
+      "check": "incident-facts-extracted",
+      "status": "recorded",
+      "band_reference": "b33c7424-87e1-40db-9b15-558a64f608d7",
+      "previous_hash": "42fb2cb424944fa28464d2a25c7967eb0a6cada729be29ede42d320e5c1ea6e5",
+      "receipt_hash": "99b62f25cc2bb525175ccfafc4c13f56149c82c05171b88ba81997e7a9cf0020"
+    },
+    {
+      "id": "receipt-003",
+      "event_id": "msg-003",
+      "agent": "Incident Commander",
+      "check": "specialist-recruited",
+      "status": "recorded",
+      "band_reference": "msg-003",
+      "previous_hash": "99b62f25cc2bb525175ccfafc4c13f56149c82c05171b88ba81997e7a9cf0020",
+      "receipt_hash": "5c5e501df8f6c1f182d41cf4e734e190c9c028ef44b8505c24f6d56f308f3e11"
+    },
+    {
+      "id": "receipt-004",
+      "event_id": "msg-004",
+      "agent": "Traceability Agent",
+      "check": "coverage-below-approval-threshold",
+      "status": "recorded",
+      "band_reference": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82",
+      "previous_hash": "5c5e501df8f6c1f182d41cf4e734e190c9c028ef44b8505c24f6d56f308f3e11",
+      "receipt_hash": "be6fcf51d4259fff883168e711b5bd07ea4afbe8c66448060a15a28121600216"
+    },
+    {
+      "id": "receipt-005",
+      "event_id": "msg-005",
+      "agent": "Incident Commander",
+      "check": "specialist-recruited",
+      "status": "recorded",
+      "band_reference": "msg-005",
+      "previous_hash": "be6fcf51d4259fff883168e711b5bd07ea4afbe8c66448060a15a28121600216",
+      "receipt_hash": "c052e500f17406b2a66d3278579ddfc5a98b246fe639e41378185b462024a0e2"
+    },
+    {
+      "id": "receipt-006",
+      "event_id": "msg-006",
+      "agent": "Regulatory/Risk Officer",
+      "check": "approval-blocked-by-risk",
+      "status": "blocked",
+      "band_reference": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9",
+      "previous_hash": "c052e500f17406b2a66d3278579ddfc5a98b246fe639e41378185b462024a0e2",
+      "receipt_hash": "4bf9894bd6936a7b87163090a10983d662122ddfc7144f97545990506a0ef40a"
+    },
+    {
+      "id": "receipt-007",
+      "event_id": "msg-007",
+      "agent": "Traceability Agent",
+      "check": "coverage-restored-to-100",
+      "status": "cleared",
+      "band_reference": "2d7195c3-6874-4e99-bf67-73dc1724a257",
+      "previous_hash": "4bf9894bd6936a7b87163090a10983d662122ddfc7144f97545990506a0ef40a",
+      "receipt_hash": "d93eb4e729e6b30f6d419b3e06f293e026f67ec2e8e0971f89e392fa3e8812ea"
+    },
+    {
+      "id": "receipt-008",
+      "event_id": "msg-008",
+      "agent": "Regulatory/Risk Officer",
+      "check": "risk-cleared-after-replan",
+      "status": "cleared",
+      "band_reference": "04b94bb6-d8eb-4816-9cc7-70b91093a145",
+      "previous_hash": "d93eb4e729e6b30f6d419b3e06f293e026f67ec2e8e0971f89e392fa3e8812ea",
+      "receipt_hash": "2a1b7e598105c3bd4cd1536d7ef8bd72c5e5e017ac0e107fb3d22418f11d5109"
+    },
+    {
+      "id": "receipt-009",
+      "event_id": "msg-009",
+      "agent": "Communications Agent",
+      "check": "notices-ready-after-approval",
+      "status": "cleared",
+      "band_reference": "db2e10f0-f8f6-4fc4-a324-c99929911500",
+      "previous_hash": "2a1b7e598105c3bd4cd1536d7ef8bd72c5e5e017ac0e107fb3d22418f11d5109",
+      "receipt_hash": "b6b3848989736619d8c3d1f496cbe7ea05e6832c050780b50555009e119c7780"
+    },
+    {
+      "id": "receipt-010",
+      "event_id": "msg-010",
+      "agent": "QA Director",
+      "check": "human-gate-sealed",
+      "status": "sealed",
+      "band_reference": "msg-010",
+      "previous_hash": "b6b3848989736619d8c3d1f496cbe7ea05e6832c050780b50555009e119c7780",
+      "receipt_hash": "da1c570d2fc1b9ca86fe7c2f872bd74895e51bd868766b6f373335306d10ff2b"
+    }
+  ],
+  "decision_graph": {
+    "nodes": [
+      {
+        "id": "incident",
+        "label": "BAT-4421 incident",
+        "owner": "Incident Commander",
+        "state": "open"
+      },
+      {
+        "id": "evidence",
+        "label": "critical defect extracted",
+        "owner": "Evidence Agent",
+        "state": "recorded"
+      },
+      {
+        "id": "trace-gap",
+        "label": "82% lot coverage",
+        "owner": "Traceability Agent",
+        "state": "incomplete"
+      },
+      {
+        "id": "risk-veto",
+        "label": "customer notice veto",
+        "owner": "Regulatory/Risk Officer",
+        "state": "blocked"
+      },
+      {
+        "id": "trace-resolved",
+        "label": "100% lot coverage",
+        "owner": "Traceability Agent",
+        "state": "cleared"
+      },
+      {
+        "id": "risk-approved",
+        "label": "voluntary recall approved",
+        "owner": "Regulatory/Risk Officer",
+        "state": "cleared"
+      },
+      {
+        "id": "notices",
+        "label": "regulator/customer notices",
+        "owner": "Communications Agent",
+        "state": "ready"
+      },
+      {
+        "id": "human-gate",
+        "label": "QA director approval",
+        "owner": "QA Director",
+        "state": "sealed"
+      }
+    ],
+    "edges": [
+      {
+        "source": "incident",
+        "target": "evidence",
+        "label": "@mention intake",
+        "band_message_id": "msg-001"
+      },
+      {
+        "source": "evidence",
+        "target": "trace-gap",
+        "label": "dynamic recruitment",
+        "band_message_id": "msg-003"
+      },
+      {
+        "source": "trace-gap",
+        "target": "risk-veto",
+        "label": "risk review",
+        "band_message_id": "dad3fe04-0d06-4ac4-a427-8cab0aa85d82"
+      },
+      {
+        "source": "risk-veto",
+        "target": "trace-resolved",
+        "label": "veto forces re-plan",
+        "band_message_id": "bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9"
+      },
+      {
+        "source": "trace-resolved",
+        "target": "risk-approved",
+        "label": "coverage recovered",
+        "band_message_id": "msg-007"
+      },
+      {
+        "source": "risk-approved",
+        "target": "notices",
+        "label": "@mention communications",
+        "band_message_id": "msg-008"
+      },
+      {
+        "source": "notices",
+        "target": "human-gate",
+        "label": "human approval gate",
+        "band_message_id": "msg-009"
+      }
+    ]
+  },
+  "audit_hash": "6085949e8ce61b7ef553c760a80aa2dd6ee8ecf6a1077bd470981f92fe7e0311"
 }

@@ -2,14 +2,15 @@
 
 Band-native command room for live product-recall decisions.
 
-Public demo: https://ridwan.gudman.xyz/recallops
+Public demo: https://recallops.gudman.xyz
 
 ![RecallOps command room](docs/cover.png)
 
-The demo models a battery-pack recall for lot `BAT-4421`: Evidence extracts the
-incident, Traceability finds an 82% coverage gap, Regulatory/Risk vetoes the plan,
-Traceability recovers the missing distributor file, Communications drafts notices,
-and the QA Director approves a SHA-256 sealed packet.
+The deployed demo uses a deterministic battery-pack recall for lot `BAT-4421`
+so judges can replay the same incident every time: Evidence extracts the
+incident, Traceability finds an 82% coverage gap, Regulatory/Risk vetoes the
+plan, Traceability recovers the missing distributor file, Communications drafts
+notices, and the QA Director approves a SHA-256 audit digest.
 
 ## Why It Fits Band
 
@@ -23,23 +24,23 @@ specialists to join, disagree, hand off work, and preserve the decision trail:
 - Communications Agent drafts regulator, customer, and quarantine notices after approval.
 - QA Director is the human approval gate.
 
-The command-room surface exposes room ID, participant count, event count,
-message IDs, veto ID, approval ID, proof mode, and audit hash so the
-collaboration proof is visible during the demo. The BAT-4421 recall transcript
-is a deterministic demo packet, and `docs/band-spike-proof.json` captures a
-successful live five-agent Band workflow: room creation, dynamic recruitment,
-`@mention` handoffs, traceability gap, risk veto, re-plan, risk approval,
-communications notice, and context fetch.
+The command-room surface exposes room ID, demo actor count, live Band agent
+count, event count, message IDs, veto ID, approval ID, proof mode, receipt
+chain, decision graph, and audit hash. The BAT-4421 transcript is deterministic,
+and `docs/band-spike-proof.json` captures a successful live Band room run:
+five configured Band identities, dynamic recruitment, `@mention` handoffs,
+traceability gap, risk veto, re-plan, risk approval, communications notice,
+and context fetch.
 
 ## Hackathon Alignment
 
 Track: Regulated & High-Stakes Workflows.
 
 - More than 3 agents: 5 agent roles plus a human approver.
-- Cross-framework target architecture: Band SDK, Pydantic-style extraction, LangGraph-style traceability flow, and CrewAI-style risk review roles.
+- Cross-framework target architecture: current demo uses Band SDK plus deterministic role logic; the adapter target maps Evidence to Pydantic AI, Traceability to LangGraph, and Risk review to CrewAI.
 - Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and room transcript proof.
 - Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
-- Presentation hook: live exposure clock, visible veto, recovered missing distributor file, final sealed packet.
+- Presentation hook: live drill mode, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
 
 ## Product Demo
 
@@ -65,11 +66,14 @@ Run the local API:
 
 Public API endpoints:
 
-- `https://ridwan.gudman.xyz/recallops-api/api/health`
-- `https://ridwan.gudman.xyz/recallops-api/api/packet`
-- `https://ridwan.gudman.xyz/recallops-api/api/transcript`
-- `https://ridwan.gudman.xyz/recallops-api/api/proof`
-- `https://ridwan.gudman.xyz/recallops-api/api/packet.json`
+- `https://recallops.gudman.xyz/api/health`
+- `https://recallops.gudman.xyz/api/packet`
+- `https://recallops.gudman.xyz/api/transcript`
+- `https://recallops.gudman.xyz/api/proof`
+- `https://recallops.gudman.xyz/api/receipts`
+- `https://recallops.gudman.xyz/api/decision-graph`
+- `https://recallops.gudman.xyz/api/verify`
+- `https://recallops.gudman.xyz/api/packet.json`
 
 Production check:
 

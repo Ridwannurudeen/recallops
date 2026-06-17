@@ -19,6 +19,8 @@ Stage = Literal[
     "human_approved",
 ]
 
+ReceiptStatus = Literal["recorded", "blocked", "cleared", "sealed"]
+
 
 @dataclass(frozen=True)
 class AgentIdentity:
@@ -62,6 +64,34 @@ class TraceabilitySnapshot:
 
 
 @dataclass(frozen=True)
+class DecisionReceipt:
+    id: str
+    event_id: str
+    agent: str
+    check: str
+    status: ReceiptStatus
+    band_reference: str
+    previous_hash: str
+    receipt_hash: str
+
+
+@dataclass(frozen=True)
+class DecisionGraphNode:
+    id: str
+    label: str
+    owner: str
+    state: str
+
+
+@dataclass(frozen=True)
+class DecisionGraphEdge:
+    source: str
+    target: str
+    label: str
+    band_message_id: str
+
+
+@dataclass(frozen=True)
 class RecallPacket:
     room_id: str
     incident_id: str
@@ -78,6 +108,8 @@ class RecallPacket:
     decision: dict[str, str | bool]
     notices: dict[str, str]
     band_proof: dict[str, int | str | list[str]]
+    receipts: tuple[DecisionReceipt, ...]
+    decision_graph: dict[str, tuple[DecisionGraphNode, ...] | tuple[DecisionGraphEdge, ...]]
     audit_hash: str
 
     def to_dict(self) -> dict[str, object]:
@@ -96,21 +128,21 @@ AGENTS: tuple[AgentIdentity, ...] = (
         id="agent-evidence-01",
         name="Evidence Agent",
         handle="@recallops/evidence",
-        framework="Pydantic AI",
+        framework="Pydantic AI adapter target",
         role="extracts defect, product, lot, and severity",
     ),
     AgentIdentity(
         id="agent-trace-01",
         name="Traceability Agent",
         handle="@recallops/traceability",
-        framework="LangGraph",
+        framework="LangGraph adapter target",
         role="maps lots to shipments, regions, customers, and stock",
     ),
     AgentIdentity(
         id="agent-risk-01",
         name="Regulatory/Risk Officer",
         handle="@recallops/risk",
-        framework="CrewAI",
+        framework="CrewAI adapter target",
         role="vetoes unsafe decisions and approves recall path",
     ),
     AgentIdentity(
@@ -138,6 +170,8 @@ def build_recall_packet(*, resolve_gap: bool = True, human_approved: bool = True
     decision = _decision(final, human_approved=human_approved)
     notices = _notices(decision)
     band_proof = _band_proof(events)
+    receipts = _decision_receipts(events, band_proof)
+    decision_graph = _decision_graph(events, band_proof)
     packet_fields = {
         "room_id": "band-room-recallops-bat-4421",
         "incident_id": "INC-2026-06-16-BAT-4421",
@@ -154,9 +188,23 @@ def build_recall_packet(*, resolve_gap: bool = True, human_approved: bool = True
         "decision": decision,
         "notices": notices,
         "band_proof": band_proof,
+        "receipts": receipts,
+        "decision_graph": decision_graph,
     }
     audit_hash = _audit_hash(_serialize_packet_fields(packet_fields))
     return RecallPacket(audit_hash=audit_hash, **packet_fields)
+
+
+def verify_packet_digest(packet: RecallPacket) -> dict[str, str | bool]:
+    payload = packet.to_dict()
+    expected_hash = str(payload.pop("audit_hash"))
+    actual_hash = _audit_hash(_serialize_packet_fields(payload))
+    return {
+        "ok": actual_hash == expected_hash,
+        "algorithm": "sha256",
+        "expected_hash": expected_hash,
+        "actual_hash": actual_hash,
+    }
 
 
 def _shipments(*, resolve_gap: bool) -> tuple[Shipment, ...]:
@@ -338,6 +386,10 @@ def _exposure_clock(snapshot: TraceabilitySnapshot) -> dict[str, int | str]:
 
 
 def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[str]]:
+    approval_message_id = next(
+        (event.id for event in events if event.stage == "human_approved"),
+        "none",
+    )
     return {
         "proof_mode": "live_band_five_agent_workflow",
         "room_id": "band-room-recallops-bat-4421",
@@ -345,7 +397,7 @@ def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[s
         "event_count": len(events),
         "message_ids": [event.id for event in events],
         "veto_message_id": next(event.id for event in events if event.stage == "regulatory_veto"),
-        "approval_message_id": events[-1].id,
+        "approval_message_id": approval_message_id,
         "live_workflow_scope": (
             "room_create,evidence_extract,traceability_gap,risk_veto,"
             "replan,risk_approval,communications_notice"
@@ -373,18 +425,151 @@ def _band_proof(events: tuple[RecallEvent, ...]) -> dict[str, int | str | list[s
     }
 
 
+def _decision_receipts(
+    events: tuple[RecallEvent, ...],
+    band_proof: dict[str, int | str | list[str]],
+) -> tuple[DecisionReceipt, ...]:
+    live_refs = {
+        "msg-001": str(band_proof["live_workflow_commander_message_id"]),
+        "msg-002": str(band_proof["live_workflow_evidence_ack_id"]),
+        "msg-004": str(band_proof["live_workflow_traceability_gap_id"]),
+        "msg-006": str(band_proof["live_workflow_risk_veto_id"]),
+        "msg-007": str(band_proof["live_workflow_traceability_resolved_id"]),
+        "msg-008": str(band_proof["live_workflow_risk_approved_id"]),
+        "msg-009": str(band_proof["live_workflow_communications_notice_id"]),
+    }
+    previous_hash = "0" * 64
+    receipts: list[DecisionReceipt] = []
+    for index, event in enumerate(events, start=1):
+        receipt_payload = {
+            "event_id": event.id,
+            "stage": event.stage,
+            "agent": event.agent,
+            "mentions": event.mentions,
+            "metadata": event.metadata,
+            "previous_hash": previous_hash,
+        }
+        receipt_hash = _audit_hash(_serialize_packet_fields(receipt_payload))
+        receipt = DecisionReceipt(
+            id=f"receipt-{index:03d}",
+            event_id=event.id,
+            agent=event.agent,
+            check=_receipt_check(event.stage),
+            status=_receipt_status(event.stage),
+            band_reference=live_refs.get(event.id, event.id),
+            previous_hash=previous_hash,
+            receipt_hash=receipt_hash,
+        )
+        receipts.append(receipt)
+        previous_hash = receipt_hash
+    return tuple(receipts)
+
+
+def _receipt_check(stage: Stage) -> str:
+    checks = {
+        "room_created": "room-opened",
+        "evidence_extracted": "incident-facts-extracted",
+        "agent_recruited": "specialist-recruited",
+        "traceability_gap": "coverage-below-approval-threshold",
+        "regulatory_veto": "approval-blocked-by-risk",
+        "traceability_resolved": "coverage-restored-to-100",
+        "risk_approved": "risk-cleared-after-replan",
+        "notice_drafted": "notices-ready-after-approval",
+        "human_approved": "human-gate-sealed",
+    }
+    return checks[stage]
+
+
+def _receipt_status(stage: Stage) -> ReceiptStatus:
+    if stage == "regulatory_veto":
+        return "blocked"
+    if stage in {"traceability_resolved", "risk_approved", "notice_drafted"}:
+        return "cleared"
+    if stage == "human_approved":
+        return "sealed"
+    return "recorded"
+
+
+def _decision_graph(
+    events: tuple[RecallEvent, ...],
+    band_proof: dict[str, int | str | list[str]],
+) -> dict[str, tuple[DecisionGraphNode, ...] | tuple[DecisionGraphEdge, ...]]:
+    event_ids = {event.stage: event.id for event in events}
+    recruitment_ids = [event.id for event in events if event.stage == "agent_recruited"]
+    nodes = (
+        DecisionGraphNode("incident", "BAT-4421 incident", "Incident Commander", "open"),
+        DecisionGraphNode("evidence", "critical defect extracted", "Evidence Agent", "recorded"),
+        DecisionGraphNode("trace-gap", "82% lot coverage", "Traceability Agent", "incomplete"),
+        DecisionGraphNode(
+            "risk-veto", "customer notice veto", "Regulatory/Risk Officer", "blocked"
+        ),
+        DecisionGraphNode("trace-resolved", "100% lot coverage", "Traceability Agent", "cleared"),
+        DecisionGraphNode(
+            "risk-approved", "voluntary recall approved", "Regulatory/Risk Officer", "cleared"
+        ),
+        DecisionGraphNode("notices", "regulator/customer notices", "Communications Agent", "ready"),
+        DecisionGraphNode("human-gate", "QA director approval", "QA Director", "sealed"),
+    )
+    edges = [
+        DecisionGraphEdge("incident", "evidence", "@mention intake", event_ids["room_created"]),
+        DecisionGraphEdge("evidence", "trace-gap", "dynamic recruitment", recruitment_ids[0]),
+        DecisionGraphEdge(
+            "trace-gap",
+            "risk-veto",
+            "risk review",
+            str(band_proof["live_workflow_traceability_gap_id"]),
+        ),
+        DecisionGraphEdge(
+            "risk-veto",
+            "trace-resolved",
+            "veto forces re-plan",
+            str(band_proof["live_workflow_risk_veto_id"]),
+        ),
+    ]
+    if "traceability_resolved" in event_ids:
+        edges.append(
+            DecisionGraphEdge(
+                "trace-resolved",
+                "risk-approved",
+                "coverage recovered",
+                event_ids["traceability_resolved"],
+            )
+        )
+    if "risk_approved" in event_ids:
+        edges.append(
+            DecisionGraphEdge(
+                "risk-approved",
+                "notices",
+                "@mention communications",
+                event_ids["risk_approved"],
+            )
+        )
+    if "notice_drafted" in event_ids:
+        edges.append(
+            DecisionGraphEdge(
+                "notices",
+                "human-gate",
+                "human approval gate",
+                event_ids["notice_drafted"],
+            )
+        )
+    return {"nodes": nodes, "edges": tuple(edges)}
+
+
 def _audit_hash(payload: dict[str, object]) -> str:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _serialize_packet_fields(payload: dict[str, object]) -> dict[str, object]:
-    serialized = {}
-    for key, value in payload.items():
-        if isinstance(value, tuple):
-            serialized[key] = tuple(asdict(item) for item in value)
-        elif hasattr(value, "__dataclass_fields__"):
-            serialized[key] = asdict(value)
-        else:
-            serialized[key] = value
-    return serialized
+    return {key: _to_plain(value) for key, value in payload.items()}
+
+
+def _to_plain(value: object) -> object:
+    if hasattr(value, "__dataclass_fields__"):
+        return asdict(value)
+    if isinstance(value, tuple):
+        return [_to_plain(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _to_plain(item) for key, item in value.items()}
+    return value

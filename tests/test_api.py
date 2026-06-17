@@ -47,3 +47,30 @@ def test_packet_download_headers_are_submission_ready() -> None:
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
     assert "recallops-bat-4421-packet.json" in response.headers["content-disposition"]
+
+
+def test_receipts_endpoint_returns_hash_chain() -> None:
+    response = get("/api/receipts")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["receipts"][0]["previous_hash"] == "0" * 64
+    assert body["receipts"][-1]["status"] == "sealed"
+
+
+def test_decision_graph_endpoint_returns_veto_path() -> None:
+    response = get("/api/decision-graph")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert any(edge["label"] == "veto forces re-plan" for edge in body["edges"])
+
+
+def test_verify_endpoint_recomputes_audit_digest() -> None:
+    response = get("/api/verify")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["ok"] is True
+    assert body["algorithm"] == "sha256"
+    assert body["expected_hash"] == body["actual_hash"]
