@@ -1,3 +1,5 @@
+import ThemeToggle from "./theme-toggle";
+
 type SiteNavProps = {
   active?: "product" | "demo" | "proof" | "integrations" | "security";
 };
@@ -28,9 +30,12 @@ export default function SiteNav({ active }: SiteNavProps) {
           </a>
         ))}
       </nav>
-      <a className="judge-link" href="/judge-mode">
-        Open Judge Mode
-      </a>
+      <div className="site-actions">
+        <ThemeToggle />
+        <a className="judge-link" href="/judge-mode">
+          Open Judge Mode
+        </a>
+      </div>
     </header>
   );
 }
