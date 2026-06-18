@@ -124,6 +124,24 @@ h2 {
   line-height: 1.62;
 }
 
+.hero-claims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.hero-claims span {
+  border: 1px solid rgba(212, 168, 95, 0.24);
+  border-radius: 999px;
+  padding: 8px 10px;
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .exposure,
 .panel,
 .agents article {
@@ -585,6 +603,108 @@ h2 {
 
 .readiness-panel {
   margin-top: 20px;
+}
+
+.category-thesis,
+.operating-system,
+.buyer-proof {
+  margin-top: 20px;
+}
+
+.category-copy {
+  max-width: 1040px;
+  margin: -4px 0 18px;
+  color: #d9c8a8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.62;
+}
+
+.market-grid,
+.operating-layers,
+.buyer-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.market-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.market-grid article,
+.operating-layers article,
+.buyer-grid article {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 6px;
+  padding: 13px;
+  background: rgba(230, 252, 248, 0.035);
+}
+
+.market-grid a,
+.operating-system .panel-head a,
+.market-grid span,
+.operating-layers span,
+.buyer-grid span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.market-grid a:hover,
+.operating-system .panel-head a:hover {
+  color: #fff7e8;
+}
+
+.market-grid strong,
+.operating-layers strong,
+.buyer-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff7e8;
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.market-grid p,
+.market-grid small,
+.operating-layers p,
+.buyer-grid p {
+  display: block;
+  margin: 9px 0 0;
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.48;
+}
+
+.market-grid small {
+  color: #91c4bd;
+}
+
+.operating-system .panel-head a {
+  flex: 0 0 auto;
+  border: 1px solid rgba(212, 168, 95, 0.28);
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+}
+
+.operating-layers {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.buyer-proof {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.buyer-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .readiness-links {
@@ -1334,6 +1454,8 @@ h2 {
   .agents,
   .shipment-grid,
   .proof-ledger,
+  .market-grid,
+  .operating-layers,
   .live-runner,
   .readiness-grid,
   .sync-ledger,
@@ -1345,6 +1467,10 @@ h2 {
   .approval-strip,
   .fresh-proof dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .buyer-proof {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1391,6 +1517,9 @@ h2 {
   .fact-grid,
   .shipment-ledger,
   .citation-ledger,
+  .market-grid,
+  .operating-layers,
+  .buyer-grid,
   .approval-strip,
   .fresh-proof dl {
     grid-template-columns: 1fr;

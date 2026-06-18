@@ -155,6 +155,110 @@ const stageLabels: Record<EventStage, string> = {
   human_approved: "human gate",
 };
 
+const marketSignals = [
+  {
+    company: "Oracle",
+    product: "Fusion Cloud Product Recall Management",
+    signal:
+      "End-to-end recall capture, affected-product traceability, quarantine, disposal, and structured tasks.",
+    recallops:
+      "Keep SAP/Oracle as systems of record, but put a live decision room and proof seal above the recall lifecycle.",
+    href: "https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26b/fampr/overview-of-product-recall-management.html",
+  },
+  {
+    company: "Honeywell",
+    product: "TrackWise Recall Management",
+    signal:
+      "AI-assisted life-sciences recall workflow, regulatory compliance, and patient-safety framing.",
+    recallops:
+      "Expose the AI decision path, risk veto, human approval, and evidence hashes instead of hiding intelligence inside workflow.",
+    href: "https://automation.honeywell.com/us/en/news/press-releases/2025/honeywell-ai-assisted-recall-software",
+  },
+  {
+    company: "TraceLink",
+    product: "Targeted Recalls",
+    signal:
+      "Real-time targeted alerts, site matching, response tracking, and automatic digital audit trails.",
+    recallops:
+      "Turn targeted recall execution into agent-routed notices backed by traceability coverage and dispatch receipts.",
+    href: "https://www.tracelink.com/products/product-orchestration/targeted-recalls",
+  },
+  {
+    company: "Trustwell",
+    product: "FoodLogiQ Recall",
+    signal:
+      "Fast food recall execution with real-time alerts, lot-level traceability, dashboards, and escalation.",
+    recallops:
+      "Use the same speed expectation, then add explainable vetoes and cross-system proof for regulated operators.",
+    href: "https://www.trustwell.com/products/foodlogiq/recall/",
+  },
+  {
+    company: "MasterControl",
+    product: "Quality Excellence",
+    signal:
+      "Automated workflows, real-time tracking, integrated documentation, CAPA, and compliance records.",
+    recallops:
+      "Connect recall decisions to approval receipts and closure evidence without forcing the recall to live inside one QMS.",
+    href: "https://www.mastercontrol.com/glossary-page/fda-product-recall-management/",
+  },
+  {
+    company: "ETQ / Hexagon",
+    product: "ETQ Reliance eQMS",
+    signal:
+      "Workflow-based enterprise QMS covering CAPA, supplier quality, audits, compliance, and risk.",
+    recallops:
+      "Position as the recall command layer that can orchestrate QMS, ERP, support, and regulator actions together.",
+    href: "https://hexagon.com/products/product-groups/etq-reliance",
+  },
+];
+
+const operatingLayers = [
+  {
+    layer: "signal",
+    headline: "Supplier letter, complaint, FDA notice, or support ticket",
+    copy: "Normalize the first recall signal into a source-cited incident packet before any downstream workflow starts.",
+  },
+  {
+    layer: "scope",
+    headline: "Lot, batch, site, shipment, and customer exposure",
+    copy: "Compute initial and final traceability coverage, then block approval while material gaps remain open.",
+  },
+  {
+    layer: "decision",
+    headline: "Risk veto, re-plan, and human approval",
+    copy: "Make every agent handoff inspectable: who vetoed, what changed, what cleared, and which identity approved.",
+  },
+  {
+    layer: "execution",
+    headline: "SAP/Oracle holds, dispatch notices, and ERP receipts",
+    copy: "Prepare tenant-shaped payloads, execute only behind admin gates, and keep the external write proof redacted.",
+  },
+  {
+    layer: "proof",
+    headline: "Hash-linked recall record for regulators and boards",
+    copy: "Bundle the packet, Band run, partner-AI outputs, approval receipt, and integration receipts into one proof endpoint.",
+  },
+];
+
+const productSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "RecallOps",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: "https://recallops.gudman.xyz",
+  description:
+    "AI product recall command center for SAP, Oracle SCM, QMS, support, and regulatory workflows.",
+  featureList: [
+    "AI product recall management",
+    "SAP and Oracle recall adapter proof",
+    "Lot and batch traceability",
+    "Human approval receipts",
+    "Hash-linked audit trail",
+    "Multi-agent recall command room",
+  ],
+};
+
 export default function Home() {
   const veto = packet.events.find((event) => event.stage === "regulatory_veto");
   const approval = packet.events.find(
@@ -164,18 +268,26 @@ export default function Home() {
 
   return (
     <main className="shell">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       <section className="mast">
         <div>
-          <p className="kicker">RecallOps command room</p>
-          <h1>
-            {packet.lot} is live. The room decides before exposure compounds.
-          </h1>
+          <p className="kicker">RecallOps | AI product recall command center</p>
+          <h1>Recall execution for teams that already run SAP and Oracle.</h1>
           <p className="lede">
-            A deterministic recall packet is paired with a captured five-agent
-            Band run. The regulator cannot approve the packet until the missing
-            lot coverage is resolved, the veto clears, and the audit seal
+            Coordinate source evidence, lot traceability, risk vetoes, human
+            approvals, ERP holds, notifications, and regulator-ready proof from
+            one live agent room. The {packet.lot} drill below shows the system
+            blocking approval until coverage resolves and the audit seal
             recomputes.
           </p>
+          <div className="hero-claims">
+            <span>multi-agent recall room</span>
+            <span>SAP/Oracle adapter proof</span>
+            <span>hash-linked audit receipts</span>
+          </div>
         </div>
         <aside className="exposure">
           <span className="live-dot" />
@@ -204,6 +316,99 @@ export default function Home() {
       <SourceEvidenceCockpit apiBase={apiBase} />
 
       <EnterpriseReadiness apiBase={apiBase} />
+
+      <section className="panel category-thesis">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">category thesis</p>
+            <h2>Incumbents manage recalls. RecallOps proves decisions.</h2>
+          </div>
+          <span className="mono-stat">6-market benchmark</span>
+        </div>
+        <p className="category-copy">
+          Oracle, Honeywell TrackWise, TraceLink, Trustwell, MasterControl, and
+          ETQ all validate the market: recall buyers need traceability,
+          workflow, alerts, dashboards, compliance records, and quality-system
+          closure. RecallOps takes the next step: an auditable command layer
+          that shows how the decision was reached, which agent challenged it,
+          which ERP action was prepared, and which proof a regulator can verify.
+        </p>
+        <div className="market-grid">
+          {marketSignals.map((signal) => (
+            <article key={signal.company}>
+              <a href={signal.href} rel="noreferrer" target="_blank">
+                {signal.company}
+              </a>
+              <strong>{signal.product}</strong>
+              <p>{signal.signal}</p>
+              <small>{signal.recallops}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel operating-system">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">recall operating system</p>
+            <h2>One incident across five control planes</h2>
+          </div>
+          <a href={`${apiBase}/submission-proof`}>open proof bundle</a>
+        </div>
+        <div className="operating-layers">
+          {operatingLayers.map((item, index) => (
+            <article key={item.layer}>
+              <span>
+                {String(index + 1).padStart(2, "0")} | {item.layer}
+              </span>
+              <strong>{item.headline}</strong>
+              <p>{item.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel buyer-proof">
+        <div>
+          <p className="kicker">why it can outrank</p>
+          <h2>Built for the search intent incumbents answer only halfway</h2>
+        </div>
+        <div className="buyer-grid">
+          <article>
+            <span>for quality leaders</span>
+            <strong>Audit-ready evidence, not just workflow status</strong>
+            <p>
+              Quality teams can show the complaint facts, coverage gap,
+              regulatory veto, approval identity, and closure receipts in the
+              same packet.
+            </p>
+          </article>
+          <article>
+            <span>for supply chain</span>
+            <strong>Traceability gates before execution</strong>
+            <p>
+              Distribution and warehouse actions do not move until RecallOps
+              resolves affected lots, regions, customers, and missing files.
+            </p>
+          </article>
+          <article>
+            <span>for enterprise IT</span>
+            <strong>Layer above SAP, Oracle, QMS, and support</strong>
+            <p>
+              The product does not ask an enterprise to rip out systems of
+              record. It coordinates them and records the exact adapter payload.
+            </p>
+          </article>
+          <article>
+            <span>for executives</span>
+            <strong>Board-readable recall command record</strong>
+            <p>
+              Every high-risk incident becomes a concise, verifiable narrative:
+              what happened, who decided, what changed, and what proof remains.
+            </p>
+          </article>
+        </div>
+      </section>
 
       <section className="command-grid">
         <article className="panel timeline-panel">
