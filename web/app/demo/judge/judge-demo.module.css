@@ -11,7 +11,9 @@
 
 .scenarioPicker,
 .scenarioCard,
+.agentBoard,
 .stepRail article,
+.executionPanel,
 .resultsGrid article,
 .bandPanel,
 .dispatchPanel,
@@ -25,6 +27,8 @@
 
 .scenarioPicker,
 .scenarioCard,
+.agentBoard,
+.executionPanel,
 .bandPanel,
 .dispatchPanel,
 .transcriptPanel,
@@ -173,6 +177,87 @@
   opacity: 0.52;
 }
 
+.agentBoard {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.agentBoard h2,
+.executionHeader h2,
+.transcriptPanel h2 {
+  margin: 0;
+  color: #fff7e8;
+}
+
+.agentBoard p,
+.executionHeader p {
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.agentGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.agentGrid article {
+  position: relative;
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 7px;
+  padding: 12px;
+  background: rgba(7, 16, 25, 0.48);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    transform 180ms ease;
+}
+
+.agentGrid article[data-active="true"] {
+  border-color: rgba(212, 168, 95, 0.72);
+  background: rgba(212, 168, 95, 0.14);
+  transform: translateY(-2px);
+}
+
+.agentGrid article[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gilt-2);
+  box-shadow: 0 0 0 6px rgba(212, 168, 95, 0.14);
+}
+
+.agentGrid span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.agentGrid strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff7e8;
+  font-size: 13px;
+  line-height: 1.28;
+}
+
+.agentGrid p {
+  margin: 8px 0 0;
+  color: #d9c8a8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .stepRail {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -245,6 +330,96 @@
   padding: 12px;
   background: rgba(255, 93, 93, 0.08);
   color: #ffd0d0;
+}
+
+.executionPanel {
+  padding: 18px;
+}
+
+.executionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.executionHeader > strong {
+  flex: 0 0 auto;
+  border: 1px solid rgba(212, 168, 95, 0.24);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.liveEventFeed {
+  display: grid;
+  gap: 8px;
+  max-height: 440px;
+  overflow: auto;
+  padding-right: 4px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 5%,
+    #000 95%,
+    transparent
+  );
+}
+
+.liveEventFeed article {
+  display: grid;
+  grid-template-columns: 78px 132px minmax(0, 1fr) 80px;
+  gap: 12px;
+  align-items: start;
+  border: 1px solid rgba(125, 211, 252, 0.13);
+  border-radius: 7px;
+  padding: 11px;
+  background: rgba(7, 16, 25, 0.48);
+}
+
+.liveEventFeed article[data-status="running"] {
+  border-color: rgba(212, 168, 95, 0.42);
+}
+
+.liveEventFeed article[data-status="complete"] {
+  border-color: rgba(90, 211, 154, 0.24);
+}
+
+.liveEventFeed article[data-status="gated"] {
+  border-color: rgba(255, 184, 77, 0.34);
+}
+
+.liveEventFeed article[data-status="failed"] {
+  border-color: rgba(255, 93, 93, 0.38);
+}
+
+.liveEventFeed time,
+.liveEventFeed span,
+.liveEventFeed code {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.liveEventFeed strong {
+  display: block;
+  color: #fff7e8;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.liveEventFeed p {
+  margin: 5px 0 0;
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .resultsGrid {
@@ -358,7 +533,9 @@
 
 html[data-theme="light"] .scenarioPicker,
 html[data-theme="light"] .scenarioCard,
+html[data-theme="light"] .agentBoard,
 html[data-theme="light"] .stepRail article,
+html[data-theme="light"] .executionPanel,
 html[data-theme="light"] .resultsGrid article,
 html[data-theme="light"] .bandPanel,
 html[data-theme="light"] .dispatchPanel,
@@ -367,13 +544,17 @@ html[data-theme="light"] .holdPanel,
 html[data-theme="light"] .scriptPanel,
 html[data-theme="light"] .bandStats div,
 html[data-theme="light"] .targetGrid article,
-html[data-theme="light"] .transcriptFeed article {
+html[data-theme="light"] .transcriptFeed article,
+html[data-theme="light"] .agentGrid article,
+html[data-theme="light"] .liveEventFeed article {
   border-color: rgba(111, 134, 153, 0.22);
   background: rgba(255, 255, 255, 0.82);
 }
 
 html[data-theme="light"] .scenarioList strong,
 html[data-theme="light"] .scenarioCard h2,
+html[data-theme="light"] .agentBoard h2,
+html[data-theme="light"] .executionHeader h2,
 html[data-theme="light"] .bandPanel h2,
 html[data-theme="light"] .dispatchPanel h2,
 html[data-theme="light"] .transcriptPanel h2,
@@ -382,13 +563,17 @@ html[data-theme="light"] .stepRail strong,
 html[data-theme="light"] .resultsGrid strong,
 html[data-theme="light"] .bandStats strong,
 html[data-theme="light"] .targetGrid strong,
-html[data-theme="light"] .transcriptFeed strong {
+html[data-theme="light"] .transcriptFeed strong,
+html[data-theme="light"] .agentGrid strong,
+html[data-theme="light"] .liveEventFeed strong {
   color: #071019;
 }
 
 html[data-theme="light"] .scenarioList span,
 html[data-theme="light"] .scenarioList small,
 html[data-theme="light"] .metaStrip,
+html[data-theme="light"] .agentBoard p,
+html[data-theme="light"] .executionHeader p,
 html[data-theme="light"] .stepRail p,
 html[data-theme="light"] .resultsGrid p,
 html[data-theme="light"] .bandPanel p,
@@ -398,7 +583,9 @@ html[data-theme="light"] .holdPanel p,
 html[data-theme="light"] .scriptPanel li,
 html[data-theme="light"] .scenarioCard p,
 html[data-theme="light"] .targetGrid p,
-html[data-theme="light"] .transcriptFeed p {
+html[data-theme="light"] .transcriptFeed p,
+html[data-theme="light"] .agentGrid p,
+html[data-theme="light"] .liveEventFeed p {
   color: #45576a;
 }
 
@@ -418,9 +605,18 @@ html[data-theme="light"] .breakToggle {
 
 @media (max-width: 980px) {
   .leadGrid,
+  .agentBoard,
   .bandPanel,
   .dispatchPanel,
   .transcriptPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .agentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .liveEventFeed article {
     grid-template-columns: 1fr;
   }
 
@@ -435,6 +631,7 @@ html[data-theme="light"] .breakToggle {
 }
 
 @media (max-width: 620px) {
+  .agentGrid,
   .stepRail {
     grid-template-columns: 1fr;
   }

@@ -33,6 +33,43 @@ type DemoStep = {
 
 type JsonRecord = Record<string, unknown>;
 
+type LiveEvent = {
+  id: number;
+  at: string;
+  actor: string;
+  stage: string;
+  detail: string;
+  status: "running" | "complete" | "gated" | "failed";
+};
+
+const agentRoles = [
+  {
+    actor: "Evidence",
+    role: "reads the complaint",
+    output: "product, lot, defect, severity",
+  },
+  {
+    actor: "Traceability",
+    role: "checks shipment records",
+    output: "coverage, missing units, regions",
+  },
+  {
+    actor: "Regulatory/Risk",
+    role: "checks safety risk",
+    output: "hold recommendation or clearance",
+  },
+  {
+    actor: "Communications",
+    role: "prepares notices",
+    output: "regulator and customer drafts",
+  },
+  {
+    actor: "QA Director",
+    role: "owns final sign-off",
+    output: "human decision gate",
+  },
+];
+
 const scenarios: Scenario[] = [
   {
     id: "battery",
@@ -150,6 +187,8 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
   );
   const [esignature, setESignature] = useState<JsonRecord | null>(null);
   const [proof, setProof] = useState<JsonRecord | null>(null);
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [currentActor, setCurrentActor] = useState<string | null>(null);
 
   const scenario = useMemo(
     () =>
@@ -222,6 +261,34 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     setRegulatorDispatch(null);
     setESignature(null);
     setProof(null);
+    setLiveEvents([]);
+    setCurrentActor(null);
+  }
+
+  async function appendLiveEvent(
+    actor: string,
+    stage: string,
+    detail: string,
+    status: LiveEvent["status"],
+  ) {
+    setCurrentActor(actor);
+    setLiveEvents((current) => [
+      ...current,
+      {
+        id: current.length + 1,
+        at: new Date().toLocaleTimeString([], {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        actor,
+        stage,
+        detail,
+        status,
+      },
+    ]);
+    await sleep(status === "running" ? 260 : 160);
   }
 
   function scenarioInputs() {
@@ -244,33 +311,106 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     setRegulatorDispatch(null);
     setESignature(null);
     setProof(null);
+    setLiveEvents([]);
+    setCurrentActor(null);
 
     try {
       const inputs = scenarioInputs();
 
+      await appendLiveEvent(
+        "Judge console",
+        "scenario selected",
+        `${scenario.title}: ${scenario.risk}.`,
+        "running",
+      );
+
       updateStep("evidence", "running");
+      await appendLiveEvent(
+        "Evidence",
+        "reading complaint",
+        "Posting complaint text and shipment CSV to the live source-evidence endpoint.",
+        "running",
+      );
       const nextEvidence = await postJson(`${apiBase}/source-evidence`, {
         ...inputs,
       });
       setEvidence(nextEvidence);
       updateStep("evidence", "complete");
+      await appendLiveEvent(
+        "Evidence",
+        "source packet sealed",
+        `Created ${getPathString(nextEvidence, ["packet", "incident_id"])} with source hash ${shortValue(getPathString(nextEvidence, ["packet", "audit_hash"]))}.`,
+        "complete",
+      );
+      await appendLiveEvent(
+        "Traceability",
+        "coverage math",
+        `Coverage moves from ${getPathNumber(nextEvidence, ["packet", "initial_traceability", "coverage_percent"]) ?? 0}% to ${getPathNumber(nextEvidence, ["packet", "final_traceability", "coverage_percent"]) ?? 0}%; missing units after recovery: ${getPathNumber(nextEvidence, ["packet", "final_traceability", "untraced_units"]) ?? 0}.`,
+        "complete",
+      );
 
       updateStep("room", "running");
+      await appendLiveEvent(
+        "Commander",
+        "requesting Band room",
+        "Calling the recall-room endpoint with run_live_band=true so Band is attempted first.",
+        "running",
+      );
       const nextRoomRun = await postJson(`${apiBase}/recall-room/run`, {
         ...inputs,
         run_live_band: true,
       });
       setRoomRun(nextRoomRun);
       updateStep("room", "complete");
+      await appendLiveEvent(
+        "Band",
+        "room proof attached",
+        `Room mode: ${(getPathString(nextRoomRun, ["run", "band", "mode"]) ?? "unknown").replaceAll("_", " ")}; participants: ${getPathNumber(nextRoomRun, ["run", "band", "participant_count"]) ?? 0}.`,
+        "complete",
+      );
+      for (const event of getPathArray(nextRoomRun, [
+        "run",
+        "room",
+        "events",
+      ])) {
+        const eventRecord = asRecord(event);
+        await appendLiveEvent(
+          getString(eventRecord, "agent") ?? "RecallOps agent",
+          (getString(eventRecord, "stage") ?? "room event").replaceAll(
+            "_",
+            " ",
+          ),
+          getString(eventRecord, "message") ?? "Room event completed.",
+          "complete",
+        );
+      }
 
       updateStep("filing", "running");
+      await appendLiveEvent(
+        "Communications",
+        "drafting filings",
+        "Generating regulator, distributor, FDA-screen, and NHTSA-screen filing drafts from the source packet.",
+        "running",
+      );
       const nextFilingPack = await postJson(`${apiBase}/filing-pack`, {
         ...inputs,
       });
       setFilingPack(nextFilingPack);
       updateStep("filing", "complete");
+      await appendLiveEvent(
+        "Communications",
+        "filing pack sealed",
+        `Filing pack hash ${shortValue(getPathString(nextFilingPack, ["filing_pack", "pack_hash"]))}.`,
+        "complete",
+      );
 
       updateStep("regulator", "running");
+      await appendLiveEvent(
+        "Regulatory/Risk",
+        "preparing dispatch",
+        "Preparing CPSC, EU, and regional regulator dispatch packets as dry-runs only.",
+        "running",
+      );
       const nextRegulatorDispatch = await postJson(
         `${apiBase}/regulator-filing`,
         {
@@ -281,6 +421,12 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
       );
       setRegulatorDispatch(nextRegulatorDispatch);
       updateStep("regulator", "complete");
+      await appendLiveEvent(
+        "Regulatory/Risk",
+        "dispatch prepared",
+        `${getPathArray(nextRegulatorDispatch, ["regulator_dispatch", "targets"]).length} regulator targets prepared; no external submission was sent.`,
+        "complete",
+      );
 
       updateStep("signature", "running");
       const nextFinalCoverage =
@@ -297,7 +443,19 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
           final_coverage_percent: nextFinalCoverage,
         });
         updateStep("signature", "gated");
+        await appendLiveEvent(
+          "QA Director",
+          "sign-off blocked",
+          `Final coverage is ${nextFinalCoverage}%, so human sign-off stays closed and the case remains in review.`,
+          "gated",
+        );
       } else {
+        await appendLiveEvent(
+          "QA Director",
+          "checking sign-off gate",
+          "Testing whether verified approval material is present before sealing human sign-off.",
+          "running",
+        );
         const nextSignature = await runSignatureGate({
           apiBase,
           approvalKey: approvalKey.trim(),
@@ -313,14 +471,40 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
         });
         setESignature(nextSignature.body);
         updateStep("signature", nextSignature.signed ? "complete" : "gated");
+        await appendLiveEvent(
+          "QA Director",
+          nextSignature.signed ? "sign-off sealed" : "sign-off gated",
+          nextSignature.signed
+            ? "Verified approval material sealed the human sign-off receipt."
+            : "No approval key was provided, so the public demo proves the sign-off gate stays closed.",
+          nextSignature.signed ? "complete" : "gated",
+        );
       }
 
       updateStep("packet", "running");
+      await appendLiveEvent(
+        "Proof desk",
+        "assembling packet",
+        "Fetching deployed submission proof so the judge can inspect the final bundle.",
+        "running",
+      );
       const nextProof = await fetchJson(`${apiBase}/submission-proof`);
       setProof(nextProof);
       updateStep("packet", "complete");
+      await appendLiveEvent(
+        "Proof desk",
+        "audit packet ready",
+        "Full proof bundle is ready for download and independent inspection.",
+        "complete",
+      );
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Judge demo failed.");
+      await appendLiveEvent(
+        "RecallOps",
+        "run failed",
+        exc instanceof Error ? exc.message : "Judge demo failed.",
+        "failed",
+      );
       setSteps((current) =>
         current.map((step) =>
           step.status === "running" ? { ...step, status: "failed" } : step,
@@ -478,6 +662,33 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
         </article>
       </div>
 
+      <section className={styles.agentBoard}>
+        <div>
+          <p className={styles.kicker}>Band command room</p>
+          <h2>Five roles working together, not one chatbot.</h2>
+          <p>
+            The active card changes as the run progresses so judges can see who
+            is reading, calculating, challenging, drafting, and signing.
+          </p>
+        </div>
+        <div className={styles.agentGrid}>
+          {agentRoles.map((role) => {
+            const active =
+              currentActor === role.actor ||
+              (currentActor === "Commander" && role.actor === "Evidence") ||
+              (currentActor === "Band" && role.actor === "Traceability") ||
+              (currentActor === "Proof desk" && role.actor === "QA Director");
+            return (
+              <article data-active={active} key={role.actor}>
+                <span>{role.actor}</span>
+                <strong>{role.role}</strong>
+                <p>{role.output}</p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
       <div className={styles.stepRail}>
         {steps.map((step, index) => (
           <article className={styles[step.status]} key={step.id}>
@@ -488,6 +699,50 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
           </article>
         ))}
       </div>
+
+      <section className={styles.executionPanel}>
+        <div className={styles.executionHeader}>
+          <div>
+            <p className={styles.kicker}>Live execution stream</p>
+            <h2>Watch the room work, step by step.</h2>
+            <p>
+              This is the missing show-your-work layer: every API call, agent
+              handoff, coverage change, filing draft, and sign-off decision is
+              written as it happens.
+            </p>
+          </div>
+          <strong>{running ? "running live" : "ready"}</strong>
+        </div>
+        <div className={styles.liveEventFeed}>
+          {liveEvents.length > 0 ? (
+            liveEvents.map((event) => (
+              <article data-status={event.status} key={event.id}>
+                <time>{event.at}</time>
+                <span>{event.actor}</span>
+                <div>
+                  <strong>{event.stage}</strong>
+                  <p>{event.detail}</p>
+                </div>
+                <code>{event.status}</code>
+              </article>
+            ))
+          ) : (
+            <article data-status="running">
+              <time>--:--:--</time>
+              <span>RecallOps</span>
+              <div>
+                <strong>waiting for run</strong>
+                <p>
+                  Click Run fresh Band room demo to watch source parsing,
+                  traceability, Band handoffs, filing drafts, and sign-off gate
+                  checks unfold live.
+                </p>
+              </div>
+              <code>ready</code>
+            </article>
+          )}
+        </div>
+      </section>
 
       {error ? <p className={styles.error}>{error}</p> : null}
 
@@ -765,6 +1020,15 @@ function getBoolean(record: JsonRecord | null | undefined, key: string) {
   return typeof value === "boolean" ? value : null;
 }
 
+function shortValue(value: string | null) {
+  if (!value) {
+    return "pending";
+  }
+  return value.length > 18
+    ? `${value.slice(0, 10)}...${value.slice(-8)}`
+    : value;
+}
+
 function getPathString(value: unknown, path: string[]) {
   const target = getPathValue(value, path);
   return typeof target === "string" ? target : null;
@@ -787,6 +1051,10 @@ function getPathValue(value: unknown, path: string[]) {
     current = record[segment];
   }
   return current;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function formatError(value: unknown, fallback: string) {
