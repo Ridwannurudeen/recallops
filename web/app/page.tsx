@@ -149,6 +149,9 @@ export default function Home() {
             review gates, prepare ERP actions, and seal the approval trail.
           </p>
           <div className="hero-actions-v2">
+            <a className="primary-action" href="/workspace">
+              Use the workspace
+            </a>
             <a className="primary-action" href="/console">
               Open operator console
             </a>
@@ -397,6 +400,9 @@ export default function Home() {
           </p>
         </div>
         <div className="landing-final-actions">
+          <a className="primary-action" href="/workspace">
+            Use the workspace
+          </a>
           <a className="primary-action" href="/demo/judge">
             Start judge demo
           </a>

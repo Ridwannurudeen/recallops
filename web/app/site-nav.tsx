@@ -3,6 +3,7 @@ import ThemeToggle from "./theme-toggle";
 type SiteNavProps = {
   active?:
     | "product"
+    | "workspace"
     | "console"
     | "judge"
     | "demo"
@@ -14,6 +15,7 @@ type SiteNavProps = {
 
 const navItems = [
   { id: "product", label: "Product", href: "/" },
+  { id: "workspace", label: "Workspace", href: "/workspace" },
   { id: "judge", label: "Judge Demo", href: "/demo/judge" },
   { id: "console", label: "Try Live", href: "/console" },
   { id: "demo", label: "Replay", href: "/demo/bat-4421" },
