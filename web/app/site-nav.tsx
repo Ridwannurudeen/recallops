@@ -1,4 +1,4 @@
-import ThemeToggle from "./theme-toggle";
+﻿import ThemeToggle from "./theme-toggle";
 
 type SiteNavProps = {
   active?:
@@ -15,17 +15,17 @@ type SiteNavProps = {
 const navItems = [
   { id: "product", label: "Product", href: "/" },
   { id: "demo", label: "Demo", href: "/demo/bat-4421" },
+  { id: "proof", label: "Proof", href: "/proof" },
   { id: "integrations", label: "Integrations", href: "/integrations" },
-  { id: "trust", label: "Trust Center", href: "/trust" },
-  { id: "docs", label: "Docs", href: "/docs" },
+  { id: "trust", label: "Trust", href: "/trust" },
 ] as const;
 
 export default function SiteNav({ active }: SiteNavProps) {
   return (
-    <header className="site-nav">
-      <a className="site-mark" href="/">
+    <header className="site-nav clean-site-nav">
+      <a className="site-mark" href="/" aria-label="RecallOps home">
         <strong>RecallOps</strong>
-        <span>proof-carrying command room</span>
+        <span>recall command system</span>
       </a>
       <nav aria-label="Primary navigation">
         {navItems.map((item) => (

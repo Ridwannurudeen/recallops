@@ -1,4 +1,4 @@
-import {
+﻿import {
   apiBase,
   packet,
   proofStatusDefinitions,
@@ -9,63 +9,57 @@ import SiteNav from "../site-nav";
 
 const trustRows = [
   {
-    label: "Source hashing",
+    label: "Human accountability",
+    status: "GATED" as const,
+    proves:
+      "The final action requires a named recall owner and approval reason.",
+    boundary:
+      "Agents recommend and prepare. They do not own the legal decision.",
+  },
+  {
+    label: "Source integrity",
     status: "DETERMINISTIC" as const,
     proves:
-      "The BAT-4421 source packet can be recomputed into the displayed digest.",
+      "Complaint, shipment, recovery, and receipt data can be recomputed into hashes.",
     boundary:
-      "It does not prove a customer tenant accepted a production action.",
+      "A digest proves packet integrity, not real-world product removal by itself.",
   },
   {
-    label: "Human approval",
+    label: "System boundaries",
     status: "GATED" as const,
     proves:
-      "Approval receipts bind a named signer, reason, source hash, room hash, and filing hash.",
-    boundary: "The demo does not make the software the legal recall owner.",
-  },
-  {
-    label: "Band room evidence",
-    status: "CAPTURED" as const,
-    proves:
-      "The packet references captured room, participant, handoff, hold, and notice IDs.",
-    boundary: "Captured Band evidence is not presented as a current live room.",
-  },
-  {
-    label: "ERP actions",
-    status: "GATED" as const,
-    proves:
-      "SAP and Oracle payloads are shaped from the same approved recall action.",
+      "SAP, Oracle, regulator, provider, and identity paths disclose their current state.",
     boundary:
-      "Tenant writes require configured endpoints and admin authorization.",
+      "Customer tenant writes and real submissions remain authorization-gated.",
   },
 ];
 
 export default function TrustPage() {
   return (
-    <main className="command-shell">
+    <main className="command-shell clean-trust-page">
       <SiteNav active="trust" />
 
-      <section className="page-hero compact-page-hero">
+      <section className="page-hero compact-page-hero clean-page-hero">
         <div>
-          <p className="section-kicker">Trust Center</p>
-          <h1>Every claim says what it proves and what it does not.</h1>
+          <p className="section-kicker">Trust</p>
+          <h1>The system supports the recall decision. A human owns it.</h1>
           <p>
-            RecallOps separates live checks, captured proof, deterministic
-            replay, dry runs, gated writes, and simulated behavior so auditors
-            can follow the decision without accepting vague product claims.
+            RecallOps is explicit about proof boundaries: live checks, captured
+            room evidence, deterministic replay, dry runs, gated writes, and
+            optional provider calls are labelled separately.
           </p>
         </div>
         <div className="proof-digest-card">
-          <ProofLabel status="DETERMINISTIC">final packet digest</ProofLabel>
+          <ProofLabel status="DETERMINISTIC">packet digest</ProofLabel>
           <code>{shortHash(packet.audit_hash, 16)}</code>
         </div>
       </section>
 
-      <section className="trust-control-grid">
+      <section className="clean-trust-grid">
         {trustRows.map((row) => (
           <article key={row.label}>
             <ProofLabel status={row.status}>{row.label}</ProofLabel>
-            <h2>What it proves</h2>
+            <h2>What this proves</h2>
             <p>{row.proves}</p>
             <h2>What it does not prove</h2>
             <p>{row.boundary}</p>
@@ -73,10 +67,14 @@ export default function TrustPage() {
         ))}
       </section>
 
-      <section className="proof-label-system">
+      <section className="proof-label-system clean-status-vocabulary">
         <div>
-          <p className="section-kicker">Status vocabulary</p>
-          <h2>The label is part of the control.</h2>
+          <p className="section-kicker">Status language</p>
+          <h2>Six labels keep the demo honest.</h2>
+          <p>
+            These labels prevent dry-runs, captures, and deterministic replay
+            from being confused with production writes.
+          </p>
         </div>
         <div>
           {proofStatusDefinitions.map((definition) => (
@@ -88,14 +86,16 @@ export default function TrustPage() {
         </div>
       </section>
 
-      <section className="landing-final-cta">
+      <section className="landing-final-cta clean-final-cta">
         <div>
-          <p className="section-kicker">Verification path</p>
-          <h2>Inspect the packet, then inspect the controls.</h2>
+          <p className="section-kicker">Audit path</p>
+          <h2>
+            Start with the proof packet, then inspect raw controls only if
+            needed.
+          </h2>
           <p>
-            Start with the public proof bundle, then review the security page
-            for identity, redaction, admin authorization, provider boundaries,
-            and tenant-write gates.
+            The Trust Center explains the boundaries. The proof packet contains
+            the digest, receipts, room references, and raw data.
           </p>
         </div>
         <div className="landing-final-actions">
@@ -103,7 +103,7 @@ export default function TrustPage() {
             Inspect proof
           </a>
           <a className="secondary-action" href="/security">
-            Security controls
+            Security details
           </a>
           <a className="secondary-action" href={`${apiBase}/submission-proof`}>
             Raw proof JSON

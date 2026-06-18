@@ -1,10 +1,9 @@
-import Bat4421Replay from "./bat-4421-replay";
+﻿import Bat4421Replay from "./bat-4421-replay";
 import {
   accountableHuman,
   apiBase,
   integrationClaims,
   packet,
-  proofStatusDefinitions,
   roomResponsibilities,
   shortHash,
 } from "./recall-data";
@@ -19,86 +18,99 @@ const productSchema = {
   operatingSystem: "Web",
   url: "https://recallops.gudman.xyz",
   description:
-    "Product-recall command system that coordinates source evidence, traceability, accountable human approval, ERP-ready actions, and verifiable receipts.",
+    "Product-recall command system that coordinates evidence, traceability, accountable human approval, ERP-ready actions, and verifiable receipts.",
   featureList: [
     "Source-linked incident evidence",
     "Traceability coverage calculation",
-    "Operational hold and recovery events",
     "Human-owned approval receipts",
     "SAP and Oracle dry-run payloads",
     "Hash-linked audit packet",
   ],
 };
 
-const decisionSpine = [
-  "SOURCE",
-  "FACT",
-  "HOLD",
-  "RECOVERY",
-  "CLEARANCE",
-  "APPROVAL",
-  "RECEIPT",
+const decisionSteps = [
+  "Source",
+  "Fact",
+  "Hold",
+  "Recovery",
+  "Approval",
+  "Receipt",
 ];
 
-const proofHealth = [
+const operatingFlow = [
   {
-    label: "Source packet",
-    status: "DETERMINISTIC" as const,
-    value: shortHash(packet.audit_hash, 10),
+    label: "1",
+    title: "Add the evidence",
+    copy: "Complaint details and shipment ledgers enter one case record.",
   },
   {
-    label: "Band room",
-    status: "CAPTURED" as const,
-    value: packet.band_proof.captured_band_run.room_id,
+    label: "2",
+    title: "Find the blocker",
+    copy: "Traceability, risk, and filing checks show what prevents approval.",
   },
   {
-    label: "Human approval",
-    status: "GATED" as const,
-    value: "QA Director required",
+    label: "3",
+    title: "Recover or document the gap",
+    copy: "Missing shipment files or exceptions are added before approval opens.",
   },
   {
-    label: "ERP actions",
-    status: "DRY RUN" as const,
-    value: "SAP + Oracle payloads",
+    label: "4",
+    title: "Approve and prove",
+    copy: "A named human reviews the scope and seals a receipt-backed action.",
   },
 ];
 
-const recallBreakpoints = [
-  "Complaint evidence lives in documents.",
-  "Shipment coverage lives in CSVs.",
-  "Risk review happens in meetings.",
-  "Approval disappears into email.",
-  "ERP holds become a separate handoff.",
+const proofSummary = [
+  {
+    label: "Initial coverage",
+    value: `${packet.initial_traceability.coverage_percent}%`,
+    detail: `${packet.initial_traceability.untraced_units.toLocaleString()} units untraced`,
+  },
+  {
+    label: "Recovered coverage",
+    value: `${packet.final_traceability.coverage_percent}%`,
+    detail: "missing distributor file added",
+  },
+  {
+    label: "Human owner",
+    value: accountableHuman.role,
+    detail: "final action remains accountable",
+  },
+  {
+    label: "Packet digest",
+    value: shortHash(packet.audit_hash, 8),
+    detail: "source-linked proof trail",
+  },
 ];
 
 export default function Home() {
   return (
-    <main className="command-shell">
+    <main className="command-shell product-home clean-home">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
       <SiteNav active="product" />
 
-      <section className="hero-section hero-section-redesign">
-        <div className="hero-copy-v2 hero-copy-operational">
+      <section className="hero-section hero-section-redesign clean-hero">
+        <div className="hero-copy-v2 hero-copy-operational clean-hero-copy">
           <p className="section-kicker">Product recall command system</p>
           <h1 className="hero-title">Run the recall. Prove the decision.</h1>
           <p className="hero-lede">
-            Turn complaints, shipment records, traceability, regulatory review,
-            communications, and ERP-ready actions into one source-linked,
-            human-approved decision chain.
+            Coordinate complaint evidence, shipment traceability, regulatory
+            review, communications, and accountable human approval in one
+            source-linked command room.
           </p>
           <div className="hero-actions-v2">
             <a className="primary-action" href="/demo/bat-4421">
               Run BAT-4421
             </a>
-            <a className="secondary-action" href="/proof">
-              Inspect a verified packet
+            <a className="secondary-action" href="/app">
+              Open command room
             </a>
           </div>
-          <a className="quiet-link" href="/app">
-            Open command room
+          <a className="quiet-link" href="/proof">
+            Inspect the audit packet
           </a>
           <p className="trust-line">
             Source-grounded / Human-approved / ERP-gated
@@ -108,53 +120,71 @@ export default function Home() {
         <Bat4421Replay packet={packet} variant="hero" apiBase={apiBase} />
       </section>
 
-      <section className="decision-spine" aria-label="RecallOps decision chain">
-        {decisionSpine.map((item) => (
+      <section
+        className="decision-spine clean-spine"
+        aria-label="RecallOps decision chain"
+      >
+        {decisionSteps.map((item) => (
           <span key={item}>{item}</span>
         ))}
       </section>
 
-      <section className="proof-health-strip">
-        {proofHealth.map((item) => (
+      <section className="clean-metric-strip" aria-label="BAT-4421 summary">
+        {proofSummary.map((item) => (
           <article key={item.label}>
-            <ProofLabel status={item.status}>{item.label}</ProofLabel>
+            <span>{item.label}</span>
             <strong>{item.value}</strong>
+            <p>{item.detail}</p>
           </article>
         ))}
       </section>
 
-      <section className="fragmented-section">
+      <section className="clean-section clean-problem">
         <div>
-          <p className="section-kicker">Why recalls break</p>
-          <h2>Recalls break when the decision trail breaks.</h2>
-          <p>
-            RecallOps brings evidence, traceability, risk, communications, human
-            approval, and downstream action into one inspectable case record.
-          </p>
+          <p className="section-kicker">Why it exists</p>
+          <h2>
+            Dangerous recalls fail when evidence, approval, and proof split
+            apart.
+          </h2>
         </div>
-        <div className="surface-chain" aria-label="Fragmented recall work">
-          {recallBreakpoints.map((surface, index) => (
-            <div key={surface}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{surface}</strong>
-            </div>
+        <p>
+          RecallOps keeps the decision trail intact. The system shows what is
+          known, what is missing, what is blocked, what changed after recovery,
+          and what a named human is approving.
+        </p>
+      </section>
+
+      <section className="clean-section clean-flow-section">
+        <div className="section-heading-row">
+          <div>
+            <p className="section-kicker">How it works</p>
+            <h2>One operating flow from incident to receipt.</h2>
+          </div>
+          <a className="secondary-action" href="/demo/bat-4421">
+            Watch the flow
+          </a>
+        </div>
+        <div className="clean-flow-grid">
+          {operatingFlow.map((step) => (
+            <article key={step.label}>
+              <span>{step.label}</span>
+              <strong>{step.title}</strong>
+              <p>{step.copy}</p>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="room-section">
-        <div className="section-heading-row">
-          <div>
-            <p className="section-kicker">Authority model</p>
-            <h2>Five specialist agents. One accountable human.</h2>
-            <p>
-              Agents assemble, challenge, calculate, draft, and recommend. The
-              named QA Director reviews and authorizes the final recall action.
-            </p>
-          </div>
-          <ProofLabel status="CAPTURED">Band room proof exposed</ProofLabel>
+      <section className="clean-section clean-authority-section">
+        <div>
+          <p className="section-kicker">Authority model</p>
+          <h2>Five specialist agents. One accountable human.</h2>
+          <p>
+            Agents gather, challenge, calculate, draft, and recommend. The QA
+            Director owns the final recall decision.
+          </p>
         </div>
-        <div className="responsibility-grid">
+        <div className="clean-role-grid">
           {roomResponsibilities.map((item) => (
             <article key={item.role}>
               <span>{item.authority}</span>
@@ -163,110 +193,56 @@ export default function Home() {
             </article>
           ))}
           <article className="human-authority-card">
-            <span>{accountableHuman.authority}</span>
-            <strong>{accountableHuman.role} - human</strong>
+            <span>Accountable human</span>
+            <strong>{accountableHuman.role}</strong>
             <p>{accountableHuman.assignment}</p>
           </article>
         </div>
       </section>
 
-      <section className="story-split">
-        <article className="veto-feature">
-          <span>Blocked</span>
-          <h2>864 units remain untraced.</h2>
-          <p>
-            Regulatory/Risk raises HOLD-01 because the consumer-notice scope
-            cannot be defended at 82% coverage.
-          </p>
-          <strong>Approval unavailable</strong>
-        </article>
-        <article className="recovery-feature">
-          <span>Recovered</span>
-          <h2>Kestrel distributor file enters the source packet.</h2>
-          <p>
-            The missing ledger accounts for 864 units, recomputes coverage to
-            100%, and changes the source digest.
-          </p>
-          <code>{shortHash(packet.receipts[6].receipt_hash, 14)}</code>
-        </article>
-        <article className="approval-feature">
-          <span>Approved</span>
-          <h2>The human approves a specific recall action.</h2>
-          <p>
-            Scope, regions, notices, quarantine action, ERP payloads, remaining
-            exceptions, and source hash are sealed into the receipt.
-          </p>
-          <a href="/demo/bat-4421">Replay the decision</a>
-        </article>
-      </section>
-
-      <section className="proof-preview">
+      <section className="clean-section clean-proof-section">
         <div>
-          <p className="section-kicker">Verify</p>
-          <h2>A validated quality dossier, not a black-box chatbot.</h2>
+          <p className="section-kicker">Verification</p>
+          <h2>The proof is readable before it becomes technical.</h2>
           <p>
-            The proof explorer groups the packet by source evidence, command
-            room, decision events, human authority, downstream actions, and
-            final receipts. Raw JSON stays available when the auditor needs it.
+            Every important claim is labelled as live, captured, deterministic,
+            dry-run, gated, or simulated. Raw JSON remains available, but the
+            page starts with the audit story.
           </p>
-          <a className="primary-action" href="/proof">
-            Inspect proof
-          </a>
-        </div>
-        <div className="proof-preview-list">
-          {proofStatusDefinitions.map((definition) => (
-            <span key={definition.status}>
-              {definition.status}: {definition.meaning}
-            </span>
-          ))}
-        </div>
-      </section>
-
-      <section className="integration-preview">
-        <div className="section-heading-row">
-          <div>
-            <p className="section-kicker">Integrations</p>
-            <h2>One approved recall action branches into gated systems.</h2>
-            <p>
-              Band, SAP, Oracle, regulator filing, identity, and provider checks
-              keep separate status labels so dry runs do not look like
-              customer-tenant writes.
-            </p>
+          <div className="hero-actions-v2">
+            <a className="primary-action" href="/proof">
+              Inspect proof
+            </a>
+            <a className="secondary-action" href="/trust">
+              Trust Center
+            </a>
           </div>
-          <a className="secondary-action" href="/integrations">
-            View integration status
-          </a>
         </div>
-        <div className="integration-preview-grid">
-          {integrationClaims.slice(0, 6).map((claim) => (
+        <div className="clean-boundary-list">
+          {integrationClaims.slice(0, 4).map((claim) => (
             <article key={claim.name}>
               <ProofLabel status={claim.status}>{claim.name}</ProofLabel>
               <strong>{claim.headline}</strong>
-              <p>{claim.detail}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="landing-final-cta">
+      <section className="landing-final-cta clean-final-cta">
         <div>
-          <p className="section-kicker">Operate</p>
-          <h2>Open the command room when you need to manage a case.</h2>
+          <p className="section-kicker">Start</p>
+          <h2>Use the command room when you need to test a real case.</h2>
           <p>
-            The application keeps the current decision state, blocker, next
-            action, approval boundary, and audit exports in one operating
-            surface.
+            Create a case, add shipment rows, watch the live execution stream,
+            resolve blockers, and download the report and audit packet.
           </p>
         </div>
         <div className="landing-final-actions">
           <a className="primary-action" href="/app">
             Open command room
           </a>
-          <a className="secondary-action" href="/demo/bat-4421">
-            Run BAT-4421
-          </a>
-          <a className="secondary-action" href="/trust">
-            Open Trust Center
+          <a className="secondary-action" href="/integrations">
+            Integration status
           </a>
         </div>
       </section>

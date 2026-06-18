@@ -1,129 +1,128 @@
-import EnterpriseReadiness from "../enterprise-readiness";
-import {
-  apiBase,
-  integrationClaims,
-  proofStatusDefinitions,
-} from "../recall-data";
+﻿import { apiBase, integrationClaims } from "../recall-data";
 import ProofLabel from "../proof-label";
 import SiteNav from "../site-nav";
 
 const normalizedActionBranches = [
   {
-    label: "SAP hold",
-    shape: "Tenant-shaped payload",
-    state: "DRY RUN / GATED",
+    label: "SAP",
+    capability: "Tenant-shaped recall hold payload",
+    evidence: "Sandbox read plus dry-run payload",
+    mutation: "Gated write",
   },
   {
-    label: "Oracle hold",
-    shape: "Tenant-shaped payload",
-    state: "DRY RUN / GATED",
+    label: "Oracle",
+    capability: "Oracle-shaped hold contract",
+    evidence: "Generated dry-run payload",
+    mutation: "Gated write",
   },
   {
-    label: "Regulator pack",
-    shape: "Jurisdiction-shaped filing",
-    state: "DRY RUN / GATED",
+    label: "Regulators",
+    capability: "Jurisdiction-shaped filing pack",
+    evidence: "Draft dispatch targets",
+    mutation: "Submission gated",
   },
   {
-    label: "ERP receiver",
-    shape: "Transport receipt",
-    state: "LIVE / VERIFIED",
+    label: "Band",
+    capability: "Agent-room coordination proof",
+    evidence: "Captured room IDs and handoffs",
+    mutation: "Captured proof",
   },
 ];
 
 export default function IntegrationsPage() {
   return (
-    <main className="command-shell">
+    <main className="command-shell clean-integrations-page">
       <SiteNav active="integrations" />
 
-      <section className="page-hero compact-page-hero">
+      <section className="page-hero compact-page-hero clean-page-hero">
         <div>
           <p className="section-kicker">Integrations</p>
-          <h1>One recall-hold action, clear proof boundaries.</h1>
+          <h1>One approved recall action, clear system boundaries.</h1>
           <p>
-            SAP and Oracle are shown as branches of the same normalized recall
-            action. RecallOps distinguishes dry-run payloads, transport
-            receipts, sandbox reads, live tenant gaps, and admin-gated writes
-            instead of compressing them into one vague integration claim.
+            RecallOps shows what each integration can do today, what evidence
+            supports it, and what remains gated before any real tenant write or
+            regulator submission.
           </p>
         </div>
         <ProofLabel status="GATED">
-          tenant write authorization required
+          tenant writes require authorization
         </ProofLabel>
       </section>
 
-      <section className="normalized-action-diagram">
+      <section className="normalized-action-diagram clean-action-diagram">
         <div>
-          <p className="section-kicker">Normalized recall action</p>
-          <h2>One human-approved action, several gated representations.</h2>
+          <p className="section-kicker">Normalized action</p>
+          <h2>
+            Human approval comes first. System-specific actions branch after.
+          </h2>
           <p>
-            RecallOps does not treat integration logos as proof. Each branch
-            shows the capability, current environment, evidence type, and
-            mutation boundary.
+            The same recall scope becomes SAP, Oracle, regulator, and audit
+            artifacts without pretending every branch has the same live status.
           </p>
         </div>
-        <div className="action-branch-map">
+        <div className="action-branch-map clean-branch-map">
           <strong>Human-approved recall action</strong>
           <div>
             {normalizedActionBranches.map((branch) => (
               <article key={branch.label}>
                 <span>{branch.label}</span>
-                <p>{branch.shape}</p>
-                <code>{branch.state}</code>
+                <p>{branch.capability}</p>
+                <code>{branch.mutation}</code>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="integration-status-grid">
+      <section
+        className="clean-integration-table"
+        aria-label="Integration status matrix"
+      >
+        <div className="clean-table-head">
+          <span>Integration</span>
+          <span>Capability</span>
+          <span>Evidence</span>
+          <span>Boundary</span>
+        </div>
         {integrationClaims.map((claim) => (
           <article key={claim.name}>
-            <ProofLabel status={claim.status}>{claim.name}</ProofLabel>
-            <h2>{claim.headline}</h2>
+            <div>
+              <ProofLabel status={claim.status}>{claim.name}</ProofLabel>
+            </div>
+            <strong>{claim.headline}</strong>
             <p>{claim.detail}</p>
+            <code>
+              {claim.status === "GATED"
+                ? "Requires authorization"
+                : claim.status === "DRY RUN"
+                  ? "No tenant write"
+                  : claim.status.toLowerCase()}
+            </code>
           </article>
         ))}
       </section>
 
-      <section className="integration-branches">
-        <article>
-          <span>SAP branch</span>
-          <h2>Dry-run hold payload plus sandbox read.</h2>
-          <p>
-            RecallOps prepares a tenant-shaped SAP hold request from the
-            human-signed recall action, verifies the SAP API Hub sandbox, and
-            keeps real writes behind an admin key.
-          </p>
-          <a href={`${apiBase}/sap-api-hub`}>Open SAP sandbox proof</a>
-        </article>
-        <article>
-          <span>Oracle branch</span>
-          <h2>Same normalized action, Oracle-shaped contract.</h2>
-          <p>
-            The Oracle path receives the same recall scope, regions, notices,
-            traceability state, and approval basis without pretending a demo
-            tenant has granted administrative write access.
-          </p>
-          <a href={`${apiBase}/enterprise-sync`}>Open dry-run payload</a>
-        </article>
-      </section>
-
-      <section className="proof-label-system">
+      <section className="landing-final-cta clean-final-cta">
         <div>
-          <p className="section-kicker">Proof label system</p>
-          <h2>Every proof surface says what it is.</h2>
+          <p className="section-kicker">Verify</p>
+          <h2>Inspect the receipts behind each claim.</h2>
+          <p>
+            Start with the audit packet for the full proof chain, or open the
+            live SAP sandbox and enterprise dry-run endpoints directly.
+          </p>
         </div>
-        <div>
-          {proofStatusDefinitions.map((definition) => (
-            <article key={definition.status}>
-              <ProofLabel status={definition.status} />
-              <p>{definition.meaning}</p>
-            </article>
-          ))}
+        <div className="landing-final-actions">
+          <a className="primary-action" href="/proof">
+            Inspect proof
+          </a>
+          <a className="secondary-action" href={`${apiBase}/sap-api-hub`}>
+            SAP sandbox
+          </a>
+          <a className="secondary-action" href={`${apiBase}/enterprise-sync`}>
+            ERP dry-run
+          </a>
         </div>
       </section>
-
-      <EnterpriseReadiness apiBase={apiBase} />
     </main>
   );
 }

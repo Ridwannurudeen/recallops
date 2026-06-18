@@ -1,4 +1,4 @@
-import {
+﻿import {
   apiBase,
   packet,
   proofStatusDefinitions,
@@ -10,50 +10,43 @@ import SiteNav from "../site-nav";
 const trustControls = [
   {
     label: "Identity",
-    headline: "Approval identity is sealed into the receipt.",
-    copy: "The deployed API supports admin-key and OIDC/JWKS approval gates. The public proof bundle discloses whether the gate is ready instead of hiding behind a generic approval label.",
+    headline: "Approval identity is explicit.",
+    copy: "Approval receipts bind signer, reason, scope, source hash, room hash, and filing hash. Public approval remains gated unless the configured identity path authorizes it.",
     status: "GATED" as const,
   },
   {
     label: "Hashing",
     headline: "Packets and receipts are digest-verifiable.",
-    copy: "The deterministic packet, source evidence packet, approval receipt, and ERP transport receipts expose expected and actual SHA-256 verification values.",
+    copy: "Source evidence, recall room output, filing pack, approval receipt, and final packet expose values that can be compared independently.",
     status: "DETERMINISTIC" as const,
   },
   {
-    label: "Provider boundaries",
-    headline: "External AI usage is visible by provider status.",
-    copy: "AI/ML API and Featherless paths run through spend controls and response hashes. If a provider is unavailable or unused, the proof says so.",
-    status: "LIVE" as const,
-  },
-  {
-    label: "ERP authorization",
+    label: "ERP gates",
     headline: "Tenant writes are not implied.",
-    copy: "SAP and Oracle payloads are dry-run unless tenant endpoints and administrative authorization are configured. The receiver contract is separate from customer ERP authority.",
+    copy: "SAP and Oracle actions remain dry-run or gated until customer endpoints and administrative authorization are configured.",
     status: "GATED" as const,
   },
   {
-    label: "Redaction",
-    headline: "Receipts prove flow without exposing customer data.",
-    copy: "Transport receipts keep proof metadata and hashes while avoiding fake customer names, fake tenants, and unnecessary personal data in the public demo.",
-    status: "CAPTURED" as const,
+    label: "Provider boundaries",
+    headline: "Optional AI providers are disclosed.",
+    copy: "Partner-AI paths run behind spend controls and response hashes. Deterministic parsing remains the public proof source of truth.",
+    status: "LIVE" as const,
   },
 ];
 
 export default function SecurityPage() {
   return (
-    <main className="command-shell">
-      <SiteNav active="security" />
+    <main className="command-shell clean-security-page">
+      <SiteNav active="trust" />
 
-      <section className="page-hero compact-page-hero">
+      <section className="page-hero compact-page-hero clean-page-hero">
         <div>
-          <p className="section-kicker">Security and trust</p>
-          <h1>Proof first, no unsupported compliance theater.</h1>
+          <p className="section-kicker">Security</p>
+          <h1>Proof first. No unsupported compliance theater.</h1>
           <p>
-            RecallOps does not display fake certifications, fake customers, or
-            vague security slogans. The product earns trust by showing identity
-            gates, hash checks, provider boundaries, redaction rules, and ERP
-            authorization state directly.
+            RecallOps avoids fake certifications and vague slogans. It shows
+            identity gates, hashing, redaction, provider status, and
+            tenant-write boundaries directly.
           </p>
         </div>
         <div className="proof-digest-card">
@@ -62,7 +55,7 @@ export default function SecurityPage() {
         </div>
       </section>
 
-      <section className="trust-control-grid">
+      <section className="clean-trust-grid">
         {trustControls.map((control) => (
           <article key={control.label}>
             <ProofLabel status={control.status}>{control.label}</ProofLabel>
@@ -72,34 +65,26 @@ export default function SecurityPage() {
         ))}
       </section>
 
-      <section className="security-principles">
+      <section className="clean-security-split">
         <article>
-          <span>What the public demo proves</span>
+          <span>Public demo proves</span>
           <p>
-            Captured Band room IDs, deterministic packet verification, source
-            packet verification, SAP sandbox read verification, ERP receiver
-            receipts, approval receipt hashing, and dry-run enterprise payloads.
+            Captured Band IDs, deterministic packet verification, source packet
+            verification, SAP sandbox read verification, approval receipt
+            hashing, ERP receiver receipts, and dry-run enterprise payloads.
           </p>
         </article>
         <article>
-          <span>What remains gated</span>
+          <span>Still requires authorization</span>
           <p>
             Real customer ERP writes, production identity policy, tenant
-            endpoint configuration, data-processing review, and administrative
-            authorization.
+            endpoint configuration, data-processing review, and regulator
+            submission.
           </p>
-        </article>
-        <article>
-          <span>How to inspect it</span>
-          <p>
-            Open the proof explorer, verify the digest, download the packet, or
-            inspect the raw deployed API responses.
-          </p>
-          <a href={`${apiBase}/submission-proof`}>Open raw proof JSON</a>
         </article>
       </section>
 
-      <section className="proof-label-system">
+      <section className="proof-label-system clean-status-vocabulary">
         <div>
           <p className="section-kicker">Status language</p>
           <h2>The label is part of the control.</h2>

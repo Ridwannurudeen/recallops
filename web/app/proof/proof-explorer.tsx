@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { apiBase, packet, shortHash } from "../recall-data";
@@ -76,12 +76,22 @@ type SubmissionProof = {
   checks: Record<string, boolean | number>;
 };
 
-type ProofNode = {
+type ProofStage = {
   label: string;
-  status: "ok" | "warn" | "gated";
-  detail: string;
+  status: "verified" | "review" | "gated";
+  summary: string;
+  proves: string;
+  boundary: string;
   value: string;
+  raw: unknown;
 };
+
+const emptySummary = [
+  { label: "Source", value: "loading" },
+  { label: "Room", value: "loading" },
+  { label: "Approval", value: "loading" },
+  { label: "Digest", value: shortHash(packet.audit_hash, 8) },
+];
 
 export default function ProofExplorer() {
   const [proof, setProof] = useState<SubmissionProof | null>(null);
@@ -112,7 +122,25 @@ export default function ProofExplorer() {
 
   const digest = proof?.packet.audit_hash ?? packet.audit_hash;
 
-  const proofNodes = useMemo<ProofNode[]>(() => {
+  const summaryItems = proof
+    ? [
+        {
+          label: "Source",
+          value: proof.source_evidence.verification.ok ? "verified" : "review",
+        },
+        {
+          label: "Room",
+          value: `${proof.recall_room_run.band.mode.replaceAll("_", " ")} / ${proof.recall_room_run.band.participant_count}`,
+        },
+        {
+          label: "Approval",
+          value: proof.approval_receipt.verification.ok ? "verified" : "review",
+        },
+        { label: "Digest", value: shortHash(digest, 8) },
+      ]
+    : emptySummary;
+
+  const stages = useMemo<ProofStage[]>(() => {
     if (!proof) {
       return [];
     }
@@ -120,47 +148,82 @@ export default function ProofExplorer() {
     return [
       {
         label: "Source evidence",
-        status: proof.source_evidence.verification.ok ? "ok" : "warn",
-        detail:
-          "Complaint packet, shipment ledger, recovered distributor file, citations, and source digest.",
+        status: proof.source_evidence.verification.ok ? "verified" : "review",
+        summary:
+          "Complaint, shipment ledger, recovered distributor file, citations, and source digest.",
+        proves:
+          "The case facts can be traced back to the supplied evidence packet.",
+        boundary: "It does not prove a customer ERP tenant accepted a write.",
         value: proof.source_evidence.audit_hash,
+        raw: proof.source_evidence,
       },
       {
         label: "Analysis",
-        status: proof.recall_room_run.verification.ok ? "ok" : "warn",
-        detail: `${proof.recall_room_run.band.mode.replaceAll("_", " ")} room run with ${proof.recall_room_run.band.participant_count} participants and traceability checks.`,
+        status: proof.recall_room_run.verification.ok ? "verified" : "review",
+        summary:
+          "Traceability math, room run, Band mode, and participant count.",
+        proves: "Coverage and room narrative were derived from the packet.",
+        boundary:
+          "Captured or deterministic room evidence is not a silent legal decision.",
         value: proof.recall_room_run.run_hash,
+        raw: proof.recall_room_run,
       },
       {
-        label: "Decision",
-        status: proof.packet.verification.ok ? "ok" : "warn",
-        detail:
-          "Risk hold, recovery, clearance, and deterministic BAT-4421 decision graph.",
+        label: "Decision hold",
+        status: proof.packet.verification.ok ? "verified" : "review",
+        summary: "HOLD-01, recovery, clearance, and BAT-4421 decision graph.",
+        proves: "The blocker and recovery sequence are present in the packet.",
+        boundary:
+          "The hold supports review; it does not replace the recall owner.",
         value: proof.packet.incident_id,
+        raw: proof.packet.decision,
       },
       {
         label: "Human authority",
-        status: proof.approval_receipt.verification.ok ? "ok" : "warn",
-        detail: proof.approval_receipt.disclosure,
+        status: proof.approval_receipt.verification.ok ? "verified" : "review",
+        summary: proof.approval_receipt.disclosure,
+        proves:
+          "The approval receipt binds signer, reason, scope, and source hash.",
+        boundary:
+          "Public demo approval remains gated by the configured identity path.",
         value: String(
           proof.approval_receipt.receipt.receipt_hash ?? "receipt pending",
         ),
+        raw: proof.approval_receipt,
       },
       {
         label: "Downstream action",
-        status: proof.checks.erp_contract_live_write_verified ? "ok" : "gated",
-        detail: `${proof.filing_pack.filings.length} filing drafts, ${proof.regulator_dispatch.targets.length} regulator targets, and SAP/Oracle payload boundaries.`,
+        status: proof.checks.erp_contract_live_write_verified
+          ? "verified"
+          : "gated",
+        summary: `${proof.filing_pack.filings.length} filing drafts and ${proof.regulator_dispatch.targets.length} regulator targets prepared.`,
+        proves:
+          "Filing and SAP/Oracle payloads can be generated from the approved action.",
+        boundary: "Real tenant writes and regulator submissions remain gated.",
         value: String(
-          proof.erp_contract.latest_pair_verified ??
-            "contract verification unknown",
+          proof.erp_contract.latest_pair_verified ?? "tenant write gated",
         ),
+        raw: {
+          filing_pack: proof.filing_pack,
+          regulator_dispatch: proof.regulator_dispatch,
+          enterprise_sync: proof.enterprise_sync,
+          erp_contract: proof.erp_contract,
+        },
       },
       {
         label: "Receipts",
-        status: proof.packet.verification.ok ? "ok" : "warn",
-        detail:
+        status: proof.packet.verification.ok ? "verified" : "review",
+        summary:
           "Band IDs, ERP transport receipts, provider controls, and final SHA-256 digest.",
+        proves: "The final packet digest can be independently compared.",
+        boundary:
+          "Provider and tenant availability can change after the captured packet.",
         value: proof.packet.audit_hash,
+        raw: {
+          band: proof.band,
+          dispatch_receipts: proof.dispatch_receipts,
+          checks: proof.checks,
+        },
       },
     ];
   }, [proof]);
@@ -203,15 +266,17 @@ export default function ProofExplorer() {
   }
 
   return (
-    <section className="proof-explorer" id="structured-proof">
-      <div className="proof-explorer-head">
+    <section
+      className="proof-explorer clean-proof-explorer"
+      id="structured-proof"
+    >
+      <div className="proof-explorer-head clean-proof-head">
         <div>
           <p className="section-kicker">Audit packet</p>
-          <h1>Verify the decision from source to receipt.</h1>
+          <h1>Follow the decision from source to receipt.</h1>
           <p>
-            The proof bundle is organized by causality: source evidence,
-            analysis, decision events, human authority, downstream action, and
-            receipts. Each item says what it proves and what remains gated.
+            This page starts with the human-readable chain. Raw JSON and hash
+            checks remain one click away for auditors.
           </p>
         </div>
         <div className="proof-digest-card">
@@ -221,15 +286,24 @@ export default function ProofExplorer() {
         </div>
       </div>
 
-      <div className="proof-actions">
-        <a href="#structured-proof">View structured proof</a>
-        <a href={`${apiBase}/submission-proof`}>View raw JSON</a>
-        <button type="button" onClick={copyDigest}>
-          {copied ? "Digest copied" : "Copy digest"}
-        </button>
+      <div className="clean-proof-summary" aria-label="Proof summary">
+        {summaryItems.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </article>
+        ))}
+      </div>
+
+      <div className="proof-actions clean-proof-actions">
         <button type="button" onClick={verifyChain}>
           Verify chain
         </button>
+        <button type="button" onClick={copyDigest}>
+          {copied ? "Digest copied" : "Copy digest"}
+        </button>
+        <a href={`${apiBase}/packet.json`}>Download packet</a>
+        <a href={`${apiBase}/submission-proof`}>Raw JSON</a>
         <button
           type="button"
           disabled={runningProviderProof}
@@ -237,7 +311,6 @@ export default function ProofExplorer() {
         >
           {runningProviderProof ? "Running providers" : "Run provider proof"}
         </button>
-        <a href={`${apiBase}/packet.json`}>Download packet</a>
       </div>
 
       {verify ? (
@@ -255,46 +328,67 @@ export default function ProofExplorer() {
           <strong>Loading audit packet</strong>
           <p>
             Fetching source evidence, room proof, approval receipt, downstream
-            actions, and final digest from the deployed proof endpoint.
+            actions, and final digest from the deployed endpoint.
           </p>
         </div>
       ) : null}
 
-      <div className="proof-node-grid">
-        {proofNodes.map((node) => (
+      <div className="clean-proof-timeline">
+        {stages.map((stage, index) => (
           <article
-            className={`proof-node proof-node-${node.status}`}
-            key={node.label}
+            className={`clean-proof-stage stage-${stage.status}`}
+            key={stage.label}
           >
-            <span>{node.label}</span>
-            <strong>{node.status}</strong>
-            <p>{node.detail}</p>
-            <code>{node.value}</code>
+            <div className="clean-proof-index">
+              {String(index + 1).padStart(2, "0")}
+            </div>
+            <div>
+              <span>{stage.label}</span>
+              <strong>{stage.summary}</strong>
+              <dl>
+                <div>
+                  <dt>Proves</dt>
+                  <dd>{stage.proves}</dd>
+                </div>
+                <div>
+                  <dt>Does not prove</dt>
+                  <dd>{stage.boundary}</dd>
+                </div>
+              </dl>
+              <code>{stage.value}</code>
+              <details>
+                <summary>View structured data</summary>
+                <pre>{JSON.stringify(stage.raw, null, 2)}</pre>
+              </details>
+            </div>
           </article>
         ))}
       </div>
 
       {proof ? (
-        <div className="proof-structured-panels">
-          <article>
-            <span>Submission gates</span>
-            {Object.entries(proof.submission_gates).map(([key, value]) => (
-              <div key={key}>
-                <strong>{key.replaceAll("_", " ")}</strong>
-                <code>{value}</code>
-              </div>
-            ))}
-          </article>
-          <article>
-            <span>Checks</span>
-            {Object.entries(proof.checks).map(([key, value]) => (
-              <div key={key}>
-                <strong>{key.replaceAll("_", " ")}</strong>
-                <code>{String(value)}</code>
-              </div>
-            ))}
-          </article>
-        </div>
+        <details className="clean-advanced-proof">
+          <summary>Submission gates and low-level checks</summary>
+          <div className="proof-structured-panels">
+            <article>
+              <span>Submission gates</span>
+              {Object.entries(proof.submission_gates).map(([key, value]) => (
+                <div key={key}>
+                  <strong>{key.replaceAll("_", " ")}</strong>
+                  <code>{value}</code>
+                </div>
+              ))}
+            </article>
+            <article>
+              <span>Checks</span>
+              {Object.entries(proof.checks).map(([key, value]) => (
+                <div key={key}>
+                  <strong>{key.replaceAll("_", " ")}</strong>
+                  <code>{String(value)}</code>
+                </div>
+              ))}
+            </article>
+          </div>
+        </details>
       ) : null}
     </section>
   );
