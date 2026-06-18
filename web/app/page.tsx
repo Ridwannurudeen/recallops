@@ -1,5 +1,6 @@
 import Bat4421Replay from "./bat-4421-replay";
 import {
+  apiBase,
   fragmentedSurfaces,
   integrationClaims,
   packet,
@@ -18,11 +19,11 @@ const productSchema = {
   operatingSystem: "Web",
   url: "https://recallops.gudman.xyz",
   description:
-    "Proof-carrying command room for product recalls, coordinating evidence, traceability, risk vetoes, human approval, ERP-ready actions, and audit receipts.",
+    "Proof-carrying command room for product recalls, coordinating evidence, traceability, risk holds, human approval, ERP-ready actions, and audit receipts.",
   featureList: [
     "Band-native recall command room",
     "Product recall proof packet",
-    "Risk veto and re-plan workflow",
+    "Risk hold and re-plan workflow",
     "Human approval receipt",
     "SAP and Oracle dry-run payloads",
     "Hash-linked audit chain",
@@ -48,18 +49,18 @@ export default function Home() {
             ERP-ready action becomes part of one verifiable decision chain.
           </p>
           <div className="hero-actions-v2">
-            <a className="primary-action" href="/demo/bat-4421">
-              Replay BAT-4421
+            <a className="primary-action" href="/console">
+              Try the live console
             </a>
-            <a className="secondary-action" href="/proof">
-              Inspect the audit packet
+            <a className="secondary-action" href="/demo/bat-4421">
+              Replay BAT-4421
             </a>
           </div>
           <p className="trust-line">
             Human-approved &middot; Source-linked &middot; ERP-gated
           </p>
         </div>
-        <Bat4421Replay packet={packet} />
+        <Bat4421Replay packet={packet} apiBase={apiBase} />
       </section>
 
       <section className="fragmented-section">
@@ -106,13 +107,13 @@ export default function Home() {
 
       <section className="story-split">
         <article className="veto-feature">
-          <span>VETO-01</span>
-          <h2>Issued by Regulatory/Risk</h2>
+          <span>HOLD-01</span>
+          <h2>Raised by Regulatory/Risk</h2>
           <p>
             864 shipped units remain untraced. Consumer-notice scope cannot yet
             be defended.
           </p>
-          <strong>Plan status: BLOCKED</strong>
+          <strong>Plan status: HUMAN REVIEW REQUIRED</strong>
         </article>
         <article className="recovery-feature">
           <span>Recovery and re-plan</span>

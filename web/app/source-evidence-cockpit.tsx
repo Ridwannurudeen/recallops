@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 
-type SourceInputs = {
+export type SourceInputs = {
   complaint_text: string;
   shipment_csv: string;
   recovered_shipment_csv: string;
@@ -52,7 +52,26 @@ type PartnerProvider = {
   error?: string;
 };
 
-type SourceEvidencePacket = {
+type SourceRoomEvent = {
+  id: string;
+  stage: string;
+  agent: string;
+  message: string;
+  metrics: Record<string, string | number | boolean>;
+};
+
+type SourceRoom = {
+  mode: string;
+  disclosure: string;
+  room_id: string;
+  incident_id: string;
+  source_audit_hash: string;
+  approval_ready: boolean;
+  room_hash: string;
+  events: SourceRoomEvent[];
+};
+
+export type SourceEvidencePacket = {
   incident_id: string;
   generated_at: string;
   source_digests: Record<string, string>;
@@ -71,16 +90,17 @@ type SourceEvidencePacket = {
   audit_hash: string;
 };
 
-type Verification = {
+export type Verification = {
   ok: boolean;
   algorithm: string;
   expected_hash: string;
   actual_hash: string;
 };
 
-type SourceEvidenceResponse = {
+export type SourceEvidenceResponse = {
   inputs: SourceInputs;
   packet: SourceEvidencePacket;
+  room: SourceRoom;
   verification: Verification;
 };
 
@@ -99,23 +119,51 @@ type ApprovalReceiptResponse = {
   disclosure: string;
 };
 
+type IncidentIntake = {
+  firstComplaintId: string;
+  product: string;
+  lot: string;
+  defect: string;
+  severity: string;
+  complaintCount: number;
+};
+
+type IntakeErrors = {
+  complaint?: string;
+  shipment?: string;
+  recovered?: string;
+};
+
 const EMPTY_INPUTS: SourceInputs = {
   complaint_text: "",
   shipment_csv: "",
   recovered_shipment_csv: "",
 };
 
+const EMPTY_INTAKE: IncidentIntake = {
+  firstComplaintId: "C-001",
+  product: "",
+  lot: "",
+  defect: "",
+  severity: "critical",
+  complaintCount: 1,
+};
+
 export default function SourceEvidenceCockpit({
   apiBase,
+  onEvidenceLoaded,
 }: {
   apiBase: string;
+  onEvidenceLoaded?: (value: SourceEvidenceResponse | null) => void;
 }) {
   const [inputs, setInputs] = useState<SourceInputs>(EMPTY_INPUTS);
+  const [intake, setIntake] = useState<IncidentIntake>(EMPTY_INTAKE);
+  const [intakeErrors, setIntakeErrors] = useState<IntakeErrors>({});
   const [evidence, setEvidence] = useState<SourceEvidenceResponse | null>(null);
   const [receipt, setReceipt] = useState<ApprovalReceiptResponse | null>(null);
   const [approver, setApprover] = useState("QA Director");
   const [reason, setReason] = useState(
-    "Traceability reached 100% and the risk veto cleared.",
+    "Traceability reached 100% and the risk hold cleared.",
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,14 +183,25 @@ export default function SourceEvidenceCockpit({
       const nextEvidence = body as SourceEvidenceResponse;
       setEvidence(nextEvidence);
       setInputs(nextEvidence.inputs);
+      setIntake(parseIncidentIntake(nextEvidence.inputs.complaint_text));
+      setIntakeErrors({});
+      onEvidenceLoaded?.(nextEvidence);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Source evidence failed.");
+      onEvidenceLoaded?.(null);
     } finally {
       setLoading(false);
     }
   }
 
   async function recompute(usePartnerAi = false) {
+    const nextErrors = validateIntake(inputs, intake);
+    setIntakeErrors(nextErrors);
+    if (hasIntakeErrors(nextErrors)) {
+      setError("Fix the incident intake fields before recalculating.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setReceipt(null);
@@ -156,9 +215,15 @@ export default function SourceEvidenceCockpit({
       if (!response.ok) {
         throw new Error(body.detail ?? "Source evidence failed.");
       }
-      setEvidence(body as SourceEvidenceResponse);
+      const nextEvidence = body as SourceEvidenceResponse;
+      setEvidence(nextEvidence);
+      setInputs(nextEvidence.inputs);
+      setIntake(parseIncidentIntake(nextEvidence.inputs.complaint_text));
+      setIntakeErrors({});
+      onEvidenceLoaded?.(nextEvidence);
     } catch (exc) {
       setError(exc instanceof Error ? exc.message : "Source evidence failed.");
+      onEvidenceLoaded?.(null);
     } finally {
       setLoading(false);
     }
@@ -195,6 +260,53 @@ export default function SourceEvidenceCockpit({
 
   function updateInput(field: keyof SourceInputs, value: string) {
     setInputs((current) => ({ ...current, [field]: value }));
+    if (field === "complaint_text") {
+      setIntake(parseIncidentIntake(value));
+    }
+    if (field === "shipment_csv" || field === "recovered_shipment_csv") {
+      const key = field === "shipment_csv" ? "shipment" : "recovered";
+      const message = validateShipmentCsv(value);
+      setIntakeErrors((current) => ({
+        ...current,
+        [key]: message ?? undefined,
+      }));
+    }
+  }
+
+  function updateIntake(field: keyof IncidentIntake, value: string) {
+    const nextIntake = {
+      ...intake,
+      [field]:
+        field === "complaintCount"
+          ? Math.max(1, Number.parseInt(value, 10) || 1)
+          : value,
+    };
+    setIntake(nextIntake);
+    setInputs((current) => ({
+      ...current,
+      complaint_text: buildComplaintText(nextIntake),
+    }));
+    setIntakeErrors((current) => ({
+      ...current,
+      complaint: validateComplaint(nextIntake) ?? undefined,
+    }));
+  }
+
+  async function uploadCsv(
+    field: "shipment_csv" | "recovered_shipment_csv",
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      updateInput(field, await file.text());
+    } catch {
+      setError("CSV file could not be read.");
+    } finally {
+      event.currentTarget.value = "";
+    }
   }
 
   useEffect(() => {
@@ -206,7 +318,7 @@ export default function SourceEvidenceCockpit({
       <div className="panel-head">
         <div>
           <p className="kicker">source-grounded evidence</p>
-          <h2>Computed packet, cited rows</h2>
+          <h2>Evidence and calculations from case files</h2>
         </div>
         <span className={evidence?.verification.ok ? "mono-stat" : "risk-stat"}>
           {evidence?.verification.ok ? "verified" : "pending"}
@@ -214,48 +326,157 @@ export default function SourceEvidenceCockpit({
       </div>
 
       <div className="source-grid">
-        <article className="source-inputs">
-          <label>
-            <span>complaints</span>
-            <textarea
-              value={inputs.complaint_text}
-              onChange={(event) =>
-                updateInput("complaint_text", event.currentTarget.value)
-              }
-            />
-          </label>
-          <label>
-            <span>initial shipment csv</span>
-            <textarea
-              value={inputs.shipment_csv}
-              onChange={(event) =>
-                updateInput("shipment_csv", event.currentTarget.value)
-              }
-            />
-          </label>
-          <label>
-            <span>recovered shipment csv</span>
-            <textarea
-              value={inputs.recovered_shipment_csv}
-              onChange={(event) =>
-                updateInput("recovered_shipment_csv", event.currentTarget.value)
-              }
-            />
-          </label>
+        <article className="source-inputs intake-builder">
+          <div className="intake-head">
+            <div>
+              <span>operator intake</span>
+              <strong>Create or edit the recall case</strong>
+            </div>
+            <small>{shipmentSummary(inputs.shipment_csv)}</small>
+          </div>
+
+          <div className="intake-field-grid">
+            <label>
+              <span>first complaint id</span>
+              <input
+                value={intake.firstComplaintId}
+                onChange={(event) =>
+                  updateIntake("firstComplaintId", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>complaint count</span>
+              <input
+                min={1}
+                type="number"
+                value={intake.complaintCount}
+                onChange={(event) =>
+                  updateIntake("complaintCount", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>product</span>
+              <input
+                value={intake.product}
+                onChange={(event) =>
+                  updateIntake("product", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>lot</span>
+              <input
+                value={intake.lot}
+                onChange={(event) =>
+                  updateIntake("lot", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>severity</span>
+              <select
+                value={intake.severity}
+                onChange={(event) =>
+                  updateIntake("severity", event.currentTarget.value)
+                }
+              >
+                <option value="critical">critical</option>
+                <option value="high">high</option>
+                <option value="medium">medium</option>
+                <option value="low">low</option>
+              </select>
+            </label>
+            <label className="intake-defect-field">
+              <span>defect / complaint summary</span>
+              <textarea
+                value={intake.defect}
+                onChange={(event) =>
+                  updateIntake("defect", event.currentTarget.value)
+                }
+              />
+            </label>
+          </div>
+          {intakeErrors.complaint ? (
+            <small className="field-error">{intakeErrors.complaint}</small>
+          ) : null}
+
+          <div className="csv-upload-grid">
+            <label>
+              <span>initial shipment csv</span>
+              <input
+                accept=".csv,text/csv"
+                type="file"
+                onChange={(event) => uploadCsv("shipment_csv", event)}
+              />
+              <small>{shipmentSummary(inputs.shipment_csv)}</small>
+              {intakeErrors.shipment ? (
+                <b className="field-error">{intakeErrors.shipment}</b>
+              ) : null}
+            </label>
+            <label>
+              <span>recovered shipment csv</span>
+              <input
+                accept=".csv,text/csv"
+                type="file"
+                onChange={(event) => uploadCsv("recovered_shipment_csv", event)}
+              />
+              <small>{shipmentSummary(inputs.recovered_shipment_csv)}</small>
+              {intakeErrors.recovered ? (
+                <b className="field-error">{intakeErrors.recovered}</b>
+              ) : null}
+            </label>
+          </div>
+
+          <details className="raw-source-editor">
+            <summary>Raw source editor</summary>
+            <label>
+              <span>complaints</span>
+              <textarea
+                value={inputs.complaint_text}
+                onChange={(event) =>
+                  updateInput("complaint_text", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>initial shipment csv</span>
+              <textarea
+                value={inputs.shipment_csv}
+                onChange={(event) =>
+                  updateInput("shipment_csv", event.currentTarget.value)
+                }
+              />
+            </label>
+            <label>
+              <span>recovered shipment csv</span>
+              <textarea
+                value={inputs.recovered_shipment_csv}
+                onChange={(event) =>
+                  updateInput(
+                    "recovered_shipment_csv",
+                    event.currentTarget.value,
+                  )
+                }
+              />
+            </label>
+          </details>
+
           <div className="source-actions">
             <button
               type="button"
               disabled={loading}
               onClick={() => recompute()}
             >
-              {loading ? "computing" : "recompute"}
+              {loading ? "computing..." : "Recalculate"}
             </button>
             <button
               type="button"
               disabled={loading}
               onClick={() => recompute(true)}
             >
-              {loading ? "running" : "run partner ai"}
+              {loading ? "computing..." : "Recalculate with AI"}
             </button>
             <a href={`${apiBase}/source-evidence`}>source api</a>
             <a href={`${apiBase}/source-evidence/verify`}>verify api</a>
@@ -315,6 +536,31 @@ export default function SourceEvidenceCockpit({
           </article>
         ) : null}
       </div>
+
+      {evidence?.room ? (
+        <div className="source-room-panel">
+          <div className="source-room-head">
+            <div>
+              <span>parameterized room</span>
+              <strong>{evidence.room.room_id}</strong>
+            </div>
+            <small>
+              {evidence.room.approval_ready ? "approval ready" : "hold active"}
+            </small>
+          </div>
+          <p>{evidence.room.disclosure}</p>
+          <div className="source-room-events">
+            {evidence.room.events.map((event) => (
+              <article key={event.id}>
+                <span>{event.stage.replaceAll("_", " ")}</span>
+                <strong>{event.agent}</strong>
+                <p>{event.message}</p>
+              </article>
+            ))}
+          </div>
+          <code>{evidence.room.room_hash}</code>
+        </div>
+      ) : null}
 
       {packet ? (
         <>
@@ -399,4 +645,158 @@ export default function SourceEvidenceCockpit({
       {error ? <p className="runner-error">{error}</p> : null}
     </section>
   );
+}
+
+function parseIncidentIntake(complaintText: string): IncidentIntake {
+  const lines = complaintText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) {
+    return EMPTY_INTAKE;
+  }
+
+  const parts = lines[0].split("|").map((part) => part.trim());
+  const values: Record<string, string> = {
+    firstComplaintId: parts[0] || EMPTY_INTAKE.firstComplaintId,
+  };
+  for (const part of parts.slice(1)) {
+    const [key, ...rest] = part.split(":");
+    if (key && rest.length > 0) {
+      values[key.trim().toLowerCase()] = rest.join(":").trim();
+    }
+  }
+
+  return {
+    firstComplaintId: values.firstComplaintId,
+    product: values.product ?? "",
+    lot: values.lot ?? "",
+    defect: values.defect ?? "",
+    severity: values.severity ?? EMPTY_INTAKE.severity,
+    complaintCount: lines.length,
+  };
+}
+
+function buildComplaintText(intake: IncidentIntake): string {
+  const count = Math.max(1, intake.complaintCount);
+  return Array.from({ length: count }, (_, index) => {
+    const complaintId = incrementComplaintId(intake.firstComplaintId, index);
+    return `${complaintId} | product: ${intake.product.trim()} | lot: ${intake.lot.trim()} | defect: ${intake.defect.trim()} | severity: ${intake.severity.trim()}`;
+  }).join("\n");
+}
+
+function incrementComplaintId(value: string, offset: number): string {
+  const clean = value.trim() || EMPTY_INTAKE.firstComplaintId;
+  if (offset === 0) {
+    return clean;
+  }
+  const match = clean.match(/^(.*?)(\d+)$/);
+  if (!match) {
+    return `${clean}-${offset + 1}`;
+  }
+  const [, prefix, numeric] = match;
+  const nextNumber = Number.parseInt(numeric, 10) + offset;
+  return `${prefix}${String(nextNumber).padStart(numeric.length, "0")}`;
+}
+
+function validateIntake(
+  inputs: SourceInputs,
+  intake: IncidentIntake,
+): IntakeErrors {
+  return {
+    complaint: validateComplaint(intake) ?? undefined,
+    shipment: validateShipmentCsv(inputs.shipment_csv) ?? undefined,
+    recovered: validateShipmentCsv(inputs.recovered_shipment_csv) ?? undefined,
+  };
+}
+
+function validateComplaint(intake: IncidentIntake): string | null {
+  if (
+    !intake.firstComplaintId.trim() ||
+    !intake.product.trim() ||
+    !intake.lot.trim() ||
+    !intake.defect.trim() ||
+    !intake.severity.trim()
+  ) {
+    return "Complaint id, product, lot, defect, and severity are required.";
+  }
+  if (intake.complaintCount < 1) {
+    return "Complaint count must be at least 1.";
+  }
+  return null;
+}
+
+function validateShipmentCsv(csvText: string): string | null {
+  try {
+    parseShipmentRows(csvText);
+    return null;
+  } catch (exc) {
+    return exc instanceof Error ? exc.message : "Shipment CSV is invalid.";
+  }
+}
+
+function hasIntakeErrors(errors: IntakeErrors): boolean {
+  return Boolean(errors.complaint || errors.shipment || errors.recovered);
+}
+
+function shipmentSummary(csvText: string): string {
+  try {
+    const rows = parseShipmentRows(csvText);
+    const units = rows.reduce((total, row) => total + row.units, 0);
+    const missing = rows.filter((row) => row.status !== "traced").length;
+    return `${rows.length} rows / ${units.toLocaleString()} units / ${missing} missing`;
+  } catch {
+    return "CSV not ready";
+  }
+}
+
+function parseShipmentRows(
+  csvText: string,
+): { status: string; units: number }[] {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) {
+    throw new Error("Shipment CSV needs a header and at least one row.");
+  }
+
+  const headers = lines[0].split(",").map((header) => header.trim());
+  const required = [
+    "source",
+    "distributor",
+    "region",
+    "customers",
+    "units",
+    "status",
+  ];
+  for (const header of required) {
+    if (!headers.includes(header)) {
+      throw new Error(`Shipment CSV is missing ${header}.`);
+    }
+  }
+
+  const statusIndex = headers.indexOf("status");
+  const unitsIndex = headers.indexOf("units");
+  const customersIndex = headers.indexOf("customers");
+  return lines.slice(1).map((line, index) => {
+    const cells = line.split(",").map((cell) => cell.trim());
+    const status = cells[statusIndex]?.toLowerCase() ?? "";
+    if (status !== "traced" && status !== "missing") {
+      throw new Error(`Shipment row ${index + 2} must be traced or missing.`);
+    }
+    const units = Number.parseInt(cells[unitsIndex] ?? "", 10);
+    const customers = Number.parseInt(cells[customersIndex] ?? "", 10);
+    if (
+      !Number.isFinite(units) ||
+      units <= 0 ||
+      !Number.isFinite(customers) ||
+      customers <= 0
+    ) {
+      throw new Error(
+        `Shipment row ${index + 2} needs positive customers and units.`,
+      );
+    }
+    return { status, units };
+  });
 }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Literal
 
@@ -146,6 +147,7 @@ async def run_live_drill_endpoint() -> dict[str, object]:
 @app.get("/api/source-evidence")
 def source_evidence() -> dict[str, object]:
     packet = build_source_evidence_packet()
+    rule_assessment = assess_rules(packet)
     return {
         "inputs": {
             "complaint_text": DEFAULT_COMPLAINT_TEXT,
@@ -153,6 +155,7 @@ def source_evidence() -> dict[str, object]:
             "recovered_shipment_csv": DEFAULT_RECOVERED_SHIPMENT_CSV,
         },
         "packet": packet.to_dict(),
+        "room": _source_room_from_packet(packet, rule_assessment),
         "verification": verify_source_evidence_digest(packet),
     }
 
@@ -178,6 +181,7 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
             recovered_shipment_csv=recovered_shipment_csv,
             partner_ai=partner_ai,
         )
+        rule_assessment = assess_rules(packet)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -188,6 +192,7 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
             "recovered_shipment_csv": recovered_shipment_csv,
         },
         "packet": packet.to_dict(),
+        "room": _source_room_from_packet(packet, rule_assessment),
         "verification": verify_source_evidence_digest(packet),
     }
 
@@ -615,6 +620,121 @@ def _enterprise_sync_from_inputs(
             targets=targets,
         ),
         "status": enterprise_sync_status(),
+    }
+
+
+def _source_room_from_packet(
+    source_packet: object,
+    rule_assessment: dict[str, object],
+) -> dict[str, object]:
+    packet = source_packet
+    facts = {fact.key: fact.value for fact in packet.facts}
+    initial = packet.initial_traceability
+    final = packet.final_traceability
+    initial_blockers = rule_assessment["initial_blockers"]
+    final_blockers = rule_assessment["final_blockers"]
+    next_deadline = rule_assessment["next_deadline"]
+
+    hold_message = (
+        f"Regulatory/Risk raises a human-review hold: {initial_blockers[0]['reason']}"
+        if isinstance(initial_blockers, list) and initial_blockers
+        else "Regulatory/Risk finds no initial traceability hold."
+    )
+    deadline_message = (
+        f"Rules desk prepares {next_deadline['authority']} filing within "
+        f"{next_deadline['deadline_hours']}h for "
+        f"{', '.join(next_deadline['matched_regions'])}."
+        if isinstance(next_deadline, dict)
+        else "Rules desk finds no triggered jurisdiction deadline."
+    )
+    approval_message = (
+        f"QA can approve after reviewing source hash {packet.audit_hash[:12]} and "
+        "the generated enterprise hold payload."
+        if rule_assessment["approval_ready"] is True
+        else "QA approval waits on final blockers: "
+        + "; ".join(
+            str(blocker["reason"])
+            for blocker in final_blockers
+            if isinstance(blocker, dict) and "reason" in blocker
+        )
+    )
+    events = [
+        {
+            "id": "source-room-001",
+            "stage": "source_opened",
+            "agent": "Evidence",
+            "message": (
+                f"Opened {facts['complaints']} complaint(s) for {facts['product']} "
+                f"lot {facts['lot']}: {facts['defect']}."
+            ),
+            "metrics": {"severity": facts["severity"]},
+        },
+        {
+            "id": "source-room-002",
+            "stage": "traceability_gap",
+            "agent": "Traceability",
+            "message": (
+                f"Initial shipment coverage is {initial.coverage_percent}% with "
+                f"{initial.untraced_units} untraced units across {initial.regions} regions."
+            ),
+            "metrics": {
+                "coverage_percent": initial.coverage_percent,
+                "untraced_units": initial.untraced_units,
+            },
+        },
+        {
+            "id": "source-room-003",
+            "stage": "human_review_hold",
+            "agent": "Regulatory/Risk",
+            "message": hold_message,
+            "metrics": {"blocker_count": len(initial_blockers)},
+        },
+        {
+            "id": "source-room-004",
+            "stage": "recovered_sources",
+            "agent": "Traceability",
+            "message": (
+                f"Recovered source set reaches {final.coverage_percent}% coverage with "
+                f"{final.untraced_units} untraced units remaining."
+            ),
+            "metrics": {
+                "coverage_percent": final.coverage_percent,
+                "untraced_units": final.untraced_units,
+            },
+        },
+        {
+            "id": "source-room-005",
+            "stage": "jurisdiction_rules",
+            "agent": "Rules",
+            "message": deadline_message,
+            "metrics": {
+                "applied_rules": len(rule_assessment["applied_rules"]),
+            },
+        },
+        {
+            "id": "source-room-006",
+            "stage": "human_approval_gate",
+            "agent": "QA Director",
+            "message": approval_message,
+            "metrics": {"approval_ready": rule_assessment["approval_ready"]},
+        },
+    ]
+    room_hash = hashlib.sha256(
+        json.dumps(events, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        "mode": "source_packet_parameterized_room",
+        "disclosure": (
+            "Generated from the current source-evidence packet and deterministic rules; "
+            "not a live Band room."
+        ),
+        "room_id": f"source-room-{packet.audit_hash[:12]}",
+        "incident_id": packet.incident_id,
+        "source_audit_hash": packet.audit_hash,
+        "approval_ready": rule_assessment["approval_ready"],
+        "next_deadline": next_deadline,
+        "events": events,
+        "room_hash": room_hash,
     }
 
 

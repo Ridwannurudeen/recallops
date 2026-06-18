@@ -105,11 +105,45 @@ def test_source_evidence_endpoint_returns_computed_packet() -> None:
     body = response.json()
     packet = body["packet"]
     assert body["verification"]["ok"] is True
+    assert body["room"]["mode"] == "source_packet_parameterized_room"
+    assert body["room"]["room_id"].startswith("source-room-")
     assert packet["incident_id"] == "INC-SOURCE-BAT-4421"
     assert packet["initial_traceability"]["coverage_percent"] == 82
     assert packet["final_traceability"]["coverage_percent"] == 100
     assert packet["missing_sources"] == ["SHIP-006"]
     assert packet["partner_ai"]["mode"] == "deterministic_source_parser"
+
+
+def test_source_evidence_recompute_generates_parameterized_room() -> None:
+    response = post(
+        "/api/source-evidence",
+        {
+            "complaint_text": (
+                "C-900 | product: Harbor Sensor | lot: LOT-900 | "
+                "defect: cracked housing | severity: critical"
+            ),
+            "shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,South Hub,US-East,10,100,missing\n"
+            ),
+            "recovered_shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,South Hub,US-East,10,100,traced\n"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["packet"]["incident_id"] == "INC-SOURCE-LOT-900"
+    assert body["packet"]["initial_traceability"]["coverage_percent"] == 50
+    assert body["room"]["incident_id"] == "INC-SOURCE-LOT-900"
+    assert body["room"]["approval_ready"] is True
+    assert "Harbor Sensor" in body["room"]["events"][0]["message"]
+    assert "50% with 100 untraced units" in body["room"]["events"][1]["message"]
+    assert len(body["room"]["room_hash"]) == 64
 
 
 def test_source_evidence_recompute_rejects_bad_csv() -> None:

@@ -8,6 +8,20 @@ import ProofLabel from "./proof-label";
 type ReplayVariant = "hero" | "full";
 type ReadingMode = "operator" | "judge";
 
+type SourceEvidenceApiResponse = {
+  packet?: {
+    audit_hash?: string;
+  };
+};
+
+type ApprovalReceiptApiResponse = {
+  receipt?: {
+    approval_id?: string;
+    receipt_hash?: string;
+  };
+  detail?: string;
+};
+
 type ReplayStep = {
   key: string;
   tag: string;
@@ -124,15 +138,21 @@ const replaySteps: ReplayStep[] = [
 ];
 
 export default function Bat4421Replay({
+  apiBase = "/api",
   packet,
   variant = "hero",
 }: {
+  apiBase?: string;
   packet: Packet;
   variant?: ReplayVariant;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [running, setRunning] = useState(false);
   const [mode, setMode] = useState<ReadingMode>("operator");
+  const [approving, setApproving] = useState(false);
+  const [approvalReceipt, setApprovalReceipt] =
+    useState<ApprovalReceiptApiResponse | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const step = replaySteps[stepIndex];
   const visibleEvents = packet.events.slice(0, step.visibleEvents);
   const capturedRun = packet.band_proof.captured_band_run;
@@ -190,9 +210,46 @@ export default function Bat4421Replay({
     setStepIndex((current) => Math.min(current + 1, finalStepIndex));
   }
 
-  function approve() {
+  async function approve() {
     setRunning(false);
-    setStepIndex(finalStepIndex);
+    setApproving(true);
+    setApprovalError(null);
+    try {
+      const sourceResponse = await fetch(`${apiBase}/source-evidence`, {
+        cache: "no-store",
+      });
+      const sourceBody =
+        (await sourceResponse.json()) as SourceEvidenceApiResponse;
+      if (!sourceResponse.ok || !sourceBody.packet?.audit_hash) {
+        throw new Error("Source evidence is not ready for approval.");
+      }
+
+      const approvalResponse = await fetch(`${apiBase}/approval-receipt`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          approver: "QA Director",
+          decision: "approved",
+          reason:
+            "Traceability reached 100% and the risk hold cleared for human approval.",
+          source_audit_hash: sourceBody.packet.audit_hash,
+        }),
+      });
+      const approvalBody =
+        (await approvalResponse.json()) as ApprovalReceiptApiResponse;
+      if (!approvalResponse.ok) {
+        throw new Error(approvalBody.detail ?? "Approval receipt failed.");
+      }
+
+      setApprovalReceipt(approvalBody);
+      setStepIndex(finalStepIndex);
+    } catch (exc) {
+      setApprovalError(
+        exc instanceof Error ? exc.message : "Approval receipt failed.",
+      );
+    } finally {
+      setApproving(false);
+    }
   }
 
   function reset() {
@@ -332,18 +389,22 @@ export default function Bat4421Replay({
             <span>Authorize</span>
             <strong>Voluntary recall, notices, quarantine, ERP hold</strong>
             <small>
-              Scope: {packet.exposure_clock.units_in_market.toLocaleString()}{" "}
-              units / {packet.final_traceability.regions} regions /{" "}
-              {packet.final_traceability.affected_customers.toLocaleString()}{" "}
-              customers
+              {approvalReceipt?.receipt?.receipt_hash
+                ? `Receipt: ${shortHash(approvalReceipt.receipt.receipt_hash, 10)}`
+                : `Scope: ${packet.exposure_clock.units_in_market.toLocaleString()} units / ${packet.final_traceability.regions} regions / ${packet.final_traceability.affected_customers.toLocaleString()} customers`}
             </small>
             <button
               type="button"
-              disabled={!approvalReady && !sealed}
+              disabled={approving || (!approvalReady && !sealed)}
               onClick={approve}
             >
-              {sealed ? "Recall action approved" : "Approve recall action"}
+              {approving
+                ? "Approving..."
+                : sealed
+                  ? "Recall action approved"
+                  : "Approve recall action"}
             </button>
+            {approvalError ? <small>{approvalError}</small> : null}
           </div>
         </article>
       </div>

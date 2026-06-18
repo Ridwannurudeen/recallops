@@ -1,11 +1,18 @@
 import ThemeToggle from "./theme-toggle";
 
 type SiteNavProps = {
-  active?: "product" | "demo" | "proof" | "integrations" | "security";
+  active?:
+    | "product"
+    | "console"
+    | "demo"
+    | "proof"
+    | "integrations"
+    | "security";
 };
 
 const navItems = [
   { id: "product", label: "Product", href: "/" },
+  { id: "console", label: "Console", href: "/console" },
   { id: "demo", label: "Demo", href: "/demo/bat-4421" },
   { id: "proof", label: "Proof", href: "/proof" },
   { id: "integrations", label: "Integrations", href: "/integrations" },
