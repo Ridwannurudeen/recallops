@@ -43,8 +43,8 @@ Final output includes notices, affected coverage, packet room ID, captured Band
 room ID, message IDs, veto ID, approval ID, receipt chain, decision graph, and
 SHA-256 audit digest. `/api/submission-proof` bundles every judge proof surface
 into one JSON endpoint, including rules, dispatch receipts, adapter readiness,
-SAP/Oracle sync payloads, identity-gate status, ERP contract receipts, and
-spend controls.
+SAP API Hub sandbox proof, SAP/Oracle sync payloads, identity-gate status, ERP
+contract receipts, and spend controls.
 
 ## 9. SAP / Oracle Gate
 
@@ -52,6 +52,9 @@ RecallOps prepares the same recall-hold payload for SAP S/4HANA and Oracle SCM
 in dry-run mode. Live writes require real tenant endpoints, credentials, and a
 server-side admin action key, so the demo proves the integration contract
 without pretending to own a customer ERP tenant.
+
+The SAP API Hub key is used as a separate live sandbox-read proof against SAP's
+S/4HANA Cloud Business Partner sandbox.
 
 ## 10. Identity Gate
 

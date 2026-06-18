@@ -53,6 +53,10 @@ type Readiness = {
     receipt_count: number;
     latest_pair_verified: boolean;
   };
+  sap_api_hub: {
+    configured: boolean;
+    endpoint: string;
+  };
   spend_limits: {
     partner_ai: {
       runnable: boolean;
@@ -97,6 +101,7 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
         <div className="readiness-links">
           <a href={`${apiBase}/ops-readiness`}>readiness api</a>
           <a href={`${apiBase}/enterprise-sync`}>sap/oracle proof</a>
+          <a href={`${apiBase}/sap-api-hub`}>sap sandbox</a>
         </div>
       </div>
       {readiness ? (
@@ -163,6 +168,13 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
                   ? "token set"
                   : "token absent"}
               </small>
+            </article>
+            <article>
+              <span>sap api hub</span>
+              <strong>
+                {readiness.sap_api_hub.configured ? "configured" : "missing"}
+              </strong>
+              <small>{readiness.sap_api_hub.endpoint}</small>
             </article>
           </div>
           <div className="sync-ledger">

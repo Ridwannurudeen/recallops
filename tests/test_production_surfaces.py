@@ -16,6 +16,7 @@ from recallops.identity import identity_status, resolve_approval_identity
 from recallops.notifications import build_dispatch_receipts
 from recallops.rate_limit import SpendLimitSettings, acquire_spend_permit, spend_limit_status
 from recallops.rules import assess_rules
+from recallops.sap_sandbox import run_sap_api_hub_probe, sap_api_hub_status
 from recallops.source_evidence import build_source_evidence_packet
 
 
@@ -84,6 +85,37 @@ def test_sap_oracle_status_reports_execution_ready_without_secrets(monkeypatch) 
     assert status["enterprise_sync"]["execution_ready_count"] == 2
     assert "sap-secret-token" not in str(status)
     assert "oracle-secret-token" not in str(status)
+
+
+def test_sap_api_hub_probe_reports_missing_key(monkeypatch) -> None:
+    monkeypatch.delenv("RECALLOPS_SAP_API_HUB_KEY", raising=False)
+
+    status = sap_api_hub_status()
+    probe = run_sap_api_hub_probe()
+
+    assert status["configured"] is False
+    assert probe["verified"] is False
+    assert probe["status"] == "missing_key"
+
+
+def test_sap_api_hub_probe_hashes_successful_sandbox_read(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_SAP_API_HUB_KEY", "sap-api-hub-secret")
+
+    def fake_fetch_business_partner_sample(**_: str) -> dict[str, object]:
+        return {"d": {"results": [{"BusinessPartner": "1000000"}]}}
+
+    monkeypatch.setattr(
+        "recallops.sap_sandbox._fetch_business_partner_sample",
+        fake_fetch_business_partner_sample,
+    )
+
+    probe = run_sap_api_hub_probe()
+
+    assert probe["configured"] is True
+    assert probe["verified"] is True
+    assert probe["result_count"] == 1
+    assert len(str(probe["response_hash"])) == 64
+    assert "sap-api-hub-secret" not in str(probe)
 
 
 def test_enterprise_sync_dry_run_builds_sap_oracle_payloads() -> None:

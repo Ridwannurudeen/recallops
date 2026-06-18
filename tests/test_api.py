@@ -163,6 +163,7 @@ def test_integrations_and_ops_readiness_are_explicit() -> None:
     assert readiness.json()["persistence"]["mode"] == "sqlite_case_store"
     assert "identity" in readiness.json()
     assert "erp_contract" in readiness.json()
+    assert "sap_api_hub" in readiness.json()
     assert "production_blockers_remaining" in readiness.json()
 
 
@@ -175,6 +176,22 @@ def test_enterprise_sync_get_returns_dry_run_payloads() -> None:
     assert body["sync"]["external_write"] is False
     assert body["sync"]["payload"]["lotNumber"] == "BAT-4421"
     assert [target["id"] for target in body["sync"]["targets"]] == ["sap", "oracle"]
+
+
+def test_sap_api_hub_endpoint_runs_probe(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_SAP_API_HUB_KEY", "sap-api-hub-secret")
+    monkeypatch.setattr(
+        "recallops.sap_sandbox._fetch_business_partner_sample",
+        lambda **_: {"d": {"results": [{"BusinessPartner": "1000000"}]}},
+    )
+
+    response = get("/api/sap-api-hub")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["verified"] is True
+    assert body["result_count"] == 1
+    assert "sap-api-hub-secret" not in str(body)
 
 
 def test_enterprise_sync_live_requires_admin_gate(monkeypatch) -> None:
@@ -319,10 +336,12 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["checks"]["sap_oracle_payloads_prepared"] is True
     assert "identity_gate_ready" in body["checks"]
     assert "erp_contract_live_write_verified" in body["checks"]
+    assert "sap_api_hub_sandbox_verified" in body["checks"]
     assert len(body["dispatch_receipts"]) == 3
     assert body["enterprise_sync"]["mode"] == "dry_run_no_external_write"
     assert "identity" in body
     assert "erp_contract" in body
+    assert "sap_api_hub" in body
     assert body["production_readiness"]["persistence"]["mode"] == "sqlite_case_store"
     assert body["submission_gates"]["repo_visibility"] == "private_until_user_approves_public_flip"
 

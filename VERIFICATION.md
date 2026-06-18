@@ -1,6 +1,6 @@
 # Verification
 
-Last full local verification: 2026-06-17.
+Last full local verification: 2026-06-18.
 
 ## Python
 
@@ -10,10 +10,10 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `62 passed`, including API endpoint tests, source parser coverage,
+Result: `65 passed`, including API endpoint tests, source parser coverage,
 citation integrity, partner AI missing-key checks, mocked partner AI execution,
 submission proof bundle checks, SQLite case persistence, jurisdiction rules,
-dispatch receipts, SAP/Oracle sync payloads, identity-gated approval, OIDC/JWKS verification,
+dispatch receipts, SAP API Hub sandbox proof, SAP/Oracle sync payloads, identity-gated approval, OIDC/JWKS verification,
 ERP contract receiver receipts, integration readiness, spend-limit checks, approval receipt
 hashing, static packet drift protection, workflow gates, receipt hash chaining,
 decision graph checks, digest verification, and mocked Band spike ordering.
@@ -59,6 +59,7 @@ curl.exe -fsSL https://recallops.gudman.xyz/api/partner-ai/status
 curl.exe -fsSL https://recallops.gudman.xyz/api/spend-limits
 curl.exe -fsSL https://recallops.gudman.xyz/api/integrations
 curl.exe -fsSL https://recallops.gudman.xyz/api/ops-readiness
+curl.exe -fsSL https://recallops.gudman.xyz/api/sap-api-hub
 curl.exe -fsSL https://recallops.gudman.xyz/api/enterprise-sync
 curl.exe -fsSL https://recallops.gudman.xyz/api/identity/status
 curl.exe -fsSL https://recallops.gudman.xyz/api/erp-contract/status
@@ -96,6 +97,8 @@ payload hashes and no external ERP write.
 The identity status endpoint reports whether admin-key or OIDC/JWKS approval is
 available, and the ERP contract receiver exposes redacted SAP/Oracle adapter
 receipts after a live contract smoke.
+The SAP API Hub endpoint performs a live S/4HANA Cloud sandbox Business Partner
+read when `RECALLOPS_SAP_API_HUB_KEY` is configured.
 Live `POST /api/submission-proof` returned `partner_ai_assisted`,
 `partner_ai_used_count: 2`, and `partner_ai_used_both: true`. `/favicon.ico`
 returns HTTP 200 so opening the raw JSON endpoint does not create a browser
