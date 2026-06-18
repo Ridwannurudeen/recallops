@@ -1,38 +1,231 @@
-.workspace {
+.commandCenter {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 18px;
+}
+
+.heroBoard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
   gap: 16px;
 }
 
-.inputPanel,
-.resultsPanel {
-  display: grid;
-  gap: 16px;
-}
-
-.actionPanel {
-  display: grid;
-  align-content: start;
-  gap: 16px;
-}
-
+.verdictCard,
 .card,
-.statusCard,
-.metricCard,
-.documentPanel {
+.cardWide,
+.metricStrip,
+.taskGrid article,
+.marketList article,
+.documentGrid article,
+.emptyState {
   border: 1px solid rgba(212, 168, 95, 0.18);
   border-radius: 8px;
-  padding: 16px;
-  background: rgba(10, 18, 28, 0.72);
+  background:
+    linear-gradient(180deg, rgba(255, 247, 232, 0.045), transparent 42%),
+    rgba(10, 18, 28, 0.78);
+}
+
+.verdictCard {
+  position: relative;
+  overflow: hidden;
+  min-height: 260px;
+  padding: 24px;
+}
+
+.verdictCard::before {
+  content: "";
+  position: absolute;
+  inset: -30% 44% auto auto;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(212, 168, 95, 0.11);
+  filter: blur(22px);
+}
+
+.verdictCard[data-ready="true"] {
+  border-color: rgba(90, 211, 154, 0.42);
+}
+
+.verdictCard[data-ready="false"] {
+  border-color: rgba(255, 184, 77, 0.42);
+}
+
+.verdictCard h2 {
+  position: relative;
+  max-width: 760px;
+  margin: 0;
+  color: #fff7e8;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(32px, 5vw, 64px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.verdictCard p {
+  position: relative;
+  max-width: 680px;
+  margin: 16px 0 0;
+  color: #d9c8a8;
+  font-size: 14px;
+  line-height: 1.62;
 }
 
 .kicker {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--gilt-2);
   font-family: Consolas, "Courier New", monospace;
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.buttonRow {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.buttonRow button,
+.buttonRow a,
+.tabs button,
+.fileButton,
+.cardHead button,
+.shipmentTable button,
+.exportStack button,
+.exportStack a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid rgba(212, 168, 95, 0.34);
+  border-radius: 7px;
+  padding: 0 13px;
+  background: rgba(212, 168, 95, 0.12);
+  color: #fff7e8;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.buttonRow button:first-child {
+  border-color: rgba(212, 168, 95, 0.58);
+  background: #d4a85f;
+  color: #120d07;
+}
+
+.buttonRow button:disabled,
+.cardHead button:disabled,
+.exportStack button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.metricStrip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.metricStrip article {
+  min-height: 128px;
+  padding: 18px;
+  background: rgba(7, 16, 25, 0.36);
+}
+
+.metricStrip span,
+.taskGrid span,
+.marketList span,
+.documentGrid span,
+.emptyState span {
+  display: block;
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.metricStrip strong {
+  display: block;
+  margin-top: 12px;
+  color: #fff7e8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 28px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricStrip p,
+.card p,
+.cardWide p,
+.taskGrid p,
+.marketList p,
+.documentGrid p,
+.emptyState p,
+.boundaryList {
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid rgba(212, 168, 95, 0.16);
+  padding-bottom: 10px;
+}
+
+.tabs button {
+  background: rgba(7, 16, 25, 0.62);
+  color: #d9c8a8;
+}
+
+.tabs button[aria-pressed="true"] {
+  border-color: rgba(212, 168, 95, 0.6);
+  background: rgba(212, 168, 95, 0.16);
+  color: #fff7e8;
+}
+
+.twoColumn,
+.taskLayout,
+.documentGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.card,
+.cardWide {
+  padding: 18px;
+}
+
+.cardWide {
+  grid-column: 1 / -1;
+}
+
+.cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cardHead h2,
+.card h2,
+.cardWide h2,
+.emptyState h2 {
+  margin: 0;
+  color: #fff7e8;
+  font-size: 18px;
+  letter-spacing: -0.02em;
 }
 
 .fieldGrid {
@@ -45,7 +238,8 @@
   grid-column: 1 / -1;
 }
 
-.fieldGrid label {
+.fieldGrid label,
+.shipmentTable label {
   display: grid;
   gap: 7px;
 }
@@ -65,126 +259,162 @@
 .tableRow input,
 .tableRow select {
   width: 100%;
-  border: 1px solid rgba(125, 211, 252, 0.18);
+  border: 1px solid rgba(125, 211, 252, 0.17);
   border-radius: 6px;
   padding: 10px;
-  background: rgba(7, 16, 25, 0.7);
+  background: rgba(7, 16, 25, 0.72);
   color: #fff7e8;
   font: 13px/1.4 inherit;
 }
 
 .fieldGrid textarea {
-  min-height: 86px;
+  min-height: 108px;
   resize: vertical;
 }
 
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 12px;
+.fieldGrid input:focus,
+.fieldGrid select:focus,
+.fieldGrid textarea:focus,
+.tableRow input:focus,
+.tableRow select:focus,
+.tabs button:focus-visible,
+.buttonRow button:focus-visible,
+.buttonRow a:focus-visible,
+.fileButton:focus-visible,
+.cardHead button:focus-visible,
+.shipmentTable button:focus-visible,
+.exportStack button:focus-visible,
+.exportStack a:focus-visible {
+  border-color: rgba(212, 168, 95, 0.76);
+  outline: 2px solid rgba(212, 168, 95, 0.18);
+  outline-offset: 2px;
 }
 
-.cardHead h2,
-.statusCard h2,
-.documentPanel h2 {
-  margin: 0;
-  color: #fff7e8;
+.fileButton {
+  position: relative;
+  overflow: hidden;
 }
 
-.smallActions,
-.documentPanel .cardHead button {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.smallActions button,
-.statusCard button,
-.documentPanel button {
-  border: 1px solid rgba(212, 168, 95, 0.38);
-  border-radius: 7px;
-  min-height: 38px;
-  padding: 0 12px;
-  background: rgba(212, 168, 95, 0.12);
-  color: #fff7e8;
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
   cursor: pointer;
-}
-
-.statusCard button {
-  width: 100%;
-  min-height: 46px;
-  margin-top: 12px;
-  font-weight: 700;
-}
-
-.statusCard button:disabled {
-  cursor: not-allowed;
-  opacity: 0.56;
 }
 
 .shipmentTable {
   display: grid;
   gap: 8px;
   overflow-x: auto;
+  padding-bottom: 2px;
 }
 
 .tableHeader,
 .tableRow {
   display: grid;
-  grid-template-columns: 1fr 1.25fr 0.9fr 0.72fr 0.72fr 0.8fr;
+  grid-template-columns: 0.95fr 1.1fr 0.9fr 0.7fr 0.72fr 0.72fr 64px;
   gap: 8px;
-  min-width: 760px;
+  min-width: 900px;
+  align-items: end;
 }
 
 .tableHeader {
   padding: 0 4px;
 }
 
-.statusCard[data-ready="true"] {
-  border-color: rgba(90, 211, 154, 0.36);
+.tableRow {
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  border-radius: 7px;
+  padding: 8px;
+  background: rgba(7, 16, 25, 0.38);
 }
 
-.statusCard[data-ready="false"] {
-  border-color: rgba(255, 184, 77, 0.34);
+.taskGrid {
+  display: grid;
+  gap: 10px;
 }
 
-.statusCard p,
-.card p,
-.metricCard p,
-.documentPanel p,
-.disclaimer,
-.actionList,
-.boundaryList {
-  color: #d9c8a8;
-  font-size: 12px;
-  line-height: 1.5;
+.taskGrid article,
+.marketList article,
+.documentGrid article,
+.emptyState {
+  padding: 14px;
 }
 
-.disclaimer {
-  margin: 12px 0 0;
+.taskGrid article {
+  border-left: 3px solid rgba(212, 168, 95, 0.42);
+}
+
+.taskGrid article[data-status="blocked"] {
+  border-color: rgba(255, 184, 77, 0.54);
+}
+
+.taskGrid article[data-status="ready"] {
+  border-color: rgba(90, 211, 154, 0.5);
+}
+
+.taskGrid article[data-status="review"] {
+  border-color: rgba(125, 211, 252, 0.48);
+}
+
+.taskGrid article h3,
+.marketList article h3,
+.documentGrid article h3 {
+  margin: 7px 0 8px;
+  color: #fff7e8;
+  font-size: 15px;
+  line-height: 1.28;
+}
+
+.marketList {
+  display: grid;
+  gap: 10px;
 }
 
 .noticeDraft {
   width: 100%;
-  min-height: 190px;
+  min-height: 220px;
   border: 1px solid rgba(125, 211, 252, 0.16);
   border-radius: 7px;
   padding: 12px;
-  background: rgba(7, 16, 25, 0.48);
+  background: rgba(7, 16, 25, 0.52);
   color: #fff7e8;
   font:
     13px/1.55 Consolas,
     "Courier New",
     monospace;
   resize: vertical;
+  white-space: pre-wrap;
 }
 
-.statusCard small {
+.emptyState {
+  grid-column: 1 / -1;
+}
+
+.emptyState strong,
+.documentGrid strong {
   display: block;
-  margin-top: 10px;
-  color: #ffdf9a;
+  margin-top: 8px;
+  color: #fff7e8;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.exportStack {
+  display: grid;
+  gap: 10px;
+}
+
+.exportStack button,
+.exportStack a {
+  width: 100%;
+}
+
+.boundaryList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
 }
 
 .error {
@@ -194,115 +424,106 @@
   font-size: 12px;
 }
 
-.actionList,
-.boundaryList {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding-left: 18px;
-}
-
-.resultsPanel {
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.metricCard span,
-.documentGrid span {
-  color: var(--gilt-2);
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.metricCard strong,
-.documentGrid strong {
-  display: block;
-  margin-top: 8px;
-  color: #fff7e8;
-  font-size: 16px;
-  line-height: 1.28;
-}
-
-.documentPanel {
-  grid-column: 1 / -1;
-}
-
-.documentGrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.documentGrid article {
-  min-width: 0;
-  border: 1px solid rgba(125, 211, 252, 0.14);
-  border-radius: 7px;
-  padding: 12px;
-  background: rgba(7, 16, 25, 0.48);
-}
-
-.documentGrid code {
-  display: block;
-  overflow: hidden;
-  color: #9fe7d6;
-  font-family: Consolas, "Courier New", monospace;
-  font-size: 10px;
-  text-overflow: ellipsis;
-}
-
+html[data-theme="light"] .verdictCard,
 html[data-theme="light"] .card,
-html[data-theme="light"] .statusCard,
-html[data-theme="light"] .metricCard,
-html[data-theme="light"] .documentPanel,
-html[data-theme="light"] .documentGrid article {
+html[data-theme="light"] .cardWide,
+html[data-theme="light"] .metricStrip,
+html[data-theme="light"] .taskGrid article,
+html[data-theme="light"] .marketList article,
+html[data-theme="light"] .documentGrid article,
+html[data-theme="light"] .emptyState {
   border-color: rgba(111, 134, 153, 0.22);
-  background: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.84),
+      rgba(255, 255, 255, 0.68)
+    ),
+    rgba(255, 255, 255, 0.82);
 }
 
+html[data-theme="light"] .verdictCard h2,
 html[data-theme="light"] .cardHead h2,
-html[data-theme="light"] .statusCard h2,
-html[data-theme="light"] .documentPanel h2,
-html[data-theme="light"] .metricCard strong,
-html[data-theme="light"] .documentGrid strong {
+html[data-theme="light"] .card h2,
+html[data-theme="light"] .cardWide h2,
+html[data-theme="light"] .metricStrip strong,
+html[data-theme="light"] .taskGrid article h3,
+html[data-theme="light"] .marketList article h3,
+html[data-theme="light"] .documentGrid article h3,
+html[data-theme="light"] .documentGrid strong,
+html[data-theme="light"] .emptyState h2,
+html[data-theme="light"] .emptyState strong {
   color: #071019;
 }
 
-html[data-theme="light"] .statusCard p,
+html[data-theme="light"] .verdictCard p,
 html[data-theme="light"] .card p,
-html[data-theme="light"] .metricCard p,
-html[data-theme="light"] .documentPanel p,
-html[data-theme="light"] .disclaimer,
-html[data-theme="light"] .actionList,
+html[data-theme="light"] .cardWide p,
+html[data-theme="light"] .metricStrip p,
+html[data-theme="light"] .taskGrid p,
+html[data-theme="light"] .marketList p,
+html[data-theme="light"] .documentGrid p,
+html[data-theme="light"] .emptyState p,
 html[data-theme="light"] .boundaryList {
   color: #45576a;
-}
-
-html[data-theme="light"] .noticeDraft {
-  border-color: rgba(111, 134, 153, 0.24);
-  background: rgba(255, 255, 255, 0.78);
-  color: #071019;
 }
 
 html[data-theme="light"] .fieldGrid input,
 html[data-theme="light"] .fieldGrid select,
 html[data-theme="light"] .fieldGrid textarea,
 html[data-theme="light"] .tableRow input,
-html[data-theme="light"] .tableRow select {
+html[data-theme="light"] .tableRow select,
+html[data-theme="light"] .noticeDraft {
   border-color: rgba(111, 134, 153, 0.24);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
+  color: #071019;
+}
+
+html[data-theme="light"] .tabs {
+  border-color: rgba(111, 134, 153, 0.18);
+}
+
+html[data-theme="light"] .tabs button {
+  background: rgba(255, 255, 255, 0.74);
+  color: #45576a;
+}
+
+html[data-theme="light"] .tabs button[aria-pressed="true"] {
   color: #071019;
 }
 
 @media (max-width: 980px) {
-  .workspace,
-  .resultsPanel,
+  .heroBoard,
+  .twoColumn,
+  .taskLayout,
   .documentGrid {
     grid-template-columns: 1fr;
   }
 
-  .fieldGrid {
+  .fieldGrid,
+  .metricStrip {
     grid-template-columns: 1fr;
+  }
+
+  .verdictCard {
+    min-height: auto;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 620px) {
+  .cardHead,
+  .buttonRow,
+  .tabs {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .buttonRow button,
+  .buttonRow a,
+  .tabs button,
+  .cardHead button,
+  .fileButton {
+    width: 100%;
   }
 }

@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 import styles from "./recall-workspace.module.css";
 
 type ShipmentStatus = "traced" | "missing";
+type TaskStatus = "ready" | "blocked" | "review" | "draft";
 
 type ShipmentRow = {
   id: string;
@@ -30,6 +31,14 @@ type EvidenceResponse = {
     facts: { key: string; value: string | number; citation_id: string }[];
     initial_traceability: Traceability;
     final_traceability: Traceability;
+    initial_shipments: {
+      source: string;
+      distributor: string;
+      region: string;
+      customers: number;
+      units: number;
+      status: string;
+    }[];
     missing_sources: string[];
     audit_hash: string;
   };
@@ -43,6 +52,8 @@ type FilingResponse = {
       authority: string;
       label: string;
       status: string;
+      deadline_hours?: number | null;
+      matched_regions?: string[];
       required_human_action: string;
     }[];
   };
@@ -64,6 +75,14 @@ type WorkspaceResult = {
   evidence: EvidenceResponse;
   filing: FilingResponse;
   regulator: RegulatorResponse;
+};
+
+type Task = {
+  title: string;
+  owner: string;
+  deadline: string;
+  status: TaskStatus;
+  detail: string;
 };
 
 const initialRows: ShipmentRow[] = [
@@ -108,6 +127,9 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "case" | "tasks" | "drafts" | "proof"
+  >("case");
 
   const validationError = useMemo(
     () => validateCase({ product, lot, defect, rows }),
@@ -119,12 +141,6 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     traceability && traceability.coverage_percent === 100,
   );
   const missingRows = rows.filter((row) => row.status === "missing");
-  const nextActions = buildNextActions({
-    isReady,
-    missingRows,
-    traceability,
-    hasResult: result !== null,
-  });
   const globalChecklist = buildGlobalChecklist(rows, productCategory);
   const customerNotice = buildCustomerNotice({
     product,
@@ -133,6 +149,26 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     severity,
     isReady,
   });
+  const distributorHold = buildDistributorHold({ product, lot, defect, rows });
+  const executiveBrief = buildExecutiveBrief({
+    product,
+    lot,
+    defect,
+    severity,
+    productCategory,
+    result,
+    isReady,
+  });
+  const tasks = buildTasks({
+    isReady,
+    missingRows,
+    traceability,
+    filings: result?.filing.filing_pack?.filings ?? [],
+    globalChecklist,
+  });
+  const urgentTasks = tasks.filter(
+    (task) => task.status === "blocked" || task.deadline.includes("24h"),
+  );
 
   async function analyzeCase() {
     const nextError = validateCase({ product, lot, defect, rows });
@@ -144,6 +180,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     setBusy(true);
     setError(null);
     setResult(null);
+    setActiveTab("tasks");
 
     const complaintText = buildComplaintText({
       complaintId,
@@ -173,7 +210,6 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         dry_run: true,
         targets: ["cpsc", "eu", "regional"],
       })) as RegulatorResponse;
-
       setResult({ evidence, filing, regulator });
     } catch (exc) {
       setError(
@@ -211,29 +247,67 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     ]);
   }
 
+  function removeRow(id: string) {
+    setRows((current) => current.filter((row) => row.id !== id));
+  }
+
   function markAllTraced() {
-    setRows((current) =>
-      current.map((row) => ({
-        ...row,
-        status: "traced",
-      })),
-    );
+    setRows((current) => current.map((row) => ({ ...row, status: "traced" })));
   }
 
   function resetCase() {
     setRows(initialRows);
     setResult(null);
     setError(null);
+    setActiveTab("case");
   }
 
-  function downloadBrief() {
+  async function uploadShipmentCsv(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      setRows(parseShipmentCsv(await file.text()));
+      setResult(null);
+    } catch (exc) {
+      setError(
+        exc instanceof Error ? exc.message : "Shipment CSV could not be read.",
+      );
+    } finally {
+      event.currentTarget.value = "";
+    }
+  }
+
+  async function uploadComplaintFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      const text = await file.text();
+      const parsed = parseComplaint(text);
+      setComplaintId(parsed.complaintId ?? complaintId);
+      setProduct(parsed.product ?? product);
+      setLot(parsed.lot ?? lot);
+      setDefect(parsed.defect ?? defect);
+      setSeverity(parsed.severity ?? severity);
+      setResult(null);
+    } catch {
+      setError("Complaint file could not be read.");
+    } finally {
+      event.currentTarget.value = "";
+    }
+  }
+
+  function downloadActionPack() {
     if (!result) {
       return;
     }
-    const brief = {
-      proof_kind: "recallops_external_user_case_brief",
+    const actionPack = {
+      proof_kind: "recallops_global_action_pack",
       generated_at: new Date().toISOString(),
-      input: {
+      case: {
         complaintId,
         product,
         productCategory,
@@ -244,26 +318,23 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
       },
       readiness: isReady
         ? "ready_for_human_review"
-        : "not_ready_missing_traceability",
-      next_actions: nextActions,
+        : "blocked_missing_traceability",
+      tasks,
+      globalChecklist,
+      executiveBrief,
+      customerNotice,
+      distributorHold,
       evidence: result.evidence,
-      filing_pack: result.filing,
-      regulator_dispatch: result.regulator,
+      filingPack: result.filing,
+      regulatorDispatch: result.regulator,
       boundaries: [
-        "RecallOps does not submit to regulators from the public workspace.",
-        "RecallOps does not write to SAP or Oracle from the public workspace.",
+        "This pack is decision support, not legal advice.",
+        "No external regulator submission was sent.",
+        "No SAP or Oracle tenant write was performed.",
         "A named human remains responsible for final recall sign-off.",
       ],
     };
-    const blob = new Blob([JSON.stringify(brief, null, 2)], {
-      type: "application/json",
-    });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `recallops-${lot || "case"}-brief.json`;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
+    downloadJson(actionPack, `recallops-${lot || "case"}-action-pack.json`);
   }
 
   async function copyNotice() {
@@ -273,234 +344,213 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   }
 
   return (
-    <section className={styles.workspace}>
-      <div className={styles.inputPanel}>
-        <article className={styles.card}>
-          <p className={styles.kicker}>1. Describe the incident</p>
-          <div className={styles.fieldGrid}>
-            <label>
-              <span>Complaint ID</span>
-              <input
-                onChange={(event) => setComplaintId(event.currentTarget.value)}
-                value={complaintId}
-              />
-            </label>
-            <label>
-              <span>Product</span>
-              <input
-                onChange={(event) => setProduct(event.currentTarget.value)}
-                value={product}
-              />
-            </label>
-            <label>
-              <span>Lot or batch</span>
-              <input
-                onChange={(event) => setLot(event.currentTarget.value)}
-                value={lot}
-              />
-            </label>
-            <label>
-              <span>Product category</span>
-              <select
-                onChange={(event) =>
-                  setProductCategory(event.currentTarget.value)
-                }
-                value={productCategory}
-              >
-                <option value="consumer product">consumer product</option>
-                <option value="food">food</option>
-                <option value="medical device">medical device</option>
-                <option value="vehicle equipment">vehicle equipment</option>
-                <option value="toy or child product">
-                  toy or child product
-                </option>
-                <option value="industrial equipment">
-                  industrial equipment
-                </option>
-              </select>
-            </label>
-            <label>
-              <span>Severity</span>
-              <select
-                onChange={(event) => setSeverity(event.currentTarget.value)}
-                value={severity}
-              >
-                <option value="critical">critical</option>
-                <option value="high">high</option>
-                <option value="medium">medium</option>
-                <option value="low">low</option>
-              </select>
-            </label>
-            <label className={styles.wideField}>
-              <span>What went wrong?</span>
-              <textarea
-                onChange={(event) => setDefect(event.currentTarget.value)}
-                value={defect}
-              />
-            </label>
-          </div>
-        </article>
-
-        <article className={styles.card}>
-          <div className={styles.cardHead}>
-            <div>
-              <p className={styles.kicker}>2. Enter shipment rows</p>
-              <h2>Mark each row traced or missing.</h2>
-            </div>
-            <div className={styles.smallActions}>
-              <button onClick={addRow} type="button">
-                Add row
-              </button>
-              <button onClick={markAllTraced} type="button">
-                Mark all traced
-              </button>
-              <button onClick={resetCase} type="button">
-                Reset
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.shipmentTable}>
-            <div className={styles.tableHeader}>
-              <span>source</span>
-              <span>distributor</span>
-              <span>market / country</span>
-              <span>customers</span>
-              <span>units</span>
-              <span>status</span>
-            </div>
-            {rows.map((row) => (
-              <div className={styles.tableRow} key={row.id}>
-                <input
-                  onChange={(event) =>
-                    updateRow(row.id, "source", event.currentTarget.value)
-                  }
-                  value={row.source}
-                />
-                <input
-                  onChange={(event) =>
-                    updateRow(row.id, "distributor", event.currentTarget.value)
-                  }
-                  value={row.distributor}
-                />
-                <input
-                  onChange={(event) =>
-                    updateRow(row.id, "region", event.currentTarget.value)
-                  }
-                  value={row.region}
-                />
-                <input
-                  min={1}
-                  onChange={(event) =>
-                    updateRow(row.id, "customers", event.currentTarget.value)
-                  }
-                  type="number"
-                  value={row.customers}
-                />
-                <input
-                  min={1}
-                  onChange={(event) =>
-                    updateRow(row.id, "units", event.currentTarget.value)
-                  }
-                  type="number"
-                  value={row.units}
-                />
-                <select
-                  onChange={(event) =>
-                    updateRow(row.id, "status", event.currentTarget.value)
-                  }
-                  value={row.status}
-                >
-                  <option value="traced">traced</option>
-                  <option value="missing">missing</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        </article>
-      </div>
-
-      <aside className={styles.actionPanel}>
-        <article className={styles.statusCard} data-ready={isReady}>
-          <p className={styles.kicker}>3. Run recall analysis</p>
+    <section className={styles.commandCenter}>
+      <section className={styles.heroBoard}>
+        <article className={styles.verdictCard} data-ready={isReady}>
+          <p className={styles.kicker}>Live verdict</p>
           <h2>
             {result
               ? isReady
                 ? "Ready for human review"
-                : "Not ready: traceability gap"
-              : "No analysis yet"}
+                : "Blocked: traceability gap"
+              : "Start a recall case"}
           </h2>
           <p>
             {result
               ? isReady
-                ? "All shipped units are traced. Review the generated drafts before a named human signs off."
-                : "Some shipped units are still missing. Recover the shipment source before sign-off."
-              : "Run analysis to calculate coverage, prepare drafts, and get next actions."}
+                ? "All shipped units are traced. Review drafts and route to the accountable recall owner."
+                : "Some shipped units are untraced. Recover shipment evidence before sign-off or external action."
+              : "Upload or enter the incident, then run analysis to get the action board."}
           </p>
           <button disabled={busy} onClick={analyzeCase} type="button">
-            {busy ? "Analyzing..." : "Analyze recall risk"}
+            {busy ? "Building action center..." : "Build action center"}
           </button>
+          {error ? <strong>{error}</strong> : null}
           {validationError ? <small>{validationError}</small> : null}
-          {error ? <strong className={styles.error}>{error}</strong> : null}
         </article>
 
-        <article className={styles.card}>
-          <p className={styles.kicker}>What to do today</p>
-          <ol className={styles.actionList}>
-            {nextActions.map((action) => (
-              <li key={action}>{action}</li>
-            ))}
-          </ol>
-        </article>
-
-        <article className={styles.card}>
-          <p className={styles.kicker}>Boundaries</p>
-          <ul className={styles.boundaryList}>
-            <li>No public regulator submission.</li>
-            <li>No public SAP or Oracle write.</li>
-            <li>Final recall action stays human-owned.</li>
-          </ul>
-        </article>
-      </aside>
-
-      {result ? (
-        <section className={styles.resultsPanel}>
-          <article className={styles.metricCard}>
-            <span>coverage</span>
+        <article className={styles.metricStrip}>
+          <div>
+            <span>Coverage</span>
             <strong>{traceability?.coverage_percent ?? 0}%</strong>
-            <p>
-              {(traceability?.untraced_units ?? 0).toLocaleString()} untraced
-              units
-            </p>
-          </article>
-          <article className={styles.metricCard}>
-            <span>market exposure</span>
+          </div>
+          <div>
+            <span>Untraced units</span>
             <strong>
-              {(traceability?.shipped_units ?? 0).toLocaleString()} units
+              {(
+                traceability?.untraced_units ??
+                missingRows.reduce((sum, row) => sum + numeric(row.units), 0)
+              ).toLocaleString()}
             </strong>
-            <p>{traceability?.regions ?? 0} regions affected</p>
-          </article>
-          <article className={styles.metricCard}>
-            <span>case</span>
-            <strong>{result.evidence.packet.incident_id}</strong>
-            <p>{shortHash(result.evidence.packet.audit_hash)}</p>
-          </article>
-          <article className={styles.metricCard}>
-            <span>customer reach</span>
-            <strong>
-              {(traceability?.affected_customers ?? 0).toLocaleString()}
-            </strong>
-            <p>affected customers traced</p>
-          </article>
+          </div>
+          <div>
+            <span>Urgent tasks</span>
+            <strong>{urgentTasks.length}</strong>
+          </div>
+          <div>
+            <span>Markets</span>
+            <strong>{globalChecklist.length}</strong>
+          </div>
+        </article>
+      </section>
 
-          <article className={styles.documentPanel}>
+      <nav className={styles.tabs} aria-label="Workspace sections">
+        {[
+          ["case", "Case intake"],
+          ["tasks", "Task board"],
+          ["drafts", "Drafts"],
+          ["proof", "Proof & exports"],
+        ].map(([id, label]) => (
+          <button
+            aria-pressed={activeTab === id}
+            key={id}
+            onClick={() => setActiveTab(id as typeof activeTab)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {activeTab === "case" ? (
+        <section className={styles.twoColumn}>
+          <article className={styles.card}>
             <div className={styles.cardHead}>
               <div>
-                <p className={styles.kicker}>Global market checklist</p>
-                <h2>Which authorities may care?</h2>
+                <p className={styles.kicker}>Incident intake</p>
+                <h2>Paste details or upload a complaint file.</h2>
+              </div>
+              <label className={styles.fileButton}>
+                Upload complaint
+                <input
+                  accept=".txt,.csv,text/plain,text/csv"
+                  onChange={uploadComplaintFile}
+                  type="file"
+                />
+              </label>
+            </div>
+            <div className={styles.fieldGrid}>
+              <label>
+                <span>Complaint ID</span>
+                <input
+                  onChange={(event) =>
+                    setComplaintId(event.currentTarget.value)
+                  }
+                  value={complaintId}
+                />
+              </label>
+              <label>
+                <span>Product</span>
+                <input
+                  onChange={(event) => setProduct(event.currentTarget.value)}
+                  value={product}
+                />
+              </label>
+              <label>
+                <span>Lot or batch</span>
+                <input
+                  onChange={(event) => setLot(event.currentTarget.value)}
+                  value={lot}
+                />
+              </label>
+              <label>
+                <span>Product category</span>
+                <select
+                  onChange={(event) =>
+                    setProductCategory(event.currentTarget.value)
+                  }
+                  value={productCategory}
+                >
+                  <option value="consumer product">consumer product</option>
+                  <option value="food">food</option>
+                  <option value="medical device">medical device</option>
+                  <option value="vehicle equipment">vehicle equipment</option>
+                  <option value="toy or child product">
+                    toy or child product
+                  </option>
+                  <option value="industrial equipment">
+                    industrial equipment
+                  </option>
+                </select>
+              </label>
+              <label>
+                <span>Severity</span>
+                <select
+                  onChange={(event) => setSeverity(event.currentTarget.value)}
+                  value={severity}
+                >
+                  <option value="critical">critical</option>
+                  <option value="high">high</option>
+                  <option value="medium">medium</option>
+                  <option value="low">low</option>
+                </select>
+              </label>
+              <label className={styles.wideField}>
+                <span>What went wrong?</span>
+                <textarea
+                  onChange={(event) => setDefect(event.currentTarget.value)}
+                  value={defect}
+                />
+              </label>
+            </div>
+          </article>
+
+          <article className={styles.card}>
+            <div className={styles.cardHead}>
+              <div>
+                <p className={styles.kicker}>Shipment ledger</p>
+                <h2>Upload CSV or edit rows.</h2>
+              </div>
+              <div className={styles.buttonRow}>
+                <label className={styles.fileButton}>
+                  Upload CSV
+                  <input
+                    accept=".csv,text/csv"
+                    onChange={uploadShipmentCsv}
+                    type="file"
+                  />
+                </label>
+                <button onClick={addRow} type="button">
+                  Add row
+                </button>
+                <button onClick={markAllTraced} type="button">
+                  Mark all traced
+                </button>
+                <button onClick={resetCase} type="button">
+                  Reset
+                </button>
               </div>
             </div>
-            <div className={styles.documentGrid}>
+            <ShipmentEditor
+              rows={rows}
+              removeRow={removeRow}
+              updateRow={updateRow}
+            />
+          </article>
+        </section>
+      ) : null}
+
+      {activeTab === "tasks" ? (
+        <section className={styles.taskLayout}>
+          <article className={styles.card}>
+            <p className={styles.kicker}>Action board</p>
+            <div className={styles.taskGrid}>
+              {tasks.map((task) => (
+                <article
+                  data-status={task.status}
+                  key={`${task.owner}-${task.title}`}
+                >
+                  <span>{task.owner}</span>
+                  <strong>{task.title}</strong>
+                  <p>{task.detail}</p>
+                  <code>{task.deadline}</code>
+                </article>
+              ))}
+            </div>
+          </article>
+          <article className={styles.card}>
+            <p className={styles.kicker}>Global market checklist</p>
+            <div className={styles.marketList}>
               {globalChecklist.map((item) => (
                 <article key={`${item.market}-${item.authority}`}>
                   <span>{item.market}</span>
@@ -510,17 +560,17 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
                 </article>
               ))}
             </div>
-            <p className={styles.disclaimer}>
-              This is decision support, not legal advice. Confirm filing duties
-              with qualified counsel or the responsible product-safety owner.
-            </p>
           </article>
+        </section>
+      ) : null}
 
-          <article className={styles.documentPanel}>
+      {activeTab === "drafts" ? (
+        <section className={styles.twoColumn}>
+          <article className={styles.card}>
             <div className={styles.cardHead}>
               <div>
-                <p className={styles.kicker}>Customer notice draft</p>
-                <h2>Plain-language notice to review.</h2>
+                <p className={styles.kicker}>Customer notice</p>
+                <h2>Plain-language draft.</h2>
               </div>
               <button onClick={copyNotice} type="button">
                 {copiedNotice ? "Copied" : "Copy notice"}
@@ -532,53 +582,147 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               value={customerNotice}
             />
           </article>
-
-          <article className={styles.documentPanel}>
-            <div className={styles.cardHead}>
-              <div>
-                <p className={styles.kicker}>Prepared drafts</p>
-                <h2>Ready for human review.</h2>
-              </div>
-              <button onClick={downloadBrief} type="button">
-                Download case brief
-              </button>
-            </div>
-            <div className={styles.documentGrid}>
-              {(result.filing.filing_pack?.filings ?? [])
-                .slice(0, 5)
-                .map((filing) => (
-                  <article key={filing.id}>
-                    <span>{filing.authority}</span>
-                    <strong>{filing.label}</strong>
-                    <p>{filing.required_human_action}</p>
-                    <code>{filing.status}</code>
-                  </article>
-                ))}
-            </div>
+          <article className={styles.card}>
+            <p className={styles.kicker}>Distributor hold</p>
+            <h2>Send to warehouses and distributors after review.</h2>
+            <textarea
+              className={styles.noticeDraft}
+              readOnly
+              value={distributorHold}
+            />
           </article>
-
-          <article className={styles.documentPanel}>
-            <p className={styles.kicker}>Regulator dispatch preview</p>
+          <article className={styles.cardWide}>
+            <p className={styles.kicker}>Regulator and filing drafts</p>
             <div className={styles.documentGrid}>
-              {(result.regulator.regulator_dispatch?.targets ?? []).map(
-                (target) => (
-                  <article key={target.id}>
-                    <span>{target.id}</span>
-                    <strong>{target.status}</strong>
-                    <p>{target.label}</p>
-                    <code>
-                      {target.external_submit
-                        ? "external submit"
-                        : "dry-run only"}
-                    </code>
-                  </article>
-                ),
-              )}
+              {(result?.filing.filing_pack?.filings ?? []).map((filing) => (
+                <article key={filing.id}>
+                  <span>{filing.authority}</span>
+                  <strong>{filing.label}</strong>
+                  <p>{filing.required_human_action}</p>
+                  <code>{filing.status}</code>
+                </article>
+              ))}
+              {!result ? (
+                <p className={styles.emptyState}>
+                  Run analysis to generate filing drafts.
+                </p>
+              ) : null}
             </div>
           </article>
         </section>
       ) : null}
+
+      {activeTab === "proof" ? (
+        <section className={styles.twoColumn}>
+          <article className={styles.card}>
+            <p className={styles.kicker}>Executive brief</p>
+            <textarea
+              className={styles.noticeDraft}
+              readOnly
+              value={executiveBrief}
+            />
+          </article>
+          <article className={styles.card}>
+            <p className={styles.kicker}>Exports</p>
+            <div className={styles.exportStack}>
+              <button
+                disabled={!result}
+                onClick={downloadActionPack}
+                type="button"
+              >
+                Download full action pack
+              </button>
+              <a href="/proof">Open proof explorer</a>
+              <a href="/docs">Open API docs</a>
+            </div>
+            <ul className={styles.boundaryList}>
+              <li>No public regulator submission.</li>
+              <li>No public SAP or Oracle write.</li>
+              <li>Final recall action stays human-owned.</li>
+              <li>This is decision support, not legal advice.</li>
+            </ul>
+          </article>
+        </section>
+      ) : null}
     </section>
+  );
+}
+
+function ShipmentEditor({
+  rows,
+  removeRow,
+  updateRow,
+}: {
+  rows: ShipmentRow[];
+  removeRow: (id: string) => void;
+  updateRow: (
+    id: string,
+    field: keyof Omit<ShipmentRow, "id">,
+    value: string,
+  ) => void;
+}) {
+  return (
+    <div className={styles.shipmentTable}>
+      <div className={styles.tableHeader}>
+        <span>source</span>
+        <span>distributor</span>
+        <span>market / country</span>
+        <span>customers</span>
+        <span>units</span>
+        <span>status</span>
+        <span>remove</span>
+      </div>
+      {rows.map((row) => (
+        <div className={styles.tableRow} key={row.id}>
+          <input
+            onChange={(event) =>
+              updateRow(row.id, "source", event.currentTarget.value)
+            }
+            value={row.source}
+          />
+          <input
+            onChange={(event) =>
+              updateRow(row.id, "distributor", event.currentTarget.value)
+            }
+            value={row.distributor}
+          />
+          <input
+            onChange={(event) =>
+              updateRow(row.id, "region", event.currentTarget.value)
+            }
+            value={row.region}
+          />
+          <input
+            min={1}
+            onChange={(event) =>
+              updateRow(row.id, "customers", event.currentTarget.value)
+            }
+            type="number"
+            value={row.customers}
+          />
+          <input
+            min={1}
+            onChange={(event) =>
+              updateRow(row.id, "units", event.currentTarget.value)
+            }
+            type="number"
+            value={row.units}
+          />
+          <select
+            onChange={(event) =>
+              updateRow(row.id, "status", event.currentTarget.value)
+            }
+            value={row.status}
+          >
+            <option value="traced">traced</option>
+            <option value="missing">missing</option>
+          </select>
+          <button onClick={() => removeRow(row.id)} type="button">
+            remove
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -625,12 +769,77 @@ function buildShipmentCsv(rows: ShipmentRow[]) {
       row.source.trim(),
       row.distributor.trim(),
       row.region.trim(),
-      Math.max(1, Number.parseInt(row.customers, 10) || 1),
-      Math.max(1, Number.parseInt(row.units, 10) || 1),
+      numeric(row.customers),
+      numeric(row.units),
       row.status,
     ].join(","),
   );
   return [header, ...body].join("\n");
+}
+
+function parseShipmentCsv(csvText: string): ShipmentRow[] {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) {
+    throw new Error("Shipment CSV needs a header and at least one row.");
+  }
+  const headers = lines[0]
+    .split(",")
+    .map((header) => header.trim().toLowerCase());
+  const required = [
+    "source",
+    "distributor",
+    "region",
+    "customers",
+    "units",
+    "status",
+  ];
+  for (const header of required) {
+    if (!headers.includes(header)) {
+      throw new Error(`Shipment CSV is missing ${header}.`);
+    }
+  }
+  return lines.slice(1).map((line, index) => {
+    const cells = line.split(",").map((cell) => cell.trim());
+    const status =
+      cells[headers.indexOf("status")]?.toLowerCase() === "traced"
+        ? "traced"
+        : "missing";
+    return {
+      id: `csv-${index}-${Date.now()}`,
+      source: cells[headers.indexOf("source")] ?? `SHIP-${index + 1}`,
+      distributor: cells[headers.indexOf("distributor")] ?? "",
+      region: cells[headers.indexOf("region")] ?? "Regional",
+      customers: String(numeric(cells[headers.indexOf("customers")] ?? "1")),
+      units: String(numeric(cells[headers.indexOf("units")] ?? "1")),
+      status,
+    };
+  });
+}
+
+function parseComplaint(text: string) {
+  const first =
+    text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find(Boolean) ?? "";
+  const parts = first.split("|").map((part) => part.trim());
+  const parsed: Record<string, string> = { complaintId: parts[0] };
+  for (const part of parts.slice(1)) {
+    const [key, ...rest] = part.split(":");
+    if (key && rest.length) {
+      parsed[key.trim().toLowerCase()] = rest.join(":").trim();
+    }
+  }
+  return {
+    complaintId: parsed.complaintId,
+    product: parsed.product,
+    lot: parsed.lot,
+    defect: parsed.defect,
+    severity: parsed.severity,
+  };
 }
 
 function validateCase({
@@ -652,55 +861,74 @@ function validateCase({
   }
   for (const row of rows) {
     if (!row.source.trim() || !row.distributor.trim() || !row.region.trim()) {
-      return "Every shipment row needs source, distributor, and region.";
+      return "Every shipment row needs source, distributor, and market/country.";
     }
-    if (
-      (Number.parseInt(row.customers, 10) || 0) <= 0 ||
-      (Number.parseInt(row.units, 10) || 0) <= 0
-    ) {
+    if (numeric(row.customers) <= 0 || numeric(row.units) <= 0) {
       return "Every shipment row needs positive customers and units.";
     }
   }
   return null;
 }
 
-function buildNextActions({
+function buildTasks({
   isReady,
   missingRows,
   traceability,
-  hasResult,
+  filings,
+  globalChecklist,
 }: {
   isReady: boolean;
   missingRows: ShipmentRow[];
   traceability?: Traceability;
-  hasResult: boolean;
-}) {
-  if (!hasResult) {
-    return [
-      "Enter the incident details.",
-      "Mark each shipment row as traced or missing.",
-      "Run analysis to see whether human sign-off is safe.",
-    ];
-  }
-
+  filings: NonNullable<FilingResponse["filing_pack"]>["filings"];
+  globalChecklist: ReturnType<typeof buildGlobalChecklist>;
+}): Task[] {
+  const tasks: Task[] = [];
   if (!isReady) {
-    const missingNames = missingRows
-      .map((row) => row.distributor || row.source)
-      .join(", ");
-    return [
-      `Recover missing shipment evidence for ${missingNames || "untraced rows"}.`,
-      `Do not seal human sign-off while ${(traceability?.untraced_units ?? 0).toLocaleString()} units are untraced.`,
-      "Keep regulator dispatch as draft-only until coverage reaches 100%.",
-      "Quarantine known stock while traceability is being completed.",
-    ];
+    tasks.push({
+      title: "Recover missing shipment evidence",
+      owner: "Traceability",
+      deadline: "Now",
+      status: "blocked",
+      detail: `${missingRows.length || 1} shipment source(s) are missing; ${(traceability?.untraced_units ?? 0).toLocaleString()} units remain untraced.`,
+    });
   }
-
-  return [
-    "Review the prepared regulator and distributor drafts.",
-    "Confirm the scope with the accountable QA or legal owner.",
-    "Use authorized systems for any real regulator submission or SAP/Oracle write.",
-    "Download the case brief for audit and handoff.",
-  ];
+  tasks.push({
+    title: isReady ? "Review recall scope" : "Hold sign-off",
+    owner: "QA / Legal",
+    deadline: isReady ? "Today" : "Blocked",
+    status: isReady ? "review" : "blocked",
+    detail: isReady
+      ? "Coverage is complete. Review drafts before named human sign-off."
+      : "Do not approve final action until traceability reaches 100%.",
+  });
+  for (const filing of filings) {
+    tasks.push({
+      title: filing.label,
+      owner: "Regulatory",
+      deadline: filing.deadline_hours ? `${filing.deadline_hours}h` : "Review",
+      status: isReady ? "draft" : "blocked",
+      detail: filing.required_human_action,
+    });
+  }
+  for (const item of globalChecklist) {
+    tasks.push({
+      title: `Check ${item.market} route`,
+      owner: "Regional lead",
+      deadline: item.status === "scope incomplete" ? "Blocked" : "Today",
+      status: item.status === "scope incomplete" ? "blocked" : "review",
+      detail: item.action,
+    });
+  }
+  tasks.push({
+    title: "Prepare customer and distributor communications",
+    owner: "Communications",
+    deadline: isReady ? "Today" : "Draft only",
+    status: "draft",
+    detail:
+      "Use the generated drafts as review material; do not send until the recall owner approves.",
+  });
+  return tasks;
 }
 
 function buildCustomerNotice({
@@ -727,6 +955,70 @@ function buildCustomerNotice({
     "Stop using the affected product until the company confirms the final recall instruction.",
     "Do not discard the product unless instructed; keep proof of purchase and product labels available.",
     "This draft must be reviewed and approved by the responsible recall owner before it is sent.",
+  ].join("\n");
+}
+
+function buildDistributorHold({
+  product,
+  lot,
+  defect,
+  rows,
+}: {
+  product: string;
+  lot: string;
+  defect: string;
+  rows: ShipmentRow[];
+}) {
+  const distributors = rows
+    .map((row) => `${row.distributor} (${row.region})`)
+    .join(", ");
+  return [
+    `Distributor / warehouse hold instruction`,
+    "",
+    `Product: ${product}`,
+    `Lot: ${lot}`,
+    `Issue under review: ${defect}`,
+    `Affected distribution desks: ${distributors}`,
+    "",
+    "Immediately quarantine affected stock, stop outbound shipment, preserve shipment records, and return current on-hand counts to the recall owner. Do not notify customers or regulators from this draft without authorized review.",
+  ].join("\n");
+}
+
+function buildExecutiveBrief({
+  product,
+  lot,
+  defect,
+  severity,
+  productCategory,
+  result,
+  isReady,
+}: {
+  product: string;
+  lot: string;
+  defect: string;
+  severity: string;
+  productCategory: string;
+  result: WorkspaceResult | null;
+  isReady: boolean;
+}) {
+  const traceability = result?.evidence.packet.final_traceability;
+  return [
+    `Executive recall brief`,
+    "",
+    `Product: ${product}`,
+    `Category: ${productCategory}`,
+    `Lot: ${lot}`,
+    `Severity: ${severity}`,
+    `Issue: ${defect}`,
+    `Readiness: ${result ? (isReady ? "Ready for human review" : "Blocked - traceability incomplete") : "Not analyzed"}`,
+    traceability
+      ? `Traceability: ${traceability.coverage_percent}% coverage, ${traceability.untraced_units.toLocaleString()} untraced units, ${traceability.regions} regions.`
+      : "Traceability: pending analysis.",
+    result
+      ? `Source audit hash: ${result.evidence.packet.audit_hash}`
+      : "Source audit hash: pending.",
+    "",
+    "Boundary: This brief supports decision-making. A qualified human recall owner must approve any final recall action, regulator submission, or enterprise-system write.",
   ].join("\n");
 }
 
@@ -831,8 +1123,18 @@ function classifyMarket(region: string, category: string) {
   };
 }
 
-function shortHash(value: string) {
-  return value.length > 22
-    ? `${value.slice(0, 12)}...${value.slice(-8)}`
-    : value;
+function downloadJson(value: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], {
+    type: "application/json",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
+}
+
+function numeric(value: string) {
+  return Math.max(1, Number.parseInt(value, 10) || 1);
 }
