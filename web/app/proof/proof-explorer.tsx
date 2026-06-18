@@ -50,6 +50,10 @@ type SubmissionProof = {
     verification: Verification;
     filings: Record<string, unknown>[];
   };
+  regulator_dispatch: {
+    mode: string;
+    targets: Record<string, unknown>[];
+  };
   dispatch_receipts: Record<string, unknown>[];
   enterprise_sync: {
     mode?: string;
@@ -150,6 +154,12 @@ export default function ProofExplorer() {
         value: proof.filing_pack.pack_hash,
       },
       {
+        label: "Regulator dispatch",
+        status: proof.checks.regulator_dispatch_prepared ? "ok" : "warn",
+        detail: `${proof.regulator_dispatch.targets.length} target dispatches prepared; ${proof.regulator_dispatch.mode.replaceAll("_", " ")}.`,
+        value: proof.regulator_dispatch.mode,
+      },
+      {
         label: "Decision events",
         status: proof.packet.verification.ok ? "ok" : "warn",
         detail: "Deterministic BAT-4421 room replay with hash verification.",
@@ -162,6 +172,13 @@ export default function ProofExplorer() {
         value: String(
           proof.approval_receipt.receipt.receipt_hash ?? "receipt pending",
         ),
+      },
+      {
+        label: "Human e-signature",
+        status: proof.checks.esignature_gate_ready ? "ok" : "gated",
+        detail:
+          "Verified human approval receipt endpoint binds signer identity to source, room, and filing hashes.",
+        value: proof.links.esignature_approval ?? "/api/esignature-approval",
       },
       {
         label: "Notices",

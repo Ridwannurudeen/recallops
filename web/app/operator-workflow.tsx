@@ -100,6 +100,48 @@ type FilingPackResponse = {
   };
 };
 
+type RegulatorDispatchResponse = {
+  regulator_dispatch: {
+    mode: string;
+    external_submit: boolean;
+    payload_hash: string;
+    targets: {
+      id: string;
+      label: string;
+      mode: string;
+      external_submit: boolean;
+      status: string;
+      payload_hash: string;
+      action_required?: string | null;
+    }[];
+  };
+};
+
+type ESignatureResponse = {
+  receipt: {
+    signature_id: string;
+    signed_at: string;
+    approver: string;
+    decision: "approved" | "rejected";
+    meaning: string;
+    source_audit_hash: string;
+    recall_room_run_hash: string;
+    filing_pack_hash: string;
+    record_hash: string;
+    signature_hash: string;
+    controls: {
+      disclosure: string;
+    };
+  };
+  verification: {
+    ok: boolean;
+    algorithm: string;
+    expected_hash: string;
+    actual_hash: string;
+    record_hash: string;
+  };
+};
+
 function ensureTargets(targets: SyncTargets): ("sap" | "oracle")[] {
   const chosen: ("sap" | "oracle")[] = [];
   if (targets.sap) {
@@ -121,10 +163,14 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<ActionResponse | null>(null);
+  const [runLiveBand, setRunLiveBand] = useState(false);
   const [recallRun, setRecallRun] = useState<RecallRoomRunResponse | null>(
     null,
   );
   const [filingPack, setFilingPack] = useState<FilingPackResponse | null>(null);
+  const [regulatorDispatch, setRegulatorDispatch] =
+    useState<RegulatorDispatchResponse | null>(null);
+  const [esignature, setESignature] = useState<ESignatureResponse | null>(null);
   const [caseDrafted, setCaseDrafted] = useState(false);
   const [dryRunDone, setDryRunDone] = useState(false);
   const [liveHoldDone, setLiveHoldDone] = useState(false);
@@ -138,10 +184,23 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   const canRunRecallRoom = hasEvidence && !actionBusy;
   const canGenerateFilingPack =
     hasEvidence && recallRun !== null && !actionBusy;
+  const canPrepareRegulatorDispatch =
+    hasEvidence && filingPack !== null && !actionBusy;
   const canCreateCase = hasEvidence && filingPack !== null && !actionBusy;
   const canDryRunSync = hasEvidence && caseDrafted && !actionBusy;
+  const canSignApproval =
+    hasEvidence &&
+    recallRun !== null &&
+    filingPack !== null &&
+    hasAdminKey &&
+    !actionBusy;
   const canRunLive =
-    hasEvidence && dryRunDone && hasAdminKey && hasTargets && !actionBusy;
+    hasEvidence &&
+    dryRunDone &&
+    esignature !== null &&
+    hasAdminKey &&
+    hasTargets &&
+    !actionBusy;
   const liveKeyHint = hasAdminKey
     ? "approval code is set"
     : "enter approval code to unlock live hold";
@@ -155,6 +214,8 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     setLiveHoldDone(false);
     setRecallRun(null);
     setFilingPack(null);
+    setRegulatorDispatch(null);
+    setESignature(null);
     setError(null);
   }, [evidence]);
 
@@ -269,12 +330,14 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
         complaint_text: evidence.inputs.complaint_text,
         shipment_csv: evidence.inputs.shipment_csv,
         recovered_shipment_csv: evidence.inputs.recovered_shipment_csv,
-        run_live_band: false,
+        run_live_band: runLiveBand,
       },
     });
     if (result && result.status >= 200 && result.status < 300) {
       setRecallRun(result.body as RecallRoomRunResponse);
       setFilingPack(null);
+      setRegulatorDispatch(null);
+      setESignature(null);
     }
   }
 
@@ -293,6 +356,56 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     });
     if (result && result.status >= 200 && result.status < 300) {
       setFilingPack(result.body as FilingPackResponse);
+      setRegulatorDispatch(null);
+      setESignature(null);
+    }
+  }
+
+  async function prepareRegulatorDispatch() {
+    if (!evidence) {
+      return;
+    }
+    const result = await runAction("regulator-filing", {
+      method: "POST",
+      path: "/api/regulator-filing",
+      body: {
+        complaint_text: evidence.inputs.complaint_text,
+        shipment_csv: evidence.inputs.shipment_csv,
+        recovered_shipment_csv: evidence.inputs.recovered_shipment_csv,
+        dry_run: true,
+      },
+    });
+    if (result && result.status >= 200 && result.status < 300) {
+      setRegulatorDispatch(result.body as RegulatorDispatchResponse);
+    }
+  }
+
+  async function signApproval() {
+    if (!evidence || !recallRun || !filingPack) {
+      return;
+    }
+    if (!hasAdminKey) {
+      setError("E-signature approval requires the approval code.");
+      return;
+    }
+    const result = await runAction("esignature-approval", {
+      method: "POST",
+      path: "/api/esignature-approval",
+      headers: {
+        "x-recallops-approval-key": normalizedAdminKey,
+      },
+      body: {
+        approver: "QA Director",
+        decision: "approved",
+        reason:
+          "I reviewed source evidence, recall room, filing pack, and ERP dry-run.",
+        source_audit_hash: evidence.packet.audit_hash,
+        recall_room_run_hash: recallRun.run.run_hash,
+        filing_pack_hash: filingPack.filing_pack.pack_hash,
+      },
+    });
+    if (result && result.status >= 200 && result.status < 300) {
+      setESignature(result.body as ESignatureResponse);
     }
   }
 
@@ -341,6 +454,8 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   const isCreating = busyAction === "create-case";
   const isRecallRoom = busyAction === "recall-room-run";
   const isFilingPack = busyAction === "filing-pack";
+  const isRegulatorFiling = busyAction === "regulator-filing";
+  const isESignature = busyAction === "esignature-approval";
   const isDryRunSync = busyAction === "enterprise-sync-dry-run";
   const isLiveSync = busyAction === "enterprise-sync-live";
   const isActionSuccess =
@@ -373,6 +488,12 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     if (actionName === "filing-pack") {
       return "Multi-jurisdiction filing pack is ready for human review.";
     }
+    if (actionName === "regulator-filing") {
+      return "Regulator dispatch dry-run prepared without external submission.";
+    }
+    if (actionName === "esignature-approval") {
+      return "Attributable e-signature receipt sealed the source, room, and filing hashes.";
+    }
     if (actionName === "enterprise-sync-dry-run") {
       return (
         responseText ||
@@ -403,6 +524,12 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     }
     if (actionName === "filing-pack") {
       return "Generated filing pack";
+    }
+    if (actionName === "regulator-filing") {
+      return "Prepared regulator dispatch";
+    }
+    if (actionName === "esignature-approval") {
+      return "Signed approval receipt";
     }
     if (actionName === "enterprise-sync-dry-run") {
       return "Safety check completed";
@@ -492,9 +619,22 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
                 </div>
               </article>
               <article
-                className={`write-flow-step ${actionStepState(caseDrafted)}`}
+                className={`write-flow-step ${actionStepState(regulatorDispatch !== null)}`}
               >
                 <span>4</span>
+                <div>
+                  <strong>Prepare regulator dispatch</strong>
+                  <small>
+                    {regulatorDispatch
+                      ? "Dry-run dispatch payload is ready."
+                      : "No external submission; prepares regulator target packets."}
+                  </small>
+                </div>
+              </article>
+              <article
+                className={`write-flow-step ${actionStepState(caseDrafted)}`}
+              >
+                <span>5</span>
                 <div>
                   <strong>Build a recall plan</strong>
                   <small>
@@ -507,7 +647,7 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
               <article
                 className={`write-flow-step ${actionStepState(dryRunDone)}`}
               >
-                <span>5</span>
+                <span>6</span>
                 <div>
                   <strong>Run safety check</strong>
                   <small>
@@ -518,9 +658,22 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
                 </div>
               </article>
               <article
+                className={`write-flow-step ${actionStepState(esignature !== null)}`}
+              >
+                <span>7</span>
+                <div>
+                  <strong>E-sign human approval</strong>
+                  <small>
+                    {esignature
+                      ? "Signed receipt seals source, room, and filing hashes."
+                      : "Requires approval code and verified identity gate."}
+                  </small>
+                </div>
+              </article>
+              <article
                 className={`write-flow-step ${actionStepState(liveHoldDone)}`}
               >
-                <span>6</span>
+                <span>8</span>
                 <div>
                   <strong>Request live hold</strong>
                   <small>
@@ -544,6 +697,16 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
           <p className="kicker">Case actions</p>
           <h2>Test the operational path</h2>
         </div>
+        <label className="live-band-option">
+          <input
+            type="checkbox"
+            checked={runLiveBand}
+            onChange={(event) => setRunLiveBand(event.currentTarget.checked)}
+          />
+          <span>
+            Attempt fresh live Band run when server-side credentials allow it
+          </span>
+        </label>
         <div className="write-action-grid">
           <button
             type="button"
@@ -568,10 +731,26 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
           </button>
           <button
             type="button"
+            disabled={!canPrepareRegulatorDispatch}
+            onClick={prepareRegulatorDispatch}
+          >
+            {isRegulatorFiling
+              ? "Preparing dispatch..."
+              : "Prepare regulator dispatch"}
+          </button>
+          <button
+            type="button"
             disabled={!canDryRunSync}
             onClick={() => runEnterpriseSync(true)}
           >
             {isDryRunSync ? "Running safety check..." : "Run safety check"}
+          </button>
+          <button
+            type="button"
+            disabled={!canSignApproval}
+            onClick={signApproval}
+          >
+            {isESignature ? "Signing approval..." : "E-sign approval"}
           </button>
           <button
             type="button"
@@ -582,8 +761,9 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
           </button>
         </div>
         <p className="write-console-copy">
-          Run the room and filing pack first. The live hold button stays locked
-          until the dry-run passes and an approval code is present.
+          Regulator dispatch is a dry-run by default. The live hold button stays
+          locked until the ERP dry-run passes, a verified e-signature exists,
+          and an approval code is present.
         </p>
 
         {recallRun ? (
@@ -655,6 +835,61 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
                   </small>
                 </article>
               ))}
+            </div>
+          </section>
+        ) : null}
+
+        {regulatorDispatch ? (
+          <section className="judge-artifact-card filing-pack-card">
+            <div className="artifact-card-head">
+              <div>
+                <span>Regulator dispatch</span>
+                <strong>
+                  {regulatorDispatch.regulator_dispatch.mode.replaceAll(
+                    "_",
+                    " ",
+                  )}
+                </strong>
+              </div>
+              <code>
+                {shortHash(regulatorDispatch.regulator_dispatch.payload_hash)}
+              </code>
+            </div>
+            <div className="filing-grid">
+              {regulatorDispatch.regulator_dispatch.targets.map((target) => (
+                <article key={target.id}>
+                  <span>{target.status.replaceAll("_", " ")}</span>
+                  <strong>{target.label}</strong>
+                  <p>
+                    {target.external_submit
+                      ? "External submit attempted"
+                      : "No external submission"}
+                  </p>
+                  <small>{target.action_required ?? "Ready for review"}</small>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {esignature ? (
+          <section className="judge-artifact-card filing-pack-card">
+            <div className="artifact-card-head">
+              <div>
+                <span>E-signature receipt</span>
+                <strong>{esignature.receipt.signature_id}</strong>
+              </div>
+              <code>{shortHash(esignature.receipt.signature_hash)}</code>
+            </div>
+            <p>{esignature.receipt.controls.disclosure}</p>
+            <div className="artifact-metrics">
+              <code>record {shortHash(esignature.receipt.record_hash)}</code>
+              <code>
+                room {shortHash(esignature.receipt.recall_room_run_hash)}
+              </code>
+              <code>
+                filing {shortHash(esignature.receipt.filing_pack_hash)}
+              </code>
             </div>
           </section>
         ) : null}

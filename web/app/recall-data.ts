@@ -227,8 +227,10 @@ export const proofExplorerSections = [
   "Source packet",
   "Recall room run",
   "Filing pack",
+  "Regulator dispatch",
   "Decision events",
   "Veto and approval",
+  "Human e-signature",
   "Notices",
   "Identity gate",
   "SAP and Oracle contracts",
@@ -270,6 +272,21 @@ export const integrationClaims: {
     headline: "Transport contract receipts are verified.",
     detail:
       "RecallOps records redacted SAP and Oracle receiver receipts, separate from customer tenant authorization.",
+  },
+  {
+    name: "Regulator filing",
+    status: "DRY RUN",
+    headline:
+      "Multi-jurisdiction filing packets are prepared from live evidence.",
+    detail:
+      "CPSC, EU Safety Gate, and regional authority payloads are generated from the same source packet while live external submission stays gated.",
+  },
+  {
+    name: "Human e-signature",
+    status: "GATED",
+    headline: "Approval receipts bind the named signer to source hashes.",
+    detail:
+      "The e-signature endpoint requires a verified approval key and seals source evidence, room run, filing pack, signature meaning, and signer identity.",
   },
   {
     name: "Tenant write",
@@ -327,6 +344,23 @@ export const docsEndpoints = [
     method: "POST",
     path: "/api/filing-pack",
     purpose: "Draft filing pack from edited complaint and shipment evidence.",
+  },
+  {
+    method: "GET",
+    path: "/api/regulator-filing/status",
+    purpose: "Regulator filing gate, endpoint, and authorization status.",
+  },
+  {
+    method: "POST",
+    path: "/api/regulator-filing",
+    purpose:
+      "Prepare multi-jurisdiction filing dispatches; live submission requires admin authorization.",
+  },
+  {
+    method: "POST",
+    path: "/api/esignature-approval",
+    purpose:
+      "Create a verified human approval receipt over source, room, and filing hashes.",
   },
   {
     method: "GET",

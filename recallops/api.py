@@ -24,6 +24,7 @@ from recallops.erp_contract import (
     record_contract_write,
     require_contract_authorization,
 )
+from recallops.esignature import build_esignature_receipt, verify_esignature_receipt
 from recallops.filing_pack import build_filing_pack, verify_filing_pack
 from recallops.identity import IdentityError, identity_status, resolve_approval_identity
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
@@ -37,6 +38,12 @@ from recallops.recall_room import (
     build_source_room,
     spike_incident_payload,
     verify_recall_room_run,
+)
+from recallops.regulatory import (
+    RegulatoryFilingError,
+    regulator_filing_status,
+    require_regulator_authorization,
+    run_regulator_filing,
 )
 from recallops.rules import assess_rules
 from recallops.sap_sandbox import run_sap_api_hub_probe, sap_api_hub_status
@@ -68,6 +75,21 @@ class RecallRoomRunRequest(SourceEvidenceRequest):
 
 class FilingPackRequest(SourceEvidenceRequest):
     pass
+
+
+class RegulatorFilingRequest(FilingPackRequest):
+    dry_run: bool = True
+    targets: tuple[Literal["cpsc", "eu", "regional"], ...] = ("cpsc", "eu", "regional")
+
+
+class ESignatureApprovalRequest(BaseModel):
+    approver: str
+    decision: Literal["approved", "rejected"] = "approved"
+    reason: str
+    source_audit_hash: str
+    recall_room_run_hash: str
+    filing_pack_hash: str
+    previous_hash: str = "0" * 64
 
 
 class ApprovalReceiptRequest(BaseModel):
@@ -353,6 +375,105 @@ def run_filing_pack(request: FilingPackRequest) -> dict[str, object]:
     }
 
 
+@app.get("/api/regulator-filing/status")
+def regulator_status() -> dict[str, object]:
+    return regulator_filing_status()
+
+
+@app.post("/api/regulator-filing")
+def regulator_filing(
+    request: RegulatorFilingRequest,
+    x_recallops_admin_key: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        if not request.dry_run:
+            require_regulator_authorization(x_recallops_admin_key)
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        source_packet = build_source_evidence_packet(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+        )
+        rule_assessment = assess_rules(source_packet)
+        dispatch_receipts = build_dispatch_receipts(source_packet)
+        filing_pack = build_filing_pack(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            dispatch_receipts=dispatch_receipts,
+        )
+        regulator_dispatch = run_regulator_filing(
+            filing_pack=filing_pack,
+            dry_run=request.dry_run,
+            targets=request.targets,
+        )
+    except RegulatoryFilingError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "inputs": {
+            "complaint_text": complaint_text,
+            "shipment_csv": shipment_csv,
+            "recovered_shipment_csv": recovered_shipment_csv,
+        },
+        "packet": source_packet.to_dict(),
+        "rule_assessment": rule_assessment,
+        "filing_pack": filing_pack,
+        "regulator_dispatch": regulator_dispatch,
+    }
+
+
+@app.post("/api/esignature-approval")
+def esignature_approval(
+    request: ESignatureApprovalRequest,
+    x_recallops_approval_key: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        identity = resolve_approval_identity(
+            approver=request.approver,
+            provided_admin_key=x_recallops_approval_key,
+            authorization=authorization,
+        )
+        receipt = build_esignature_receipt(
+            approver=request.approver,
+            decision=request.decision,
+            reason=request.reason,
+            source_audit_hash=request.source_audit_hash,
+            recall_room_run_hash=request.recall_room_run_hash,
+            filing_pack_hash=request.filing_pack_hash,
+            previous_hash=request.previous_hash,
+            identity=identity,
+        )
+    except IdentityError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "receipt": receipt.to_dict(),
+        "verification": verify_esignature_receipt(receipt),
+        "identity": identity,
+        "disclosure": (
+            "Attributable e-signature receipt with server-verified identity, "
+            "signature meaning, source hash, room-run hash, and filing-pack hash."
+        ),
+    }
+
+
 @app.get("/api/source-evidence/verify")
 def source_evidence_verify() -> dict[str, object]:
     packet = build_source_evidence_packet()
@@ -384,6 +505,7 @@ def readiness() -> dict[str, object]:
         "spend_limits": spend_limits(),
         "identity": identity_status(),
         "erp_contract": contract_status(),
+        "regulator_filing": regulator_filing_status(),
         "sap_api_hub": sap_api_hub_status(),
     }
 
@@ -664,6 +786,11 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         rule_assessment=rule_assessment,
         dispatch_receipts=dispatch_receipts,
     )
+    regulator_dispatch = run_regulator_filing(
+        filing_pack=filing_pack,
+        dry_run=True,
+        targets=("cpsc", "eu", "regional"),
+    )
     enterprise_sync = run_enterprise_sync(
         source_packet=source_packet,
         rule_assessment=rule_assessment,
@@ -700,6 +827,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "live_drill": "https://recallops.gudman.xyz/api/live-drill",
             "recall_room_run": "https://recallops.gudman.xyz/api/recall-room/run",
             "filing_pack": "https://recallops.gudman.xyz/api/filing-pack",
+            "regulator_filing": "https://recallops.gudman.xyz/api/regulator-filing",
+            "esignature_approval": "https://recallops.gudman.xyz/api/esignature-approval",
             "enterprise_sync": "https://recallops.gudman.xyz/api/enterprise-sync",
         },
         "submission_gates": {
@@ -727,6 +856,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         "rule_assessment": rule_assessment,
         "recall_room_run": recall_room_run,
         "filing_pack": filing_pack,
+        "regulator_dispatch": regulator_dispatch,
         "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
         "enterprise_sync": enterprise_sync,
         "identity": approval_identity,
@@ -747,6 +877,9 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "source_digest_ok": source_verification["ok"],
             "recall_room_run_ok": verify_recall_room_run(recall_room_run)["ok"],
             "filing_pack_ok": verify_filing_pack(filing_pack)["ok"],
+            "regulator_dispatch_prepared": all(
+                target["status"] == "prepared" for target in regulator_dispatch["targets"]
+            ),
             "approval_receipt_ok": approval_verification["ok"],
             "captured_band_has_five_agents": captured_participants == 5,
             "fresh_band_run_available": latest_fresh_run is not None,
@@ -760,6 +893,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
                 target["status"] == "prepared" for target in enterprise_sync["targets"]
             ),
             "identity_gate_ready": approval_identity["approval_gate_ready"],
+            "esignature_gate_ready": approval_identity["approval_gate_ready"],
             "erp_contract_live_write_verified": erp_contract["latest_pair_verified"],
             "sap_api_hub_sandbox_verified": sap_api_hub["verified"],
         },

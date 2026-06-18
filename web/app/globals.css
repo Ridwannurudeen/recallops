@@ -1511,6 +1511,25 @@ h2 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.live-band-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 14px 0;
+  border: 1px solid rgba(212, 168, 95, 0.24);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(212, 168, 95, 0.08);
+  color: #f5e7c8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.live-band-option input {
+  margin-top: 2px;
+  accent-color: var(--gilt-2);
+}
+
 .read-brief > p {
   margin: 12px 0 14px;
   color: var(--muted);
@@ -3989,6 +4008,12 @@ html[data-theme="light"] .artifact-event-list p,
 html[data-theme="light"] .filing-grid p,
 html[data-theme="light"] .filing-grid small {
   color: #45576a;
+}
+
+html[data-theme="light"] .live-band-option {
+  border-color: rgba(184, 137, 58, 0.3);
+  background: rgba(184, 137, 58, 0.08);
+  color: #3f3220;
 }
 
 html[data-theme="light"] .digest-card,

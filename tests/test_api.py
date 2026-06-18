@@ -222,6 +222,59 @@ def test_filing_pack_generates_multijurisdiction_drafts() -> None:
     assert len(filing_pack["pack_hash"]) == 64
 
 
+def test_regulator_filing_dry_run_prepares_target_dispatches() -> None:
+    response = post("/api/regulator-filing", {})
+
+    assert response.status_code == 200
+    body = response.json()
+    dispatch = body["regulator_dispatch"]
+    assert dispatch["mode"] == "dry_run_no_external_submit"
+    assert dispatch["external_submit"] is False
+    assert [target["id"] for target in dispatch["targets"]] == ["cpsc", "eu", "regional"]
+    assert all(target["status"] == "prepared" for target in dispatch["targets"])
+    assert len(dispatch["payload_hash"]) == 64
+
+
+def test_regulator_filing_live_requires_admin_gate(monkeypatch) -> None:
+    monkeypatch.delenv("RECALLOPS_ENABLE_REGULATOR_WRITES", raising=False)
+    monkeypatch.delenv("RECALLOPS_ADMIN_ACTION_KEY", raising=False)
+
+    response = post("/api/regulator-filing", {"dry_run": False})
+
+    assert response.status_code == 403
+    assert "disabled" in response.json()["detail"]
+
+
+def test_esignature_approval_requires_verified_identity(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_APPROVAL_ADMIN_KEY", "approval-key")
+    source = get("/api/source-evidence").json()["packet"]
+    room = get("/api/recall-room/run").json()["run"]
+    filing = get("/api/filing-pack").json()["filing_pack"]
+    body = {
+        "approver": "QA Director",
+        "decision": "approved",
+        "reason": "I reviewed traceability, filing pack, and ERP dry-run.",
+        "source_audit_hash": source["audit_hash"],
+        "recall_room_run_hash": room["run_hash"],
+        "filing_pack_hash": filing["pack_hash"],
+    }
+    blocked = post("/api/esignature-approval", body)
+    approved = post_with_headers(
+        "/api/esignature-approval",
+        body,
+        {"x-recallops-approval-key": "approval-key"},
+    )
+
+    assert blocked.status_code == 403
+    assert approved.status_code == 200
+    receipt = approved.json()["receipt"]
+    assert receipt["controls"]["requires_verified_identity"] is True
+    assert receipt["source_audit_hash"] == source["audit_hash"]
+    assert receipt["recall_room_run_hash"] == room["run_hash"]
+    assert receipt["filing_pack_hash"] == filing["pack_hash"]
+    assert approved.json()["verification"]["ok"] is True
+
+
 def test_source_evidence_recompute_rejects_bad_csv() -> None:
     response = post(
         "/api/source-evidence",
@@ -442,13 +495,16 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["approval_receipt"]["verification"]["ok"] is True
     assert body["recall_room_run"]["verification"]["ok"] is True
     assert body["filing_pack"]["verification"]["ok"] is True
+    assert body["regulator_dispatch"]["mode"] == "dry_run_no_external_submit"
     assert body["checks"]["captured_band_has_five_agents"] is True
     assert body["checks"]["recall_room_run_ok"] is True
     assert body["checks"]["filing_pack_ok"] is True
+    assert body["checks"]["regulator_dispatch_prepared"] is True
     assert body["checks"]["rules_approval_ready"] is True
     assert body["checks"]["dispatch_receipts_prepared"] is True
     assert body["checks"]["sap_oracle_payloads_prepared"] is True
     assert "identity_gate_ready" in body["checks"]
+    assert "esignature_gate_ready" in body["checks"]
     assert "erp_contract_live_write_verified" in body["checks"]
     assert "sap_api_hub_sandbox_verified" in body["checks"]
     assert len(body["dispatch_receipts"]) == 3
