@@ -131,7 +131,8 @@ h2 {
   margin-top: 24px;
 }
 
-.hero-claims span {
+.hero-claims span,
+.hero-claims a {
   border: 1px solid rgba(212, 168, 95, 0.24);
   border-radius: 999px;
   padding: 8px 10px;
@@ -139,10 +140,18 @@ h2 {
   background: rgba(255, 247, 232, 0.04);
   font-family: Consolas, "Courier New", monospace;
   font-size: 11px;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
+.hero-claims a:hover {
+  border-color: rgba(125, 211, 252, 0.56);
+  color: #e8fbff;
+  background: rgba(125, 211, 252, 0.08);
+}
+
 .exposure,
+.hero-proof-console,
 .panel,
 .agents article {
   border: 1px solid rgba(212, 168, 95, 0.24);
@@ -153,6 +162,14 @@ h2 {
 .exposure {
   position: relative;
   padding: 24px;
+}
+
+.hero-proof-console {
+  position: relative;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(125, 211, 252, 0.08), transparent 42%),
+    rgba(20, 15, 9, 0.82);
 }
 
 .live-dot {
@@ -174,7 +191,8 @@ h2 {
   animation: ping 1.8s ease-out infinite;
 }
 
-.exposure strong {
+.exposure strong,
+.hero-proof-console > strong {
   display: block;
   margin-top: 24px;
   color: #fff7e8;
@@ -184,10 +202,163 @@ h2 {
   line-height: 1;
 }
 
-.exposure span:not(.live-dot) {
+.exposure span:not(.live-dot),
+.hero-proof-console > span {
   display: block;
   margin-top: 8px;
   color: var(--muted);
+}
+
+.proof-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.proof-stat-grid div,
+.proof-strip article {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(230, 252, 248, 0.04);
+}
+
+.proof-stat-grid small,
+.proof-strip span {
+  display: block;
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.proof-stat-grid b,
+.proof-strip strong,
+.proof-strip code {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: #fff7e8;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.proof-stat-grid em,
+.proof-strip p {
+  display: block;
+  margin-top: 7px;
+  color: #91c4bd;
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.proof-link-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.proof-link-grid a {
+  border: 1px solid rgba(212, 168, 95, 0.24);
+  border-radius: 6px;
+  padding: 9px 8px;
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.proof-link-grid a:hover {
+  border-color: rgba(125, 211, 252, 0.56);
+  color: #e8fbff;
+  background: rgba(125, 211, 252, 0.08);
+}
+
+.proof-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tabbed-product {
+  margin-top: 20px;
+}
+
+.tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.tab-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tab-list label {
+  min-width: 0;
+  min-height: 76px;
+  border: 1px solid rgba(212, 168, 95, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  color: #d9c8a8;
+  background: rgba(255, 247, 232, 0.035);
+  cursor: pointer;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.tab-list label span {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tab-list label:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  color: #fff7e8;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel > :first-child {
+  margin-top: 0;
+}
+
+#tab-command:checked ~ .tab-list label[for="tab-command"],
+#tab-evidence:checked ~ .tab-list label[for="tab-evidence"],
+#tab-enterprise:checked ~ .tab-list label[for="tab-enterprise"],
+#tab-market:checked ~ .tab-list label[for="tab-market"],
+#tab-deployment:checked ~ .tab-list label[for="tab-deployment"] {
+  border-color: rgba(125, 211, 252, 0.58);
+  color: #e8fbff;
+  background: rgba(125, 211, 252, 0.1);
+}
+
+#tab-command:checked ~ .tab-panels .tab-command-panel,
+#tab-evidence:checked ~ .tab-panels .tab-evidence-panel,
+#tab-enterprise:checked ~ .tab-panels .tab-enterprise-panel,
+#tab-market:checked ~ .tab-panels .tab-market-panel,
+#tab-deployment:checked ~ .tab-panels .tab-deployment-panel {
+  display: block;
 }
 
 .exposure dl {
@@ -607,7 +778,10 @@ h2 {
 
 .category-thesis,
 .operating-system,
-.buyer-proof {
+.buyer-proof,
+.capability-matrix,
+.command-proofs,
+.deployment-path {
   margin-top: 20px;
 }
 
@@ -621,6 +795,9 @@ h2 {
 }
 
 .market-grid,
+.matrix-table,
+.command-proof-grid,
+.deployment-grid,
 .operating-layers,
 .buyer-grid {
   display: grid;
@@ -632,6 +809,9 @@ h2 {
 }
 
 .market-grid article,
+.matrix-table article,
+.command-proof-grid article,
+.deployment-grid article,
 .operating-layers article,
 .buyer-grid article {
   min-width: 0;
@@ -642,7 +822,11 @@ h2 {
 }
 
 .market-grid a,
+.command-proofs .panel-head a,
 .operating-system .panel-head a,
+.deployment-grid span,
+.matrix-table span,
+.command-proof-grid span,
 .market-grid span,
 .operating-layers span,
 .buyer-grid span {
@@ -654,11 +838,15 @@ h2 {
 }
 
 .market-grid a:hover,
+.command-proofs .panel-head a:hover,
 .operating-system .panel-head a:hover {
   color: #fff7e8;
 }
 
 .market-grid strong,
+.matrix-table strong,
+.command-proof-grid strong,
+.deployment-grid strong,
 .operating-layers strong,
 .buyer-grid strong {
   display: block;
@@ -670,6 +858,9 @@ h2 {
 
 .market-grid p,
 .market-grid small,
+.matrix-table p,
+.command-proof-grid p,
+.deployment-grid p,
 .operating-layers p,
 .buyer-grid p {
   display: block;
@@ -690,6 +881,32 @@ h2 {
   padding: 9px 10px;
   color: #f0dfbf;
   background: rgba(255, 247, 232, 0.04);
+}
+
+.command-proofs .panel-head a {
+  flex: 0 0 auto;
+  border: 1px solid rgba(212, 168, 95, 0.28);
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+}
+
+.matrix-table {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.matrix-table strong {
+  color: #91c4bd;
+}
+
+.command-proof-grid,
+.deployment-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.deployment-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .operating-layers {
@@ -1454,7 +1671,12 @@ h2 {
   .agents,
   .shipment-grid,
   .proof-ledger,
+  .proof-strip,
   .market-grid,
+  .matrix-table,
+  .command-proof-grid,
+  .deployment-grid,
+  .tab-list,
   .operating-layers,
   .live-runner,
   .readiness-grid,
@@ -1504,6 +1726,10 @@ h2 {
   .gate,
   .api-actions,
   .exposure dl,
+  .proof-stat-grid,
+  .proof-link-grid,
+  .proof-strip,
+  .tab-list,
   .drill-monitor dl,
   .proof-ledger,
   .live-runner,
@@ -1518,6 +1744,9 @@ h2 {
   .shipment-ledger,
   .citation-ledger,
   .market-grid,
+  .matrix-table,
+  .command-proof-grid,
+  .deployment-grid,
   .operating-layers,
   .buyer-grid,
   .approval-strip,

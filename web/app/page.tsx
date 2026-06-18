@@ -1,8 +1,5 @@
 import packetJson from "../public/demo-packet.json";
-import EnterpriseReadiness from "./enterprise-readiness";
-import LiveBandRunner from "./live-band-runner";
-import LiveDrill from "./live-drill";
-import SourceEvidenceCockpit from "./source-evidence-cockpit";
+import ProductTabs from "./product-tabs";
 
 type Agent = {
   id: string;
@@ -76,7 +73,7 @@ type CapturedBandRun = {
   stage_evidence: BandStageEvidence[];
 };
 
-type Packet = {
+export type Packet = {
   room_id: string;
   incident_id: string;
   product: string;
@@ -143,17 +140,35 @@ type Packet = {
 const packet = packetJson as unknown as Packet;
 const apiBase = process.env.NEXT_PUBLIC_API_BASE ?? "/api";
 
-const stageLabels: Record<EventStage, string> = {
-  room_created: "room",
-  evidence_extracted: "evidence",
-  agent_recruited: "recruit",
-  traceability_gap: "gap",
-  regulatory_veto: "veto",
-  traceability_resolved: "resolved",
-  risk_approved: "approved",
-  notice_drafted: "notice",
-  human_approved: "human gate",
-};
+const proofStats = [
+  {
+    label: "live agents",
+    value: packet.band_proof.captured_band_run.participant_count.toString(),
+    detail: "Band room roles recruited in sequence",
+  },
+  {
+    label: "traceability",
+    value: `${packet.final_traceability.coverage_percent}%`,
+    detail: "approval blocked until lot coverage cleared",
+  },
+  {
+    label: "partner AI",
+    value: "2",
+    detail: "AI/ML API and Featherless proof path",
+  },
+  {
+    label: "ERP proof",
+    value: "SAP + Oracle",
+    detail: "adapter payloads, SAP sandbox, contract receipts",
+  },
+];
+
+const proofLinks = [
+  { label: "proof bundle", href: `${apiBase}/submission-proof` },
+  { label: "SAP proof", href: `${apiBase}/sap-api-hub` },
+  { label: "ERP receipts", href: `${apiBase}/erp-contract/receipts` },
+  { label: "digest verify", href: `${apiBase}/verify` },
+];
 
 const marketSignals = [
   {
@@ -212,6 +227,113 @@ const marketSignals = [
   },
 ];
 
+const capabilityMatrix = [
+  {
+    capability: "Recall lifecycle",
+    incumbent:
+      "Oracle structures the native recall record, tasks, quarantine, and closure.",
+    recallops:
+      "Coordinates the decision layer above ERP so SAP, Oracle, QMS, support, and regulators see the same incident proof.",
+  },
+  {
+    capability: "AI intake",
+    incumbent:
+      "Honeywell and Oracle show the market wants AI-assisted recall signal parsing.",
+    recallops:
+      "Publishes prompt hashes, response hashes, source citations, and provider status instead of hiding model output.",
+  },
+  {
+    capability: "Targeted response",
+    incumbent:
+      "TraceLink and Trustwell focus on targeted alerts, site response, and recall execution speed.",
+    recallops:
+      "Routes notices only after traceability clears, risk vetoes resolve, and dispatch receipts are prepared.",
+  },
+  {
+    capability: "Quality closure",
+    incumbent:
+      "MasterControl and ETQ anchor the QMS record, CAPA, documentation, audit, and risk workflow.",
+    recallops:
+      "Adds cross-system proof: who challenged the decision, who approved, what changed, and which hash verifies it.",
+  },
+  {
+    capability: "Enterprise write path",
+    incumbent:
+      "Incumbents often assume they own the workflow or the system of record.",
+    recallops:
+      "Keeps writes gated and tenant-shaped: dry-run by default, admin-key live mode, redacted ERP receipts.",
+  },
+];
+
+const commandProofs = [
+  {
+    label: "source evidence",
+    headline: "Every fact cites the complaint or shipment ledger",
+    copy: "The incident starts as source text and CSV data, not a hand-written demo state. RecallOps hashes the source packet before it moves.",
+  },
+  {
+    label: "risk veto",
+    headline: "Approval is impossible while coverage is incomplete",
+    copy: "The Risk Officer blocks the recall packet at 82% coverage, forces a re-plan, and only clears after the missing distributor file is recovered.",
+  },
+  {
+    label: "identity gate",
+    headline: "The human approval becomes part of the receipt",
+    copy: "Approvals can be sealed with a server-side admin key or OIDC/JWKS verification, then included in the recall audit chain.",
+  },
+  {
+    label: "ERP contract",
+    headline: "SAP and Oracle actions are provable without unsafe writes",
+    copy: "The public demo proves tenant-shaped payloads and live receiver receipts while keeping real customer ERP writes behind explicit configuration.",
+  },
+];
+
+const buyerOutcomes = [
+  {
+    team: "Quality and regulatory",
+    outcome: "Walk into a board review with one verifiable recall packet.",
+    proof:
+      "source digest, risk veto, approval receipt, jurisdiction rules, dispatch receipts",
+  },
+  {
+    team: "Supply chain",
+    outcome:
+      "Know exactly which lots, shipments, distributors, and regions are still unresolved.",
+    proof:
+      "coverage delta, affected regions, missing sources, final shipment ledger",
+  },
+  {
+    team: "Enterprise IT",
+    outcome:
+      "Integrate without replacing SAP, Oracle, QMS, or support systems.",
+    proof:
+      "adapter status, dry-run payloads, write gates, redacted transport receipts",
+  },
+  {
+    team: "Executives",
+    outcome: "See the decision, not a vague dashboard status.",
+    proof: "agent handoffs, re-plan evidence, final action, audit seal",
+  },
+];
+
+const deploymentPath = [
+  {
+    phase: "01",
+    title: "Read-only command layer",
+    copy: "Ingest complaints, supplier notices, shipment exports, and QMS records. Produce a source-cited incident packet without writing back.",
+  },
+  {
+    phase: "02",
+    title: "Controlled execution pilot",
+    copy: "Enable SAP/Oracle dry-runs, approval identity, dispatch receipts, and partner-AI review for one non-production recall workflow.",
+  },
+  {
+    phase: "03",
+    title: "Write-gated enterprise rollout",
+    copy: "Turn on tenant writes only after admin authorization, endpoint review, legal rule validation, and security approval.",
+  },
+];
+
 const operatingLayers = [
   {
     layer: "signal",
@@ -248,7 +370,7 @@ const productSchema = {
   operatingSystem: "Web",
   url: "https://recallops.gudman.xyz",
   description:
-    "AI product recall command center for SAP, Oracle SCM, QMS, support, and regulatory workflows.",
+    "Verifiable product recall command center for SAP, Oracle SCM, QMS, support, and regulatory workflows.",
   featureList: [
     "AI product recall management",
     "SAP and Oracle recall adapter proof",
@@ -260,12 +382,6 @@ const productSchema = {
 };
 
 export default function Home() {
-  const veto = packet.events.find((event) => event.stage === "regulatory_veto");
-  const approval = packet.events.find(
-    (event) => event.stage === "human_approved",
-  );
-  const capturedRun = packet.band_proof.captured_band_run;
-
   return (
     <main className="shell">
       <script
@@ -273,364 +389,81 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
       <section className="mast">
-        <div>
-          <p className="kicker">RecallOps | AI product recall command center</p>
-          <h1>Recall execution for teams that already run SAP and Oracle.</h1>
+        <div className="hero-copy">
+          <p className="kicker">RecallOps | verifiable recall command layer</p>
+          <h1>The proof layer above every product recall.</h1>
           <p className="lede">
-            Coordinate source evidence, lot traceability, risk vetoes, human
-            approvals, ERP holds, notifications, and regulator-ready proof from
-            one live agent room. The {packet.lot} drill below shows the system
-            blocking approval until coverage resolves and the audit seal
-            recomputes.
+            Oracle can hold the recall record. TrackWise, MasterControl, and ETQ
+            can hold the quality workflow. TraceLink and Trustwell can target
+            the response. RecallOps owns the missing control plane: live
+            decision orchestration, risk vetoes, human approval, ERP execution
+            gates, and a regulator-readable proof bundle.
           </p>
           <div className="hero-claims">
-            <span>multi-agent recall room</span>
-            <span>SAP/Oracle adapter proof</span>
-            <span>hash-linked audit receipts</span>
+            <a href={`${apiBase}/submission-proof`}>open live proof</a>
+            <a href={`${apiBase}/live-drill`}>fresh Band drill</a>
+            <a href={`${apiBase}/sap-api-hub`}>SAP sandbox proof</a>
           </div>
         </div>
-        <aside className="exposure">
+        <aside className="hero-proof-console">
           <span className="live-dot" />
-          <p className="kicker">exposure clock</p>
-          <strong>{packet.exposure_clock.unit_hours.toLocaleString()}</strong>
-          <span>unit-hours in market</span>
-          <dl>
-            <div>
-              <dt>Units</dt>
-              <dd>{packet.exposure_clock.units_in_market.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>Hours</dt>
-              <dd>{packet.exposure_clock.hours_since_first_report}</dd>
-            </div>
-            <div>
-              <dt>Regions</dt>
-              <dd>{packet.final_traceability.regions}</dd>
-            </div>
-          </dl>
-        </aside>
-      </section>
-
-      <LiveDrill packet={packet} />
-
-      <SourceEvidenceCockpit apiBase={apiBase} />
-
-      <EnterpriseReadiness apiBase={apiBase} />
-
-      <section className="panel category-thesis">
-        <div className="panel-head">
-          <div>
-            <p className="kicker">category thesis</p>
-            <h2>Incumbents manage recalls. RecallOps proves decisions.</h2>
+          <p className="kicker">live proof console</p>
+          <strong>{packet.lot}</strong>
+          <span>risk veto cleared only after coverage reached 100%</span>
+          <div className="proof-stat-grid">
+            {proofStats.map((stat) => (
+              <div key={stat.label}>
+                <small>{stat.label}</small>
+                <b>{stat.value}</b>
+                <em>{stat.detail}</em>
+              </div>
+            ))}
           </div>
-          <span className="mono-stat">6-market benchmark</span>
-        </div>
-        <p className="category-copy">
-          Oracle, Honeywell TrackWise, TraceLink, Trustwell, MasterControl, and
-          ETQ all validate the market: recall buyers need traceability,
-          workflow, alerts, dashboards, compliance records, and quality-system
-          closure. RecallOps takes the next step: an auditable command layer
-          that shows how the decision was reached, which agent challenged it,
-          which ERP action was prepared, and which proof a regulator can verify.
-        </p>
-        <div className="market-grid">
-          {marketSignals.map((signal) => (
-            <article key={signal.company}>
-              <a href={signal.href} rel="noreferrer" target="_blank">
-                {signal.company}
+          <div className="proof-link-grid">
+            {proofLinks.map((link) => (
+              <a href={link.href} key={link.label}>
+                {link.label}
               </a>
-              <strong>{signal.product}</strong>
-              <p>{signal.signal}</p>
-              <small>{signal.recallops}</small>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel operating-system">
-        <div className="panel-head">
-          <div>
-            <p className="kicker">recall operating system</p>
-            <h2>One incident across five control planes</h2>
-          </div>
-          <a href={`${apiBase}/submission-proof`}>open proof bundle</a>
-        </div>
-        <div className="operating-layers">
-          {operatingLayers.map((item, index) => (
-            <article key={item.layer}>
-              <span>
-                {String(index + 1).padStart(2, "0")} | {item.layer}
-              </span>
-              <strong>{item.headline}</strong>
-              <p>{item.copy}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel buyer-proof">
-        <div>
-          <p className="kicker">why it can outrank</p>
-          <h2>Built for the search intent incumbents answer only halfway</h2>
-        </div>
-        <div className="buyer-grid">
-          <article>
-            <span>for quality leaders</span>
-            <strong>Audit-ready evidence, not just workflow status</strong>
-            <p>
-              Quality teams can show the complaint facts, coverage gap,
-              regulatory veto, approval identity, and closure receipts in the
-              same packet.
-            </p>
-          </article>
-          <article>
-            <span>for supply chain</span>
-            <strong>Traceability gates before execution</strong>
-            <p>
-              Distribution and warehouse actions do not move until RecallOps
-              resolves affected lots, regions, customers, and missing files.
-            </p>
-          </article>
-          <article>
-            <span>for enterprise IT</span>
-            <strong>Layer above SAP, Oracle, QMS, and support</strong>
-            <p>
-              The product does not ask an enterprise to rip out systems of
-              record. It coordinates them and records the exact adapter payload.
-            </p>
-          </article>
-          <article>
-            <span>for executives</span>
-            <strong>Board-readable recall command record</strong>
-            <p>
-              Every high-risk incident becomes a concise, verifiable narrative:
-              what happened, who decided, what changed, and what proof remains.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <section className="command-grid">
-        <article className="panel timeline-panel">
-          <div className="panel-head">
-            <div>
-              <p className="kicker">Band transcript</p>
-              <h2>Veto, re-plan, approval</h2>
-            </div>
-            <span className="status-pill">{packet.decision.status}</span>
-          </div>
-          <div className="timeline">
-            {packet.events.map((event) => (
-              <div className="event-row" key={event.id}>
-                <time>{formatTime(event.at)}</time>
-                <div>
-                  <span className={`stage stage-${event.stage}`}>
-                    {stageLabels[event.stage]}
-                  </span>
-                  <p>{event.message}</p>
-                  <small>
-                    {event.id} | {event.agent} | {event.mentions.join(", ")}
-                  </small>
-                </div>
-              </div>
             ))}
-          </div>
-        </article>
-
-        <aside className="panel proof-panel">
-          <p className="kicker">Packet proof</p>
-          <h2>Room evidence</h2>
-          <ProofRow label="mode" value={packet.band_proof.proof_mode} />
-          <ProofRow
-            label="packet room"
-            value={packet.band_proof.packet_room_id}
-          />
-          <ProofRow
-            label="packet type"
-            value={packet.band_proof.packet_room_type}
-          />
-          <ProofRow
-            label="replay actors"
-            value={packet.band_proof.participant_count.toString()}
-          />
-          <ProofRow
-            label="captured agents"
-            value={capturedRun.participant_count.toString()}
-          />
-          <ProofRow
-            label="events"
-            value={packet.band_proof.event_count.toString()}
-          />
-          <ProofRow
-            label="receipts"
-            value={packet.receipts.length.toString()}
-          />
-          <ProofRow label="veto" value={packet.band_proof.veto_message_id} />
-          <ProofRow
-            label="approval"
-            value={packet.band_proof.approval_message_id}
-          />
-          <ProofRow label="captured room" value={capturedRun.room_id} />
-          <ProofRow label="captured at" value={capturedRun.captured_at} />
-          <ProofRow label="captured veto" value={capturedRun.risk_veto_id} />
-          <ProofRow
-            label="captured notice"
-            value={capturedRun.communications_notice_id}
-          />
-          <ProofRow
-            label="context"
-            value={`${capturedRun.context_items} items`}
-          />
-          <div className="hash-box">
-            <span>audit seal</span>
-            <code>{packet.audit_hash}</code>
-          </div>
-          <div className="api-actions">
-            <a href={`${apiBase}/packet`}>packet api</a>
-            <a href={`${apiBase}/proof`}>proof api</a>
-            <a href={`${apiBase}/band-proof`}>band proof</a>
-            <a href={`${apiBase}/packet.json`}>export json</a>
-            <a href={`${apiBase}/receipts`}>receipts api</a>
-            <a href={`${apiBase}/decision-graph`}>graph api</a>
-            <a href={`${apiBase}/verify`}>verify digest</a>
-            <a href={`${apiBase}/source-evidence`}>source api</a>
-            <a href={`${apiBase}/partner-ai/status`}>ai status</a>
-            <a href={`${apiBase}/submission-proof`}>proof bundle</a>
-            <a href={`${apiBase}/cases`}>cases api</a>
-            <a href={`${apiBase}/rules`}>rules api</a>
-            <a href={`${apiBase}/notifications/dry-run`}>dispatch api</a>
-            <a href={`${apiBase}/enterprise-sync`}>erp sync</a>
-            <a href={`${apiBase}/identity/status`}>identity</a>
-            <a href={`${apiBase}/erp-contract/receipts`}>erp receipts</a>
-            <a href={`${apiBase}/sap-api-hub`}>sap sandbox</a>
           </div>
         </aside>
       </section>
 
-      <section className="panel raw-proof">
-        <div className="panel-head">
-          <div>
-            <p className="kicker">raw Band proof</p>
-            <h2>Captured run, not a claim</h2>
-          </div>
-          <a href={`${apiBase}/band-proof`}>download proof</a>
-        </div>
-        <p className="proof-disclosure">
-          Judge Mode replays the deterministic BAT-4421 packet for a stable
-          walkthrough. These rows expose the real Band room IDs captured from
-          the five-agent spike that the packet receipts reference.
-        </p>
-        <div className="proof-ledger">
-          {capturedRun.stage_evidence.map((evidence) => (
-            <article key={evidence.band_message_id}>
-              <span>{evidence.stage.replaceAll("_", " ")}</span>
-              <strong>{evidence.label}</strong>
-              <code>{evidence.band_message_id}</code>
-              <p>{evidence.proves}</p>
-            </article>
-          ))}
-        </div>
-        <LiveBandRunner apiBase={apiBase} />
-      </section>
-
-      <section className="lower-grid">
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <p className="kicker">Traceability</p>
-              <h2>Missing distributor file recovered</h2>
-            </div>
-            <span className="mono-stat">
-              {packet.initial_traceability.coverage_percent}% to{" "}
-              {packet.final_traceability.coverage_percent}%
-            </span>
-          </div>
-          <CoverageBar
-            label="initial lot coverage"
-            value={packet.initial_traceability.coverage_percent}
-          />
-          <CoverageBar
-            label="final lot coverage"
-            value={packet.final_traceability.coverage_percent}
-          />
-          <div className="shipment-grid">
-            {packet.shipments.map((shipment) => (
-              <div
-                className="shipment"
-                key={`${shipment.distributor}-${shipment.region}`}
-              >
-                <span
-                  className={shipment.traced ? "trace-dot traced" : "trace-dot"}
-                />
-                <strong>{shipment.region}</strong>
-                <small>{shipment.distributor}</small>
-                <b>{shipment.units.toLocaleString()} units</b>
-              </div>
-            ))}
-          </div>
+      <section className="proof-strip">
+        <article>
+          <span>exposure clock</span>
+          <strong>{packet.exposure_clock.unit_hours.toLocaleString()}</strong>
+          <p>unit-hours in market</p>
         </article>
-
-        <article className="panel decision-panel">
-          <p className="kicker">Final packet</p>
-          <h2>{packet.decision.action.replaceAll("_", " ")}</h2>
-          <p className="decision-copy">{packet.decision.reason}</p>
-          <div className="notice-list">
-            {Object.entries(packet.notices).map(([key, value]) => (
-              <div key={key}>
-                <span>{key}</span>
-                <p>{value}</p>
-              </div>
-            ))}
-          </div>
-          <div className="gate">
-            <span>{veto?.id} risk veto cleared</span>
-            <span>{approval?.id} human approval locked</span>
-          </div>
+        <article>
+          <span>affected customers</span>
+          <strong>
+            {packet.final_traceability.affected_customers.toLocaleString()}
+          </strong>
+          <p>covered in final packet</p>
+        </article>
+        <article>
+          <span>receipts</span>
+          <strong>{packet.receipts.length}</strong>
+          <p>hash-linked decision records</p>
+        </article>
+        <article>
+          <span>audit seal</span>
+          <code>{packet.audit_hash.slice(0, 18)}...</code>
+          <p>recomputed by API</p>
         </article>
       </section>
 
-      <section className="agents">
-        {packet.agents.map((agent) => (
-          <article key={agent.id}>
-            <span>{agent.framework}</span>
-            <strong>{agent.name}</strong>
-            <small>{agent.handle}</small>
-            <p>{agent.role}</p>
-          </article>
-        ))}
-      </section>
+      <ProductTabs
+        packet={packet}
+        apiBase={apiBase}
+        marketSignals={marketSignals}
+        capabilityMatrix={capabilityMatrix}
+        operatingLayers={operatingLayers}
+        commandProofs={commandProofs}
+        buyerOutcomes={buyerOutcomes}
+        deploymentPath={deploymentPath}
+      />
     </main>
   );
-}
-
-function ProofRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="proof-row">
-      <span>{label}</span>
-      <code>{value}</code>
-    </div>
-  );
-}
-
-function CoverageBar({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="coverage">
-      <div>
-        <span>{label}</span>
-        <b>{value}%</b>
-      </div>
-      <i>
-        <em style={{ width: `${value}%` }} />
-      </i>
-    </div>
-  );
-}
-
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
 }
