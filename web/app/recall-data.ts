@@ -198,8 +198,9 @@ export const roomResponsibilities = [
   },
   {
     role: "Regulatory/Risk",
-    authority: "Can veto",
-    assignment: "Stops customer notice when the decision cannot be defended.",
+    authority: "Raises hold",
+    assignment:
+      "Flags traceability, jurisdiction, and evidence gaps before human approval.",
   },
   {
     role: "Communications",
