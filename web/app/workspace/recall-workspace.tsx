@@ -73,8 +73,11 @@ type RegulatorResponse = {
 
 type WorkspaceResult = {
   evidence: EvidenceResponse;
+  roomRun: JsonRecord | null;
   filing: FilingResponse;
   regulator: RegulatorResponse;
+  signatureGate: JsonRecord | null;
+  submissionProof: JsonRecord | null;
 };
 
 type Task = {
@@ -84,6 +87,51 @@ type Task = {
   status: TaskStatus;
   detail: string;
 };
+
+type JsonRecord = Record<string, unknown>;
+
+type LiveEvent = {
+  id: number;
+  at: string;
+  actor: string;
+  stage: string;
+  detail: string;
+  status: "running" | "complete" | "gated" | "failed";
+};
+
+type AgentRole = {
+  actor: string;
+  role: string;
+  output: string;
+};
+
+const agentRoles: AgentRole[] = [
+  {
+    actor: "Evidence",
+    role: "reads the complaint",
+    output: "product, lot, defect, severity",
+  },
+  {
+    actor: "Traceability",
+    role: "checks shipment records",
+    output: "coverage, missing units, markets",
+  },
+  {
+    actor: "Regulatory/Risk",
+    role: "checks safety duties",
+    output: "hold path or review path",
+  },
+  {
+    actor: "Communications",
+    role: "prepares notices",
+    output: "customer, distributor, filing drafts",
+  },
+  {
+    actor: "Recall owner",
+    role: "keeps final action human-owned",
+    output: "sign-off gate and proof packet",
+  },
+];
 
 const initialRows: ShipmentRow[] = [
   {
@@ -127,6 +175,9 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [approvalKey, setApprovalKey] = useState("");
+  const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [currentActor, setCurrentActor] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "case" | "tasks" | "drafts" | "proof"
   >("case");
@@ -169,6 +220,68 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   const urgentTasks = tasks.filter(
     (task) => task.status === "blocked" || task.deadline.includes("24h"),
   );
+  const sourceHash = result?.evidence.packet.audit_hash ?? null;
+  const roomMode =
+    getPathString(result?.roomRun, ["run", "band", "mode"]) ??
+    getPathString(result?.roomRun, ["recall_room_run", "band", "mode"]) ??
+    getPathString(result?.roomRun, ["band", "mode"]) ??
+    "not run yet";
+  const roomHash =
+    getPathString(result?.roomRun, ["run", "run_hash"]) ??
+    getPathString(result?.roomRun, ["recall_room_run", "run_hash"]) ??
+    getPathString(result?.roomRun, ["room_run", "run_hash"]) ??
+    getString(asRecord(result?.roomRun), "run_hash") ??
+    sourceHash;
+  const roomEvents = getPathArray(result?.roomRun, ["run", "room", "events"]);
+  const roomParticipants =
+    getPathNumber(result?.roomRun, ["run", "band", "participant_count"]) ??
+    getPathNumber(result?.roomRun, [
+      "recall_room_run",
+      "band",
+      "participant_count",
+    ]) ??
+    0;
+  const regulatorTargets = result?.regulator.regulator_dispatch?.targets ?? [];
+  const filingHash = result?.filing.filing_pack?.pack_hash ?? sourceHash;
+  const signatureMode =
+    getString(asRecord(result?.signatureGate), "mode") ??
+    getString(asRecord(result?.signatureGate), "proof_kind") ??
+    "not checked";
+  const signatureReady =
+    getString(asRecord(result?.signatureGate), "decision") === "approved" ||
+    getString(asRecord(result?.signatureGate), "status") === "approved";
+
+  async function appendLiveEvent(
+    actor: string,
+    stage: string,
+    detail: string,
+    status: LiveEvent["status"],
+  ) {
+    setCurrentActor(actor);
+    setLiveEvents((current) => [
+      ...current,
+      {
+        id: current.length + 1,
+        at: new Date().toLocaleTimeString([], {
+          hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        actor,
+        stage,
+        detail,
+        status,
+      },
+    ]);
+    await sleep(status === "running" ? 280 : 170);
+  }
+
+  function clearRunState() {
+    setResult(null);
+    setLiveEvents([]);
+    setCurrentActor(null);
+  }
 
   async function analyzeCase() {
     const nextError = validateCase({ product, lot, defect, rows });
@@ -179,7 +292,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
 
     setBusy(true);
     setError(null);
-    setResult(null);
+    clearRunState();
     setActiveTab("tasks");
 
     const complaintText = buildComplaintText({
@@ -197,25 +310,197 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     };
 
     try {
+      await appendLiveEvent(
+        "Recall owner",
+        "case opened",
+        `${complaintId.trim()} is open for ${product.trim()} lot ${lot.trim()}. Final action stays human-owned.`,
+        "running",
+      );
+
+      await appendLiveEvent(
+        "Evidence",
+        "reading complaint",
+        "Posting the complaint and shipment ledger to the live source-evidence engine.",
+        "running",
+      );
       const evidence = (await postJson(
         `${apiBase}/source-evidence`,
         body,
       )) as EvidenceResponse;
+      await appendLiveEvent(
+        "Traceability",
+        "coverage math",
+        `Coverage is ${evidence.packet.final_traceability.coverage_percent}%; ${evidence.packet.final_traceability.untraced_units.toLocaleString()} units remain untraced after the current ledger.`,
+        evidence.packet.final_traceability.coverage_percent === 100
+          ? "complete"
+          : "gated",
+      );
+
+      let roomRun: JsonRecord | null = null;
+      try {
+        await appendLiveEvent(
+          "Band",
+          "opening command room",
+          "Calling the recall-room endpoint with run_live_band=true so the agent room is attempted from this case.",
+          "running",
+        );
+        roomRun = (await postJson(`${apiBase}/recall-room/run`, {
+          ...body,
+          run_live_band: true,
+        })) as JsonRecord;
+        await appendLiveEvent(
+          "Band",
+          "room proof attached",
+          `Room mode: ${(getPathString(roomRun, ["run", "band", "mode"]) ?? "captured_or_deterministic").replaceAll("_", " ")}; participants: ${getPathNumber(roomRun, ["run", "band", "participant_count"]) ?? 0}.`,
+          "complete",
+        );
+        for (const event of getPathArray(roomRun, ["run", "room", "events"])) {
+          const record = asRecord(event);
+          await appendLiveEvent(
+            getString(record, "agent") ?? "RecallOps agent",
+            (getString(record, "stage") ?? "room event").replaceAll("_", " "),
+            getString(record, "message") ?? "Room event completed.",
+            "complete",
+          );
+        }
+      } catch (exc) {
+        roomRun = {
+          mode: "room_unavailable",
+          detail:
+            exc instanceof Error
+              ? exc.message
+              : "Recall-room run could not complete.",
+        };
+        await appendLiveEvent(
+          "Band",
+          "room unavailable",
+          "The source engine will continue, but the room proof is marked unavailable for this run.",
+          "failed",
+        );
+      }
+
+      await appendLiveEvent(
+        "Communications",
+        "drafting filings",
+        "Generating regulator, distributor, FDA-screen, and NHTSA-screen drafts from the same evidence set.",
+        "running",
+      );
       const filing = (await postJson(
         `${apiBase}/filing-pack`,
         body,
       )) as FilingResponse;
+      await appendLiveEvent(
+        "Communications",
+        "filing pack sealed",
+        `Prepared ${(filing.filing_pack?.filings ?? []).length} filing and notice drafts; pack hash ${shortValue(filing.filing_pack?.pack_hash ?? null)}.`,
+        "complete",
+      );
+
+      await appendLiveEvent(
+        "Regulatory/Risk",
+        "preparing dry-run dispatch",
+        "Preparing CPSC, EU, and regional dispatch targets without external submission.",
+        "running",
+      );
       const regulator = (await postJson(`${apiBase}/regulator-filing`, {
         ...body,
         dry_run: true,
         targets: ["cpsc", "eu", "regional"],
       })) as RegulatorResponse;
-      setResult({ evidence, filing, regulator });
+      await appendLiveEvent(
+        "Regulatory/Risk",
+        "dispatch prepared",
+        `${(regulator.regulator_dispatch?.targets ?? []).length} regulator targets prepared in dry-run mode.`,
+        "complete",
+      );
+
+      let signatureGate: JsonRecord | null = null;
+      if (evidence.packet.final_traceability.coverage_percent < 100) {
+        signatureGate = {
+          mode: "blocked_by_traceability",
+          final_coverage_percent:
+            evidence.packet.final_traceability.coverage_percent,
+          disclosure:
+            "Human sign-off stayed closed because traceability is incomplete.",
+        };
+        await appendLiveEvent(
+          "Recall owner",
+          "sign-off blocked",
+          "Human approval stayed closed because shipment traceability is not 100%.",
+          "gated",
+        );
+      } else {
+        const nextRoomHash =
+          getPathString(roomRun, ["run", "run_hash"]) ??
+          getPathString(roomRun, ["recall_room_run", "run_hash"]) ??
+          getPathString(roomRun, ["room_run", "run_hash"]) ??
+          evidence.packet.audit_hash;
+        const signatureResult = await runSignatureGate({
+          apiBase,
+          approvalKey: approvalKey.trim(),
+          sourceHash: evidence.packet.audit_hash,
+          roomHash: nextRoomHash,
+          filingHash:
+            filing.filing_pack?.pack_hash ?? evidence.packet.audit_hash,
+        });
+        signatureGate = signatureResult.body;
+        await appendLiveEvent(
+          "Recall owner",
+          signatureResult.signed ? "sign-off sealed" : "sign-off gated",
+          signatureResult.signed
+            ? "Verified approval material sealed the human sign-off receipt."
+            : "No approval code was provided, so RecallOps proves the gate stays closed.",
+          signatureResult.signed ? "complete" : "gated",
+        );
+      }
+
+      let submissionProof: JsonRecord | null = null;
+      try {
+        await appendLiveEvent(
+          "Proof desk",
+          "assembling proof",
+          "Fetching the deployed proof packet so this run can be exported with source, room, filing, and gate evidence.",
+          "running",
+        );
+        submissionProof = (await fetchJson(
+          `${apiBase}/submission-proof`,
+        )) as JsonRecord;
+        await appendLiveEvent(
+          "Proof desk",
+          "action pack ready",
+          "The downloadable action pack is ready for review, audit, or handoff.",
+          "complete",
+        );
+      } catch {
+        await appendLiveEvent(
+          "Proof desk",
+          "deployed proof unavailable",
+          "The case action pack is still available; deployed submission proof could not be fetched.",
+          "failed",
+        );
+      }
+
+      setResult({
+        evidence,
+        roomRun,
+        filing,
+        regulator,
+        signatureGate,
+        submissionProof,
+      });
     } catch (exc) {
       setError(
         exc instanceof Error
           ? exc.message
           : "Recall analysis could not complete.",
+      );
+      await appendLiveEvent(
+        "RecallOps",
+        "run failed",
+        exc instanceof Error
+          ? exc.message
+          : "Recall analysis could not complete.",
+        "failed",
       );
     } finally {
       setBusy(false);
@@ -227,12 +512,14 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     field: keyof Omit<ShipmentRow, "id">,
     value: string,
   ) {
+    clearRunState();
     setRows((current) =>
       current.map((row) => (row.id === id ? { ...row, [field]: value } : row)),
     );
   }
 
   function addRow() {
+    clearRunState();
     setRows((current) => [
       ...current,
       {
@@ -248,16 +535,18 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   }
 
   function removeRow(id: string) {
+    clearRunState();
     setRows((current) => current.filter((row) => row.id !== id));
   }
 
   function markAllTraced() {
+    clearRunState();
     setRows((current) => current.map((row) => ({ ...row, status: "traced" })));
   }
 
   function resetCase() {
     setRows(initialRows);
-    setResult(null);
+    clearRunState();
     setError(null);
     setActiveTab("case");
   }
@@ -268,8 +557,8 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
       return;
     }
     try {
+      clearRunState();
       setRows(parseShipmentCsv(await file.text()));
-      setResult(null);
     } catch (exc) {
       setError(
         exc instanceof Error ? exc.message : "Shipment CSV could not be read.",
@@ -287,12 +576,12 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     try {
       const text = await file.text();
       const parsed = parseComplaint(text);
+      clearRunState();
       setComplaintId(parsed.complaintId ?? complaintId);
       setProduct(parsed.product ?? product);
       setLot(parsed.lot ?? lot);
       setDefect(parsed.defect ?? defect);
       setSeverity(parsed.severity ?? severity);
-      setResult(null);
     } catch {
       setError("Complaint file could not be read.");
     } finally {
@@ -325,8 +614,12 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
       customerNotice,
       distributorHold,
       evidence: result.evidence,
+      recallRoomRun: result.roomRun,
       filingPack: result.filing,
       regulatorDispatch: result.regulator,
+      humanSignatureGate: result.signatureGate,
+      deployedSubmissionProof: result.submissionProof,
+      liveExecutionStream: liveEvents,
       boundaries: [
         "This pack is decision support, not legal advice.",
         "No external regulator submission was sent.",
@@ -335,6 +628,33 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
       ],
     };
     downloadJson(actionPack, `recallops-${lot || "case"}-action-pack.json`);
+  }
+
+  function downloadBandProof() {
+    if (!result?.roomRun) {
+      return;
+    }
+    const bandProof = {
+      proof_kind: "recallops_workspace_band_room_proof",
+      generated_at: new Date().toISOString(),
+      case: {
+        complaintId,
+        product,
+        lot,
+        defect,
+        severity,
+      },
+      source_audit_hash: sourceHash,
+      room_run_hash: roomHash,
+      band: {
+        mode: roomMode,
+        participant_count: roomParticipants,
+      },
+      liveExecutionStream: liveEvents,
+      transcript: roomEvents,
+      rawRoomRun: result.roomRun,
+    };
+    downloadJson(bandProof, `recallops-${lot || "case"}-band-proof.json`);
   }
 
   async function copyNotice() {
@@ -394,6 +714,82 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         </article>
       </section>
 
+      <section className={styles.liveRoom}>
+        <article className={styles.agentBoard}>
+          <div>
+            <p className={styles.kicker}>Live recall room</p>
+            <h2>Five roles working the case in view.</h2>
+            <p>
+              The active role changes during the run, so an external user can
+              see who is reading evidence, calculating coverage, drafting
+              notices, checking regulator routes, and holding final sign-off.
+            </p>
+          </div>
+          <div className={styles.agentGrid}>
+            {agentRoles.map((role) => (
+              <article
+                data-active={
+                  currentActor === role.actor ||
+                  (currentActor === "Band" && role.actor === "Traceability") ||
+                  (currentActor === "Proof desk" &&
+                    role.actor === "Recall owner")
+                }
+                key={role.actor}
+              >
+                <span>{role.actor}</span>
+                <strong>{role.role}</strong>
+                <p>{role.output}</p>
+              </article>
+            ))}
+          </div>
+        </article>
+
+        <article className={styles.executionPanel}>
+          <div className={styles.executionHeader}>
+            <div>
+              <p className={styles.kicker}>Execution stream</p>
+              <h2>{busy ? "Running live..." : "Ready to run"}</h2>
+              <p>
+                Every real API call, Band-room attempt, filing draft, regulator
+                dry-run, and human gate decision appears here as it happens.
+              </p>
+            </div>
+            <strong>
+              {busy ? "live" : liveEvents.length ? "complete" : "idle"}
+            </strong>
+          </div>
+          <div className={styles.liveEventFeed}>
+            {liveEvents.length > 0 ? (
+              liveEvents.map((event) => (
+                <article data-status={event.status} key={event.id}>
+                  <time>{event.at}</time>
+                  <span>{event.actor}</span>
+                  <div>
+                    <strong>{event.stage}</strong>
+                    <p>{event.detail}</p>
+                  </div>
+                  <code>{event.status}</code>
+                </article>
+              ))
+            ) : (
+              <article data-status="running">
+                <time>--:--:--</time>
+                <span>RecallOps</span>
+                <div>
+                  <strong>waiting for case run</strong>
+                  <p>
+                    Click Build action center to watch source evidence,
+                    traceability, Band-room handoff, filing drafts, regulator
+                    dry-run, and sign-off gate checks unfold.
+                  </p>
+                </div>
+                <code>ready</code>
+              </article>
+            )}
+          </div>
+        </article>
+      </section>
+
       <nav className={styles.tabs} aria-label="Workspace sections">
         {[
           ["case", "Case intake"],
@@ -433,32 +829,40 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <label>
                 <span>Complaint ID</span>
                 <input
-                  onChange={(event) =>
-                    setComplaintId(event.currentTarget.value)
-                  }
+                  onChange={(event) => {
+                    clearRunState();
+                    setComplaintId(event.currentTarget.value);
+                  }}
                   value={complaintId}
                 />
               </label>
               <label>
                 <span>Product</span>
                 <input
-                  onChange={(event) => setProduct(event.currentTarget.value)}
+                  onChange={(event) => {
+                    clearRunState();
+                    setProduct(event.currentTarget.value);
+                  }}
                   value={product}
                 />
               </label>
               <label>
                 <span>Lot or batch</span>
                 <input
-                  onChange={(event) => setLot(event.currentTarget.value)}
+                  onChange={(event) => {
+                    clearRunState();
+                    setLot(event.currentTarget.value);
+                  }}
                   value={lot}
                 />
               </label>
               <label>
                 <span>Product category</span>
                 <select
-                  onChange={(event) =>
-                    setProductCategory(event.currentTarget.value)
-                  }
+                  onChange={(event) => {
+                    clearRunState();
+                    setProductCategory(event.currentTarget.value);
+                  }}
                   value={productCategory}
                 >
                   <option value="consumer product">consumer product</option>
@@ -476,7 +880,10 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <label>
                 <span>Severity</span>
                 <select
-                  onChange={(event) => setSeverity(event.currentTarget.value)}
+                  onChange={(event) => {
+                    clearRunState();
+                    setSeverity(event.currentTarget.value);
+                  }}
                   value={severity}
                 >
                   <option value="critical">critical</option>
@@ -488,7 +895,10 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <label className={styles.wideField}>
                 <span>What went wrong?</span>
                 <textarea
-                  onChange={(event) => setDefect(event.currentTarget.value)}
+                  onChange={(event) => {
+                    clearRunState();
+                    setDefect(event.currentTarget.value);
+                  }}
                   value={defect}
                 />
               </label>
@@ -609,6 +1019,29 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               ) : null}
             </div>
           </article>
+          <article className={styles.cardWide}>
+            <p className={styles.kicker}>Prepared dispatch targets</p>
+            <div className={styles.proofGrid}>
+              {regulatorTargets.length > 0 ? (
+                regulatorTargets.map((target) => (
+                  <article key={target.id}>
+                    <span>{target.id}</span>
+                    <strong>{target.label}</strong>
+                    <p>
+                      {target.status}; external submit{" "}
+                      {target.external_submit ? "enabled" : "off"}.
+                    </p>
+                  </article>
+                ))
+              ) : (
+                <article>
+                  <span>dry-run</span>
+                  <strong>pending</strong>
+                  <p>Build the action center to prepare dispatch targets.</p>
+                </article>
+              )}
+            </div>
+          </article>
         </section>
       ) : null}
 
@@ -624,6 +1057,20 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
           </article>
           <article className={styles.card}>
             <p className={styles.kicker}>Exports</p>
+            <label className={styles.inlineField}>
+              <span>Approval code (optional)</span>
+              <input
+                autoComplete="off"
+                onChange={(event) => {
+                  clearRunState();
+                  setApprovalKey(event.currentTarget.value);
+                }}
+                placeholder="Leave blank to prove the gate is closed"
+                spellCheck={false}
+                type="password"
+                value={approvalKey}
+              />
+            </label>
             <div className={styles.exportStack}>
               <button
                 disabled={!result}
@@ -631,6 +1078,13 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
                 type="button"
               >
                 Download full action pack
+              </button>
+              <button
+                disabled={!result?.roomRun}
+                onClick={downloadBandProof}
+                type="button"
+              >
+                Download Band-room proof
               </button>
               <a href="/proof">Open proof explorer</a>
               <a href="/docs">Open API docs</a>
@@ -641,6 +1095,63 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <li>Final recall action stays human-owned.</li>
               <li>This is decision support, not legal advice.</li>
             </ul>
+          </article>
+          <article className={styles.cardWide}>
+            <p className={styles.kicker}>Room, dispatch, and gate proof</p>
+            <div className={styles.proofGrid}>
+              <article>
+                <span>Band room mode</span>
+                <strong>{roomMode.replaceAll("_", " ")}</strong>
+                <p>{roomParticipants} participant(s) recorded for this run.</p>
+              </article>
+              <article>
+                <span>Regulator dry-run</span>
+                <strong>{regulatorTargets.length} targets</strong>
+                <p>No public regulator submission was sent.</p>
+              </article>
+              <article>
+                <span>Human gate</span>
+                <strong>{signatureReady ? "sealed" : "closed"}</strong>
+                <p>{signatureMode.replaceAll("_", " ")}</p>
+              </article>
+            </div>
+            <div className={styles.transcriptFeed}>
+              {roomEvents.length > 0 ? (
+                roomEvents.map((event, index) => {
+                  const record = asRecord(event);
+                  return (
+                    <article key={`${getString(record, "id")}-${index}`}>
+                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <div>
+                        <strong>
+                          {getString(record, "agent") ?? "RecallOps agent"}
+                        </strong>
+                        <code>
+                          {(
+                            getString(record, "stage") ?? "room_event"
+                          ).replaceAll("_", " ")}
+                        </code>
+                        <p>
+                          {getString(record, "message") ??
+                            "Room event completed."}
+                        </p>
+                      </div>
+                    </article>
+                  );
+                })
+              ) : (
+                <article>
+                  <span>01</span>
+                  <div>
+                    <strong>Waiting for room run</strong>
+                    <code>pending</code>
+                    <p>
+                      Build the action center to stream the room transcript.
+                    </p>
+                  </div>
+                </article>
+              )}
+            </div>
           </article>
         </section>
       ) : null}
@@ -726,6 +1237,15 @@ function ShipmentEditor({
   );
 }
 
+async function fetchJson(url: string): Promise<JsonRecord> {
+  const response = await fetch(url, { cache: "no-store" });
+  const body = (await response.json()) as unknown;
+  if (!response.ok) {
+    throw new Error(formatError(body, "Request failed."));
+  }
+  return asRecord(body);
+}
+
 async function postJson(url: string, body: Record<string, unknown>) {
   const response = await fetch(url, {
     method: "POST",
@@ -744,6 +1264,45 @@ async function postJson(url: string, body: Record<string, unknown>) {
     throw new Error(detail);
   }
   return payload;
+}
+
+async function runSignatureGate({
+  apiBase,
+  approvalKey,
+  sourceHash,
+  roomHash,
+  filingHash,
+}: {
+  apiBase: string;
+  approvalKey: string;
+  sourceHash: string;
+  roomHash: string;
+  filingHash: string;
+}): Promise<{ signed: boolean; body: JsonRecord }> {
+  const response = await fetch(`${apiBase}/esignature-approval`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(approvalKey ? { "x-recallops-approval-key": approvalKey } : {}),
+    },
+    body: JSON.stringify({
+      approver: "Recall owner",
+      decision: "approved",
+      reason:
+        "Workspace reviewed source evidence, recall room, filing pack, and regulator dispatch dry-run.",
+      source_audit_hash: sourceHash,
+      recall_room_run_hash: roomHash,
+      filing_pack_hash: filingHash,
+    }),
+  });
+  const body = asRecord((await response.json()) as unknown);
+  if (response.ok) {
+    return { signed: true, body };
+  }
+  if (response.status === 403 && !approvalKey) {
+    return { signed: false, body };
+  }
+  throw new Error(formatError(body, "Human sign-off gate failed."));
 }
 
 function buildComplaintText({
@@ -1121,6 +1680,66 @@ function classifyMarket(region: string, category: string) {
     action:
       "Confirm local reporting duties and prepare distributor-specific hold instructions.",
   };
+}
+
+function asRecord(value: unknown): JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
+}
+
+function getString(record: JsonRecord | null | undefined, key: string) {
+  const value = record?.[key];
+  return typeof value === "string" ? value : null;
+}
+
+function getPathString(value: unknown, path: string[]) {
+  const target = getPathValue(value, path);
+  return typeof target === "string" ? target : null;
+}
+
+function getPathNumber(value: unknown, path: string[]) {
+  const target = getPathValue(value, path);
+  return typeof target === "number" ? target : null;
+}
+
+function getPathArray(value: unknown, path: string[]) {
+  const target = getPathValue(value, path);
+  return Array.isArray(target) ? target : [];
+}
+
+function getPathValue(value: unknown, path: string[]) {
+  let current: unknown = value;
+  for (const segment of path) {
+    const record = asRecord(current);
+    current = record[segment];
+  }
+  return current;
+}
+
+function shortValue(value: string | null) {
+  if (!value) {
+    return "pending";
+  }
+  return value.length > 18
+    ? `${value.slice(0, 10)}...${value.slice(-8)}`
+    : value;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function formatError(value: unknown, fallback: string) {
+  const record = asRecord(value);
+  const detail = record.detail;
+  if (typeof detail === "string") {
+    return detail;
+  }
+  if (Array.isArray(detail)) {
+    return JSON.stringify(detail);
+  }
+  return fallback;
 }
 
 function downloadJson(value: unknown, filename: string) {

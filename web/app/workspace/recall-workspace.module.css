@@ -13,9 +13,14 @@
 .card,
 .cardWide,
 .metricStrip,
+.agentBoard,
+.executionPanel,
+.agentGrid article,
 .taskGrid article,
 .marketList article,
 .documentGrid article,
+.proofGrid article,
+.transcriptFeed article,
 .emptyState {
   border: 1px solid rgba(212, 168, 95, 0.18);
   border-radius: 8px;
@@ -70,6 +75,20 @@
   line-height: 1.62;
 }
 
+.verdictCard > strong,
+.verdictCard > small {
+  position: relative;
+  display: block;
+  margin-top: 12px;
+  color: #ffdf9a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.verdictCard > strong {
+  color: #ffd0d0;
+}
+
 .kicker {
   margin: 0 0 12px;
   color: var(--gilt-2);
@@ -89,6 +108,7 @@
 
 .buttonRow button,
 .buttonRow a,
+.verdictCard > button,
 .tabs button,
 .fileButton,
 .cardHead button,
@@ -116,7 +136,17 @@
   color: #120d07;
 }
 
+.verdictCard > button {
+  position: relative;
+  min-height: 48px;
+  margin-top: 18px;
+  border-color: rgba(212, 168, 95, 0.64);
+  background: #d4a85f;
+  color: #120d07;
+}
+
 .buttonRow button:disabled,
+.verdictCard > button:disabled,
 .cardHead button:disabled,
 .exportStack button:disabled {
   cursor: not-allowed;
@@ -131,7 +161,7 @@
   padding: 0;
 }
 
-.metricStrip article {
+.metricStrip > div {
   min-height: 128px;
   padding: 18px;
   background: rgba(7, 16, 25, 0.36);
@@ -163,14 +193,230 @@
 .metricStrip p,
 .card p,
 .cardWide p,
+.agentBoard p,
+.executionPanel p,
 .taskGrid p,
 .marketList p,
 .documentGrid p,
+.proofGrid p,
+.transcriptFeed p,
 .emptyState p,
 .boundaryList {
   color: #d9c8a8;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.liveRoom {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(360px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.agentBoard,
+.executionPanel {
+  padding: 18px;
+}
+
+.agentBoard h2,
+.executionHeader h2 {
+  margin: 0;
+  color: #fff7e8;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+
+.agentGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.agentGrid article {
+  position: relative;
+  min-height: 130px;
+  padding: 12px;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease;
+}
+
+.agentGrid article[data-active="true"] {
+  border-color: rgba(212, 168, 95, 0.72);
+  background:
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(212, 168, 95, 0.16),
+      transparent 42%
+    ),
+    rgba(10, 18, 28, 0.86);
+}
+
+.agentGrid article[data-active="true"]::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d4a85f;
+  box-shadow: 0 0 0 6px rgba(212, 168, 95, 0.12);
+}
+
+.agentGrid span,
+.proofGrid span {
+  display: block;
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.agentGrid strong,
+.proofGrid strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff7e8;
+  font-size: 14px;
+  line-height: 1.32;
+}
+
+.executionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.executionHeader > strong {
+  border: 1px solid rgba(90, 211, 154, 0.32);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(90, 211, 154, 0.1);
+  color: #9fe7d6;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.liveEventFeed {
+  display: grid;
+  gap: 7px;
+  max-height: 430px;
+  overflow: auto;
+  padding-right: 4px;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 5%,
+    #000 95%,
+    transparent
+  );
+}
+
+.liveEventFeed article {
+  display: grid;
+  grid-template-columns: 76px 116px minmax(0, 1fr) 76px;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid rgba(125, 211, 252, 0.1);
+  border-left: 3px solid rgba(212, 168, 95, 0.44);
+  border-radius: 7px;
+  padding: 10px;
+  background: rgba(7, 16, 25, 0.42);
+}
+
+.liveEventFeed article[data-status="complete"] {
+  border-left-color: rgba(90, 211, 154, 0.56);
+}
+
+.liveEventFeed article[data-status="gated"] {
+  border-left-color: rgba(255, 184, 77, 0.72);
+}
+
+.liveEventFeed article[data-status="failed"] {
+  border-left-color: rgba(255, 115, 115, 0.72);
+}
+
+.liveEventFeed time,
+.liveEventFeed span,
+.liveEventFeed code,
+.transcriptFeed span,
+.transcriptFeed code {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.liveEventFeed strong,
+.transcriptFeed strong {
+  display: block;
+  color: #fff7e8;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.inlineField {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+}
+
+.inlineField span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.inlineField input {
+  width: 100%;
+  border: 1px solid rgba(125, 211, 252, 0.17);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(7, 16, 25, 0.72);
+  color: #fff7e8;
+  font: 13px/1.4 inherit;
+}
+
+.proofGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.proofGrid article {
+  padding: 14px;
+}
+
+.transcriptFeed {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+}
+
+.transcriptFeed article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.transcriptFeed code {
+  display: inline-block;
+  margin-top: 4px;
 }
 
 .tabs {
@@ -275,6 +521,7 @@
 .fieldGrid input:focus,
 .fieldGrid select:focus,
 .fieldGrid textarea:focus,
+.inlineField input:focus,
 .tableRow input:focus,
 .tableRow select:focus,
 .tabs button:focus-visible,
@@ -428,9 +675,14 @@ html[data-theme="light"] .verdictCard,
 html[data-theme="light"] .card,
 html[data-theme="light"] .cardWide,
 html[data-theme="light"] .metricStrip,
+html[data-theme="light"] .agentBoard,
+html[data-theme="light"] .executionPanel,
+html[data-theme="light"] .agentGrid article,
 html[data-theme="light"] .taskGrid article,
 html[data-theme="light"] .marketList article,
 html[data-theme="light"] .documentGrid article,
+html[data-theme="light"] .proofGrid article,
+html[data-theme="light"] .transcriptFeed article,
 html[data-theme="light"] .emptyState {
   border-color: rgba(111, 134, 153, 0.22);
   background:
@@ -446,11 +698,17 @@ html[data-theme="light"] .verdictCard h2,
 html[data-theme="light"] .cardHead h2,
 html[data-theme="light"] .card h2,
 html[data-theme="light"] .cardWide h2,
+html[data-theme="light"] .agentBoard h2,
+html[data-theme="light"] .executionHeader h2,
 html[data-theme="light"] .metricStrip strong,
+html[data-theme="light"] .agentGrid strong,
+html[data-theme="light"] .liveEventFeed strong,
 html[data-theme="light"] .taskGrid article h3,
 html[data-theme="light"] .marketList article h3,
 html[data-theme="light"] .documentGrid article h3,
 html[data-theme="light"] .documentGrid strong,
+html[data-theme="light"] .proofGrid strong,
+html[data-theme="light"] .transcriptFeed strong,
 html[data-theme="light"] .emptyState h2,
 html[data-theme="light"] .emptyState strong {
   color: #071019;
@@ -460,9 +718,13 @@ html[data-theme="light"] .verdictCard p,
 html[data-theme="light"] .card p,
 html[data-theme="light"] .cardWide p,
 html[data-theme="light"] .metricStrip p,
+html[data-theme="light"] .agentBoard p,
+html[data-theme="light"] .executionPanel p,
 html[data-theme="light"] .taskGrid p,
 html[data-theme="light"] .marketList p,
 html[data-theme="light"] .documentGrid p,
+html[data-theme="light"] .proofGrid p,
+html[data-theme="light"] .transcriptFeed p,
 html[data-theme="light"] .emptyState p,
 html[data-theme="light"] .boundaryList {
   color: #45576a;
@@ -471,6 +733,7 @@ html[data-theme="light"] .boundaryList {
 html[data-theme="light"] .fieldGrid input,
 html[data-theme="light"] .fieldGrid select,
 html[data-theme="light"] .fieldGrid textarea,
+html[data-theme="light"] .inlineField input,
 html[data-theme="light"] .tableRow input,
 html[data-theme="light"] .tableRow select,
 html[data-theme="light"] .noticeDraft {
@@ -492,17 +755,33 @@ html[data-theme="light"] .tabs button[aria-pressed="true"] {
   color: #071019;
 }
 
+html[data-theme="light"] .agentGrid article[data-active="true"] {
+  background:
+    radial-gradient(
+      circle at 20% 0%,
+      rgba(212, 168, 95, 0.18),
+      transparent 42%
+    ),
+    rgba(255, 255, 255, 0.92);
+}
+
 @media (max-width: 980px) {
   .heroBoard,
+  .liveRoom,
   .twoColumn,
   .taskLayout,
-  .documentGrid {
+  .documentGrid,
+  .proofGrid {
     grid-template-columns: 1fr;
   }
 
   .fieldGrid,
   .metricStrip {
     grid-template-columns: 1fr;
+  }
+
+  .agentGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .verdictCard {
@@ -525,5 +804,13 @@ html[data-theme="light"] .tabs button[aria-pressed="true"] {
   .cardHead button,
   .fileButton {
     width: 100%;
+  }
+
+  .agentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .liveEventFeed article {
+    grid-template-columns: 1fr;
   }
 }
