@@ -20,6 +20,8 @@
 .marketList article,
 .documentGrid article,
 .proofGrid article,
+.reportNarrative article,
+.reportFacts div,
 .transcriptFeed article,
 .emptyState {
   border: 1px solid rgba(212, 168, 95, 0.18);
@@ -400,6 +402,72 @@
   padding: 14px;
 }
 
+.reportNarrative {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.reportNarrative article {
+  border-left: 3px solid rgba(212, 168, 95, 0.5);
+  padding: 14px;
+}
+
+.reportNarrative article[data-status="complete"] {
+  border-left-color: rgba(90, 211, 154, 0.68);
+}
+
+.reportNarrative article[data-status="gated"] {
+  border-left-color: rgba(255, 184, 77, 0.78);
+}
+
+.reportNarrative article[data-status="failed"] {
+  border-left-color: rgba(255, 115, 115, 0.78);
+}
+
+.reportNarrative article[data-status="review"] {
+  border-left-color: rgba(125, 211, 252, 0.5);
+}
+
+.reportNarrative span,
+.reportFacts span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.reportNarrative strong,
+.reportFacts strong {
+  display: block;
+  margin-top: 6px;
+  color: #fff7e8;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.reportNarrative p,
+.reportFacts p {
+  margin: 8px 0 0;
+  color: #d9c8a8;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.reportFacts {
+  display: grid;
+  grid-template-columns: 0.75fr 1.2fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reportFacts div {
+  min-width: 0;
+  padding: 12px;
+}
+
 .transcriptFeed {
   display: grid;
   gap: 8px;
@@ -682,6 +750,8 @@ html[data-theme="light"] .taskGrid article,
 html[data-theme="light"] .marketList article,
 html[data-theme="light"] .documentGrid article,
 html[data-theme="light"] .proofGrid article,
+html[data-theme="light"] .reportNarrative article,
+html[data-theme="light"] .reportFacts div,
 html[data-theme="light"] .transcriptFeed article,
 html[data-theme="light"] .emptyState {
   border-color: rgba(111, 134, 153, 0.22);
@@ -708,6 +778,8 @@ html[data-theme="light"] .marketList article h3,
 html[data-theme="light"] .documentGrid article h3,
 html[data-theme="light"] .documentGrid strong,
 html[data-theme="light"] .proofGrid strong,
+html[data-theme="light"] .reportNarrative strong,
+html[data-theme="light"] .reportFacts strong,
 html[data-theme="light"] .transcriptFeed strong,
 html[data-theme="light"] .emptyState h2,
 html[data-theme="light"] .emptyState strong {
@@ -724,6 +796,8 @@ html[data-theme="light"] .taskGrid p,
 html[data-theme="light"] .marketList p,
 html[data-theme="light"] .documentGrid p,
 html[data-theme="light"] .proofGrid p,
+html[data-theme="light"] .reportNarrative p,
+html[data-theme="light"] .reportFacts p,
 html[data-theme="light"] .transcriptFeed p,
 html[data-theme="light"] .emptyState p,
 html[data-theme="light"] .boundaryList {
@@ -771,7 +845,9 @@ html[data-theme="light"] .agentGrid article[data-active="true"] {
   .twoColumn,
   .taskLayout,
   .documentGrid,
-  .proofGrid {
+  .proofGrid,
+  .reportNarrative,
+  .reportFacts {
     grid-template-columns: 1fr;
   }
 

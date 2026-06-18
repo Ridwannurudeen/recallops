@@ -1,6 +1,4 @@
-import Bat4421Replay from "./bat-4421-replay";
 import {
-  apiBase,
   fragmentedSurfaces,
   integrationClaims,
   packet,
@@ -159,12 +157,30 @@ export default function Home() {
               Start judge demo
             </a>
           </div>
+          <a
+            className="secondary-action"
+            href="/demo/bat-4421#live-workspace"
+            style={{ marginTop: 8 }}
+          >
+            View seeded live workspace
+          </a>
           <p className="trust-line">
             Human-owned decision support &middot; Source-linked &middot;
             ERP-gated
           </p>
         </div>
-        <Bat4421Replay packet={packet} apiBase={apiBase} />
+        <details style={{ minWidth: "100%" }}>
+          <summary className="section-kicker">
+            Need a deterministic replay for judging consistency?
+          </summary>
+          <p style={{ marginTop: 10 }}>
+            Open the replay below after you run the live scenario. Judges keep a
+            stable story, while users can test their own case live first.
+          </p>
+          <a className="secondary-action" href="/demo/bat-4421">
+            Open BAT-4421 scripted replay
+          </a>
+        </details>
       </section>
 
       <section className="landing-system-map">

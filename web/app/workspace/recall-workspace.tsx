@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import styles from "./recall-workspace.module.css";
 
 type ShipmentStatus = "traced" | "missing";
@@ -88,6 +88,19 @@ type Task = {
   detail: string;
 };
 
+export type WorkspaceSeedRow = Omit<ShipmentRow, "id">;
+
+export type WorkspaceSeed = {
+  id: string;
+  complaintId: string;
+  product: string;
+  lot: string;
+  defect: string;
+  severity: "critical" | "high" | "medium" | "low";
+  productCategory: string;
+  rows: WorkspaceSeedRow[];
+};
+
 type JsonRecord = Record<string, unknown>;
 
 type LiveEvent = {
@@ -97,6 +110,58 @@ type LiveEvent = {
   stage: string;
   detail: string;
   status: "running" | "complete" | "gated" | "failed";
+};
+
+type RunReport = {
+  completedAt: string;
+  decision: string;
+  initialCoveragePercent: number;
+  finalCoveragePercent: number;
+  shippedUnits: number;
+  tracedUnits: number;
+  untracedUnits: number;
+  initialTracedRows: number;
+  initialMissingRows: number;
+  liveEventCount: number;
+  roomMode: string;
+  roomParticipants: number;
+  filingDraftCount: number;
+  regulatorTargetCount: number;
+  signatureMode: string;
+  signatureReady: boolean;
+  sourceHash: string | null;
+  roomHash: string | null;
+  boundaryChecks: string[];
+  nextAction: string;
+};
+
+type IncidentReportSection = {
+  label: string;
+  title: string;
+  body: string;
+  status: "complete" | "gated" | "failed" | "review";
+};
+
+type IncidentReportContext = {
+  report: RunReport;
+  complaintId: string;
+  product: string;
+  productCategory: string;
+  lot: string;
+  defect: string;
+  severity: string;
+  rows: ShipmentRow[];
+  globalChecklist: ReturnType<typeof buildGlobalChecklist>;
+  filings: NonNullable<FilingResponse["filing_pack"]>["filings"];
+  regulatorTargets: NonNullable<
+    RegulatorResponse["regulator_dispatch"]
+  >["targets"];
+  liveEvents: LiveEvent[];
+  sourceHash: string | null;
+  roomHash: string | null;
+  filingHash: string | null;
+  signatureReady: boolean;
+  signatureMode: string;
 };
 
 type AgentRole = {
@@ -136,51 +201,73 @@ const agentRoles: AgentRole[] = [
 const initialRows: ShipmentRow[] = [
   {
     id: "row-1",
-    source: "SHIP-901",
-    distributor: "Northstar",
-    region: "US-West",
-    customers: "18",
-    units: "240",
-    status: "traced",
-  },
-  {
-    id: "row-2",
-    source: "SHIP-902",
-    distributor: "Baltic Retail",
-    region: "EU-North",
-    customers: "7",
-    units: "80",
+    source: "",
+    distributor: "",
+    region: "",
+    customers: "1",
+    units: "1",
     status: "missing",
-  },
-  {
-    id: "row-3",
-    source: "SHIP-903",
-    distributor: "Direct Warehouse",
-    region: "US-East",
-    customers: "21",
-    units: "260",
-    status: "traced",
   },
 ];
 
-export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
-  const [complaintId, setComplaintId] = useState("C-901");
-  const [product, setProduct] = useState("Harbor Sensor Battery Pack");
+export default function RecallWorkspace({
+  apiBase,
+  seed,
+}: {
+  apiBase: string;
+  seed?: WorkspaceSeed | null;
+}) {
+  const [complaintId, setComplaintId] = useState("C-");
+  const [product, setProduct] = useState("");
   const [productCategory, setProductCategory] = useState("consumer product");
-  const [lot, setLot] = useState("LOT-900");
-  const [defect, setDefect] = useState("overheating during overnight charge");
+  const [lot, setLot] = useState("");
+  const [defect, setDefect] = useState("");
   const [severity, setSeverity] = useState("critical");
   const [rows, setRows] = useState<ShipmentRow[]>(initialRows);
   const [result, setResult] = useState<WorkspaceResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedNotice, setCopiedNotice] = useState(false);
+  const [copiedReport, setCopiedReport] = useState(false);
   const [approvalKey, setApprovalKey] = useState("");
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
   const [currentActor, setCurrentActor] = useState<string | null>(null);
+  const [runCompletedAt, setRunCompletedAt] = useState("");
+  const [runReport, setRunReport] = useState<RunReport | null>(null);
+  const [approvalActionMessage, setApprovalActionMessage] = useState<
+    string | null
+  >(null);
+  const [approvingReceipt, setApprovingReceipt] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "case" | "tasks" | "drafts" | "proof"
   >("case");
+  const liveFeedRef = useRef<HTMLDivElement | null>(null);
+
+  function applySeed(nextSeed: WorkspaceSeed) {
+    const normalizedRows: ShipmentRow[] =
+      nextSeed.rows.length > 0
+        ? nextSeed.rows.map((row, index) => ({
+            id: `${nextSeed.id}-row-${index + 1}`,
+            source: row.source,
+            distributor: row.distributor,
+            region: row.region,
+            customers: String(numeric(row.customers)),
+            units: String(numeric(row.units)),
+            status: row.status === "traced" ? "traced" : "missing",
+          }))
+        : initialRows;
+    setComplaintId(nextSeed.complaintId || "C-");
+    setProduct(nextSeed.product);
+    setLot(nextSeed.lot);
+    setDefect(nextSeed.defect);
+    setSeverity(nextSeed.severity || "critical");
+    setProductCategory(nextSeed.productCategory || "consumer product");
+    setRows(normalizedRows);
+    setApprovalKey("");
+    setError(null);
+    setActiveTab("case");
+    clearRunState();
+  }
 
   const validationError = useMemo(
     () => validateCase({ product, lot, defect, rows }),
@@ -210,13 +297,15 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     result,
     isReady,
   });
+  const filingDrafts = result?.filing.filing_pack?.filings ?? [];
   const tasks = buildTasks({
     isReady,
     missingRows,
     traceability,
-    filings: result?.filing.filing_pack?.filings ?? [],
+    filings: filingDrafts,
     globalChecklist,
   });
+  const initialTraceability = result?.evidence.packet.initial_traceability;
   const urgentTasks = tasks.filter(
     (task) => task.status === "blocked" || task.deadline.includes("24h"),
   );
@@ -250,6 +339,46 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
   const signatureReady =
     getString(asRecord(result?.signatureGate), "decision") === "approved" ||
     getString(asRecord(result?.signatureGate), "status") === "approved";
+  const approvalHint = result
+    ? signatureReady
+      ? "Approval already sealed."
+      : runReport?.decision === "Run failed"
+        ? "Fix the run first and retry."
+        : traceability?.coverage_percent === 100
+          ? "Enter approval code to seal a human-readable receipt."
+          : "Traceability must be 100% before sign-off."
+    : "Run the action center first.";
+  const incidentReportSections = runReport
+    ? buildIncidentReportSections({
+        report: runReport,
+        complaintId,
+        product,
+        productCategory,
+        lot,
+        defect,
+        severity,
+        rows,
+        globalChecklist,
+        filings: filingDrafts,
+        regulatorTargets,
+        liveEvents,
+        sourceHash,
+        roomHash,
+        filingHash,
+        signatureReady,
+        signatureMode,
+      })
+    : [];
+
+  useEffect(() => {
+    if (liveEvents.length === 0) {
+      return;
+    }
+    liveFeedRef.current?.scrollTo({
+      top: liveFeedRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [liveEvents.length]);
 
   async function appendLiveEvent(
     actor: string,
@@ -279,12 +408,48 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
 
   function clearRunState() {
     setResult(null);
+    setRunCompletedAt("");
+    setRunReport(null);
     setLiveEvents([]);
     setCurrentActor(null);
+    setCopiedReport(false);
+    setApprovalActionMessage(null);
+    setApprovingReceipt(false);
   }
 
-  async function analyzeCase() {
-    const nextError = validateCase({ product, lot, defect, rows });
+  useEffect(() => {
+    if (!seed) {
+      setComplaintId("C-");
+      setProduct("");
+      setProductCategory("consumer product");
+      setLot("");
+      setDefect("");
+      setSeverity("critical");
+      setRows(initialRows);
+      setApprovalKey("");
+      setError(null);
+      clearRunState();
+      setActiveTab("case");
+      return;
+    }
+    applySeed(seed);
+  }, [seed?.id]);
+
+  async function analyzeCase(candidateRows?: ShipmentRow[]) {
+    const normalizedRows =
+      candidateRows ??
+      rows.map((row) => ({
+        ...row,
+      }));
+    if (candidateRows) {
+      setRows(normalizedRows);
+    }
+    const nextError = validateCase({
+      product,
+      lot,
+      defect,
+      rows: normalizedRows,
+    });
     if (nextError) {
       setError(nextError);
       return;
@@ -292,6 +457,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
 
     setBusy(true);
     setError(null);
+    setApprovalActionMessage(null);
     clearRunState();
     setActiveTab("tasks");
 
@@ -302,22 +468,33 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
       defect,
       severity,
     });
-    const shipmentCsv = buildShipmentCsv(rows);
+    const inputRows = normalizedRows.map((row) => ({ ...row }));
+    const shipmentCsv = buildShipmentCsv(normalizedRows);
+    let liveEventCount = 0;
     const body = {
       complaint_text: complaintText,
       shipment_csv: shipmentCsv,
       recovered_shipment_csv: shipmentCsv,
     };
+    const trackLiveEvent = async (
+      actor: string,
+      stage: string,
+      detail: string,
+      status: LiveEvent["status"],
+    ) => {
+      await appendLiveEvent(actor, stage, detail, status);
+      liveEventCount += 1;
+    };
 
     try {
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Recall owner",
         "case opened",
         `${complaintId.trim()} is open for ${product.trim()} lot ${lot.trim()}. Final action stays human-owned.`,
         "running",
       );
 
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Evidence",
         "reading complaint",
         "Posting the complaint and shipment ledger to the live source-evidence engine.",
@@ -327,7 +504,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         `${apiBase}/source-evidence`,
         body,
       )) as EvidenceResponse;
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Traceability",
         "coverage math",
         `Coverage is ${evidence.packet.final_traceability.coverage_percent}%; ${evidence.packet.final_traceability.untraced_units.toLocaleString()} units remain untraced after the current ledger.`,
@@ -338,7 +515,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
 
       let roomRun: JsonRecord | null = null;
       try {
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Band",
           "opening command room",
           "Calling the recall-room endpoint with run_live_band=true so the agent room is attempted from this case.",
@@ -348,7 +525,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
           ...body,
           run_live_band: true,
         })) as JsonRecord;
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Band",
           "room proof attached",
           `Room mode: ${(getPathString(roomRun, ["run", "band", "mode"]) ?? "captured_or_deterministic").replaceAll("_", " ")}; participants: ${getPathNumber(roomRun, ["run", "band", "participant_count"]) ?? 0}.`,
@@ -356,7 +533,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         );
         for (const event of getPathArray(roomRun, ["run", "room", "events"])) {
           const record = asRecord(event);
-          await appendLiveEvent(
+          await trackLiveEvent(
             getString(record, "agent") ?? "RecallOps agent",
             (getString(record, "stage") ?? "room event").replaceAll("_", " "),
             getString(record, "message") ?? "Room event completed.",
@@ -371,7 +548,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               ? exc.message
               : "Recall-room run could not complete.",
         };
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Band",
           "room unavailable",
           "The source engine will continue, but the room proof is marked unavailable for this run.",
@@ -379,7 +556,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         );
       }
 
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Communications",
         "drafting filings",
         "Generating regulator, distributor, FDA-screen, and NHTSA-screen drafts from the same evidence set.",
@@ -389,14 +566,14 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         `${apiBase}/filing-pack`,
         body,
       )) as FilingResponse;
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Communications",
         "filing pack sealed",
         `Prepared ${(filing.filing_pack?.filings ?? []).length} filing and notice drafts; pack hash ${shortValue(filing.filing_pack?.pack_hash ?? null)}.`,
         "complete",
       );
 
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Regulatory/Risk",
         "preparing dry-run dispatch",
         "Preparing CPSC, EU, and regional dispatch targets without external submission.",
@@ -407,7 +584,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         dry_run: true,
         targets: ["cpsc", "eu", "regional"],
       })) as RegulatorResponse;
-      await appendLiveEvent(
+      await trackLiveEvent(
         "Regulatory/Risk",
         "dispatch prepared",
         `${(regulator.regulator_dispatch?.targets ?? []).length} regulator targets prepared in dry-run mode.`,
@@ -423,7 +600,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
           disclosure:
             "Human sign-off stayed closed because traceability is incomplete.",
         };
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Recall owner",
           "sign-off blocked",
           "Human approval stayed closed because shipment traceability is not 100%.",
@@ -444,7 +621,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
             filing.filing_pack?.pack_hash ?? evidence.packet.audit_hash,
         });
         signatureGate = signatureResult.body;
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Recall owner",
           signatureResult.signed ? "sign-off sealed" : "sign-off gated",
           signatureResult.signed
@@ -456,7 +633,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
 
       let submissionProof: JsonRecord | null = null;
       try {
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Proof desk",
           "assembling proof",
           "Fetching the deployed proof packet so this run can be exported with source, room, filing, and gate evidence.",
@@ -465,14 +642,14 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         submissionProof = (await fetchJson(
           `${apiBase}/submission-proof`,
         )) as JsonRecord;
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Proof desk",
           "action pack ready",
           "The downloadable action pack is ready for review, audit, or handoff.",
           "complete",
         );
       } catch {
-        await appendLiveEvent(
+        await trackLiveEvent(
           "Proof desk",
           "deployed proof unavailable",
           "The case action pack is still available; deployed submission proof could not be fetched.",
@@ -480,6 +657,24 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         );
       }
 
+      const roomModeForSummary =
+        getPathString(roomRun, ["run", "band", "mode"]) ??
+        getPathString(roomRun, ["recall_room_run", "band", "mode"]) ??
+        getPathString(roomRun, ["band", "mode"]) ??
+        "not run";
+      const roomParticipantsForSummary =
+        getPathNumber(roomRun, ["run", "band", "participant_count"]) ??
+        getPathNumber(roomRun, [
+          "recall_room_run",
+          "band",
+          "participant_count",
+        ]) ??
+        0;
+      const roomHashForSummary =
+        getPathString(roomRun, ["run", "run_hash"]) ??
+        getPathString(roomRun, ["recall_room_run", "run_hash"]) ??
+        getPathString(roomRun, ["room_run", "run_hash"]) ??
+        evidence.packet.audit_hash;
       setResult({
         evidence,
         roomRun,
@@ -488,22 +683,210 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
         signatureGate,
         submissionProof,
       });
+      const isRunSigned =
+        getString(asRecord(signatureGate), "decision") === "approved" ||
+        getString(asRecord(signatureGate), "status") === "approved";
+      const completedAt = new Date().toLocaleString();
+      setRunCompletedAt(completedAt);
+      setRunReport({
+        completedAt,
+        decision:
+          evidence.packet.final_traceability.coverage_percent === 100
+            ? "Ready for human review"
+            : "Blocked: traceability incomplete",
+        initialCoveragePercent:
+          evidence.packet.initial_traceability.coverage_percent,
+        finalCoveragePercent:
+          evidence.packet.final_traceability.coverage_percent,
+        shippedUnits: evidence.packet.final_traceability.shipped_units,
+        tracedUnits: evidence.packet.final_traceability.traced_units,
+        untracedUnits: evidence.packet.final_traceability.untraced_units,
+        initialTracedRows: inputRows.filter((row) => row.status === "traced")
+          .length,
+        initialMissingRows: inputRows.filter((row) => row.status === "missing")
+          .length,
+        liveEventCount,
+        roomMode: roomModeForSummary,
+        roomParticipants: roomParticipantsForSummary,
+        filingDraftCount: filing.filing_pack?.filings.length ?? 0,
+        regulatorTargetCount: regulator.regulator_dispatch?.targets.length ?? 0,
+        signatureMode:
+          getString(asRecord(signatureGate), "mode") ??
+          getString(asRecord(signatureGate), "proof_kind") ??
+          "not checked",
+        signatureReady: isRunSigned,
+        sourceHash: evidence.packet.audit_hash,
+        roomHash: roomHashForSummary,
+        nextAction:
+          evidence.packet.final_traceability.coverage_percent === 100
+            ? "Everything is ready for human legal/regulatory review. Add approval code to create the final gate receipt or export artifacts for handoff."
+            : "Use Recovery mode: mark missing shipments as traced, rerun analysis, then capture approval receipt after review.",
+        boundaryChecks: [
+          "Decision support only; a qualified human keeps final recall control.",
+          "No public regulator submission was sent in this run.",
+          "No SAP or Oracle write was performed.",
+          "Source traceability, room activity, filing drafts, and gate status are bundled in the report.",
+        ],
+      });
+      setActiveTab("proof");
     } catch (exc) {
+      const failureMessage =
+        exc instanceof Error
+          ? exc.message
+          : "Recall analysis could not complete.";
       setError(
         exc instanceof Error
           ? exc.message
           : "Recall analysis could not complete.",
       );
+      await trackLiveEvent("RecallOps", "run failed", failureMessage, "failed");
+      const completedAt = new Date().toLocaleString();
+      setRunCompletedAt(completedAt);
+      setRunReport({
+        completedAt,
+        decision: "Run failed",
+        initialCoveragePercent: initialTraceability?.coverage_percent ?? 0,
+        finalCoveragePercent: 0,
+        shippedUnits: 0,
+        tracedUnits: 0,
+        untracedUnits: 0,
+        initialTracedRows: inputRows.filter((row) => row.status === "traced")
+          .length,
+        initialMissingRows: inputRows.filter((row) => row.status === "missing")
+          .length,
+        liveEventCount: liveEventCount,
+        roomMode: roomMode,
+        roomParticipants,
+        filingDraftCount: 0,
+        regulatorTargetCount: 0,
+        signatureMode: "failed",
+        signatureReady: false,
+        sourceHash: null,
+        roomHash: null,
+        nextAction:
+          "Capture the exact error shown above, correct the input, and run again. If the issue repeats, compare the uploaded payload with backend API expectations.",
+        boundaryChecks: [
+          "A detailed run report was still generated for auditability.",
+          `Error: ${failureMessage}`,
+          "No external regulator submission or enterprise write was performed.",
+          "A human signature was not generated because execution did not complete.",
+        ],
+      });
+      setActiveTab("proof");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sealApprovalReceipt() {
+    if (!result) {
+      return;
+    }
+    if (!approvalKey.trim()) {
+      setApprovalActionMessage(
+        "Enter approval code in the proof tab before sealing.",
+      );
+      return;
+    }
+    if (
+      !traceability?.coverage_percent ||
+      traceability.coverage_percent < 100
+    ) {
+      setApprovalActionMessage("Coverage is not 100%. Fix traceability first.");
+      return;
+    }
+    if (signatureReady) {
+      setApprovalActionMessage("Approval is already sealed.");
+      return;
+    }
+
+    const nextRoomHash =
+      getPathString(result.roomRun, ["run", "run_hash"]) ??
+      getPathString(result.roomRun, ["recall_room_run", "run_hash"]) ??
+      getPathString(result.roomRun, ["room_run", "run_hash"]) ??
+      result.evidence.packet.audit_hash;
+    const sourceHashForApproval = result.evidence.packet.audit_hash;
+    const filingHashForApproval =
+      result.filing.filing_pack?.pack_hash ?? result.evidence.packet.audit_hash;
+
+    setApprovingReceipt(true);
+    setApprovalActionMessage(null);
+    try {
       await appendLiveEvent(
-        "RecallOps",
-        "run failed",
+        "Recall owner",
+        "sign-off requested",
+        "Submitting approval code to seal the human gate.",
+        "running",
+      );
+      const signatureResult = await runSignatureGate({
+        apiBase,
+        approvalKey: approvalKey.trim(),
+        sourceHash: sourceHashForApproval,
+        roomHash: nextRoomHash,
+        filingHash: filingHashForApproval,
+      });
+
+      if (!signatureResult.signed) {
+        await appendLiveEvent(
+          "Recall owner",
+          "sign-off gated",
+          "Approval could not be sealed with current key.",
+          "gated",
+        );
+        setApprovalActionMessage(
+          getString(asRecord(signatureResult.body), "disclosure") ??
+            "Approval seal failed. Confirm the approval code and try again.",
+        );
+        return;
+      }
+
+      const signatureModeForRun =
+        getString(asRecord(signatureResult.body), "mode") ??
+        getString(asRecord(signatureResult.body), "proof_kind") ??
+        "approved";
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              signatureGate: signatureResult.body,
+            }
+          : current,
+      );
+      setRunReport((current) =>
+        current
+          ? {
+              ...current,
+              signatureMode: signatureModeForRun,
+              signatureReady: true,
+              nextAction:
+                "Human gate is sealed. Export artifacts or open proof.",
+            }
+          : current,
+      );
+      setApprovalActionMessage(
+        "Approval receipt sealed. A named human approver is now recorded.",
+      );
+      setActiveTab("proof");
+      await appendLiveEvent(
+        "Recall owner",
+        "sign-off sealed",
+        "Human approval receipt was successfully sealed.",
+        "complete",
+      );
+    } catch (exc) {
+      const message =
         exc instanceof Error
           ? exc.message
-          : "Recall analysis could not complete.",
+          : "Failed to seal human approval receipt.";
+      setApprovalActionMessage(message);
+      await appendLiveEvent(
+        "Recall owner",
+        "sign-off failed",
+        message,
         "failed",
       );
     } finally {
-      setBusy(false);
+      setApprovingReceipt(false);
     }
   }
 
@@ -544,11 +927,23 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     setRows((current) => current.map((row) => ({ ...row, status: "traced" })));
   }
 
+  async function markAllAndRerun() {
+    const recoveredRows: ShipmentRow[] = rows.map((row) => ({
+      ...row,
+      status: "traced",
+    }));
+    await analyzeCase(recoveredRows);
+  }
+
   function resetCase() {
+    setComplaintId("C-");
+    setProduct("");
+    setLot("");
+    setDefect("");
     setRows(initialRows);
-    clearRunState();
     setError(null);
     setActiveTab("case");
+    clearRunState();
   }
 
   async function uploadShipmentCsv(event: ChangeEvent<HTMLInputElement>) {
@@ -657,6 +1052,63 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
     downloadJson(bandProof, `recallops-${lot || "case"}-band-proof.json`);
   }
 
+  async function copyRunReport() {
+    if (!runReport) {
+      return;
+    }
+    await navigator.clipboard.writeText(
+      buildDetailedRunReportText({
+        report: runReport,
+        complaintId,
+        product,
+        productCategory,
+        lot,
+        defect,
+        severity,
+        rows,
+        globalChecklist,
+        filings: filingDrafts,
+        regulatorTargets,
+        liveEvents,
+        sourceHash,
+        roomHash,
+        filingHash,
+        signatureReady,
+        signatureMode,
+      }),
+    );
+    setCopiedReport(true);
+    window.setTimeout(() => setCopiedReport(false), 1800);
+  }
+
+  function downloadRunReport() {
+    if (!runReport) {
+      return;
+    }
+    downloadText(
+      buildDetailedRunReportText({
+        report: runReport,
+        complaintId,
+        product,
+        productCategory,
+        lot,
+        defect,
+        severity,
+        rows,
+        globalChecklist,
+        filings: filingDrafts,
+        regulatorTargets,
+        liveEvents,
+        sourceHash,
+        roomHash,
+        filingHash,
+        signatureReady,
+        signatureMode,
+      }),
+      `recallops-${lot || "case"}-run-report.txt`,
+    );
+  }
+
   async function copyNotice() {
     await navigator.clipboard.writeText(customerNotice);
     setCopiedNotice(true);
@@ -682,9 +1134,18 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
                 : "Some shipped units are untraced. Recover shipment evidence before sign-off or external action."
               : "Upload or enter the incident, then run analysis to get the action board."}
           </p>
-          <button disabled={busy} onClick={analyzeCase} type="button">
-            {busy ? "Building action center..." : "Build action center"}
-          </button>
+          <div className={styles.buttonRow}>
+            <button disabled={busy} onClick={() => analyzeCase()} type="button">
+              {busy ? "Building action center..." : "Build action center"}
+            </button>
+            <button
+              disabled={busy || missingRows.length === 0}
+              onClick={markAllAndRerun}
+              type="button"
+            >
+              {busy ? "Rebuilding..." : "Recover missing + rebuild"}
+            </button>
+          </div>
           {error ? <strong>{error}</strong> : null}
           {validationError ? <small>{validationError}</small> : null}
         </article>
@@ -758,7 +1219,7 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               {busy ? "live" : liveEvents.length ? "complete" : "idle"}
             </strong>
           </div>
-          <div className={styles.liveEventFeed}>
+          <div className={styles.liveEventFeed} ref={liveFeedRef}>
             {liveEvents.length > 0 ? (
               liveEvents.map((event) => (
                 <article data-status={event.status} key={event.id}>
@@ -789,6 +1250,150 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
           </div>
         </article>
       </section>
+
+      {runReport ? (
+        <article className={styles.card}>
+          <div className={styles.cardHead}>
+            <div>
+              <p className={styles.kicker}>Detailed run report</p>
+              <h2>What happened in this run</h2>
+              <p>
+                Run finished at <strong>{runCompletedAt}</strong>. You can hand
+                this as the post-run report.
+              </p>
+            </div>
+            <div>
+              <button
+                onClick={copyRunReport}
+                disabled={!runReport}
+                type="button"
+              >
+                {copiedReport ? "Report copied" : "Copy report"}
+              </button>
+              <button
+                onClick={downloadRunReport}
+                disabled={!runReport}
+                type="button"
+              >
+                Download report (txt)
+              </button>
+            </div>
+          </div>
+          <div className={styles.proofGrid}>
+            <article>
+              <span>Run decision</span>
+              <strong>
+                {runReport?.decision ??
+                  (isReady ? "Ready for human review" : "Blocked")}
+              </strong>
+              <p>
+                {runReport?.decision === "Ready for human review"
+                  ? "Coverage reached 100% and the case moved to review mode."
+                  : "Coverage is incomplete; sign-off is blocked until evidence is complete."}
+              </p>
+            </article>
+            <article>
+              <span>Traceability movement</span>
+              <strong>
+                {runReport?.initialCoveragePercent ??
+                  initialTraceability?.coverage_percent ??
+                  0}
+                % →{" "}
+                {runReport?.finalCoveragePercent ??
+                  traceability?.coverage_percent ??
+                  0}
+                %
+              </strong>
+              <p>
+                Traced units:{" "}
+                {runReport?.tracedUnits ?? traceability?.traced_units ?? 0} /{" "}
+                {runReport?.shippedUnits ?? traceability?.shipped_units ?? 0};{" "}
+                Untraced:{" "}
+                {runReport?.untracedUnits ?? traceability?.untraced_units ?? 0}.
+              </p>
+            </article>
+            <article>
+              <span>Execution details</span>
+              <strong>
+                {runReport?.liveEventCount ?? liveEvents.length} live events
+              </strong>
+              <p>
+                Current actor sequence includes evidence, room, filing,
+                regulator dry-run, and gate checks.
+              </p>
+            </article>
+            <article>
+              <span>Proof and approvals</span>
+              <strong>
+                {(runReport?.roomMode ?? roomMode).replaceAll("_", " ")}
+              </strong>
+              <p>
+                {runReport?.roomParticipants ?? roomParticipants} participants,{" "}
+                {runReport?.signatureReady
+                  ? "human gate sealed"
+                  : "human gate closed"}
+                , source hash{" "}
+                {runReport?.sourceHash || sourceHash ? "available" : "pending"}.
+              </p>
+            </article>
+            <article>
+              <span>Next action</span>
+              <strong>
+                {runReport?.decision === "Ready for human review"
+                  ? "Ready to hand off"
+                  : runReport?.decision === "Run failed"
+                    ? "Fix then rerun"
+                    : "Close evidence gap"}
+              </strong>
+              <p>{runReport?.nextAction}</p>
+            </article>
+          </div>
+          <div className={styles.reportNarrative}>
+            {incidentReportSections.map((section) => (
+              <article data-status={section.status} key={section.label}>
+                <span>{section.label}</span>
+                <strong>{section.title}</strong>
+                <p>{section.body}</p>
+              </article>
+            ))}
+          </div>
+          <div className={styles.reportFacts}>
+            <div>
+              <span>Case</span>
+              <strong>{complaintId.trim() || "unlabeled"}</strong>
+              <p>
+                {product || "Product"} lot {lot || "unknown"}; severity{" "}
+                {severity}.
+              </p>
+            </div>
+            <div>
+              <span>Shipments</span>
+              <strong>{rows.length} row(s)</strong>
+              <p>
+                {rows
+                  .map(
+                    (row) =>
+                      `${row.source || "source"}: ${numeric(row.units).toLocaleString()} units ${row.status}`,
+                  )
+                  .join("; ")}
+              </p>
+            </div>
+            <div>
+              <span>Markets</span>
+              <strong>{globalChecklist.length} route(s)</strong>
+              <p>
+                {globalChecklist.map((item) => item.market).join(", ") ||
+                  "No market classified."}
+              </p>
+            </div>
+          </div>
+          <div className={styles.boundaryList} style={{ marginTop: 10 }}>
+            {runReport?.boundaryChecks.map((check) => (
+              <p key={check}>{check}</p>
+            )) ?? null}
+          </div>
+        </article>
+      ) : null}
 
       <nav className={styles.tabs} aria-label="Workspace sections">
         {[
@@ -1062,7 +1667,6 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <input
                 autoComplete="off"
                 onChange={(event) => {
-                  clearRunState();
                   setApprovalKey(event.currentTarget.value);
                 }}
                 placeholder="Leave blank to prove the gate is closed"
@@ -1072,6 +1676,26 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               />
             </label>
             <div className={styles.exportStack}>
+              <button
+                disabled={
+                  !result ||
+                  !traceability ||
+                  !result?.evidence.packet.final_traceability
+                    .coverage_percent ||
+                  traceability.coverage_percent < 100 ||
+                  approvingReceipt ||
+                  signatureReady ||
+                  !approvalKey.trim()
+                }
+                onClick={sealApprovalReceipt}
+                type="button"
+              >
+                {approvingReceipt
+                  ? "Sealing approval..."
+                  : signatureReady
+                    ? "Approval already sealed"
+                    : "Seal human approval receipt"}
+              </button>
               <button
                 disabled={!result}
                 onClick={downloadActionPack}
@@ -1089,6 +1713,21 @@ export default function RecallWorkspace({ apiBase }: { apiBase: string }) {
               <a href="/proof">Open proof explorer</a>
               <a href="/docs">Open API docs</a>
             </div>
+            <p className={styles.kicker}>Approval status</p>
+            <p>{approvalActionMessage ?? approvalHint}</p>
+            {result?.signatureGate ? (
+              <ul className={styles.boundaryList}>
+                <li>
+                  {signatureReady
+                    ? `Approval decision: ${signatureMode.replaceAll("_", " ")}`
+                    : "Approval gate is not sealed yet."}
+                </li>
+                <li>
+                  {getString(asRecord(result.signatureGate), "disclosure") ??
+                    "No approval disclosure available yet."}
+                </li>
+              </ul>
+            ) : null}
             <ul className={styles.boundaryList}>
               <li>No public regulator submission.</li>
               <li>No public SAP or Oracle write.</li>
@@ -1756,4 +2395,167 @@ function downloadJson(value: unknown, filename: string) {
 
 function numeric(value: string) {
   return Math.max(1, Number.parseInt(value, 10) || 1);
+}
+
+function buildIncidentReportSections({
+  report,
+  complaintId,
+  product,
+  productCategory,
+  lot,
+  defect,
+  severity,
+  rows,
+  globalChecklist,
+  filings,
+  regulatorTargets,
+  liveEvents,
+  sourceHash,
+  roomHash,
+  filingHash,
+  signatureReady,
+  signatureMode,
+}: IncidentReportContext): IncidentReportSection[] {
+  const shipmentSummary =
+    rows
+      .map(
+        (row) =>
+          `${row.source || "source"} via ${row.distributor || "distributor"} in ${row.region || "market"}: ${numeric(row.units).toLocaleString()} units ${row.status}`,
+      )
+      .join("; ") || "No shipment rows were supplied.";
+  const marketSummary =
+    globalChecklist
+      .map((item) => `${item.market}: ${item.authority}`)
+      .join("; ") || "No market route was classified.";
+  const filingSummary =
+    filings.map((filing) => filing.label).join("; ") ||
+    "No filing drafts were generated.";
+  const runStatus =
+    report.decision === "Run failed"
+      ? "failed"
+      : report.finalCoveragePercent === 100
+        ? "complete"
+        : "gated";
+
+  return [
+    {
+      label: "case",
+      title: `${product || "Product"} lot ${lot || "unknown"} was opened for review`,
+      status: runStatus,
+      body: `Complaint ${complaintId.trim() || "unlabeled"} reported a ${severity} ${productCategory} issue: ${defect || "No defect detail provided."} RecallOps treated the run as decision support and kept final recall control with the named human owner.`,
+    },
+    {
+      label: "traceability",
+      title: `${report.tracedUnits.toLocaleString()} of ${report.shippedUnits.toLocaleString()} units are traced`,
+      status: report.untracedUnits === 0 ? "complete" : "gated",
+      body: `Coverage moved from ${report.initialCoveragePercent}% to ${report.finalCoveragePercent}%. The run started with ${report.initialMissingRows} missing row(s). Shipment detail: ${shipmentSummary}.`,
+    },
+    {
+      label: "markets",
+      title: `${globalChecklist.length} market route(s) checked`,
+      status: globalChecklist.some((item) => item.status === "scope incomplete")
+        ? "gated"
+        : "review",
+      body: marketSummary,
+    },
+    {
+      label: "drafts",
+      title: `${report.filingDraftCount} filing draft(s) and ${report.regulatorTargetCount} regulator dry-run target(s) prepared`,
+      status: report.filingDraftCount > 0 ? "review" : "gated",
+      body: `${filingSummary}. Regulator dispatch stayed in dry-run mode across ${regulatorTargets.length} target(s); nothing was sent outside RecallOps.`,
+    },
+    {
+      label: "room",
+      title: `${report.roomMode.replaceAll("_", " ")} room evidence attached`,
+      status:
+        report.roomParticipants > 0 || liveEvents.length > 0
+          ? "complete"
+          : "review",
+      body: `${report.roomParticipants} participant(s) were recorded and ${liveEvents.length} live event(s) were streamed. Source hash ${shortValue(sourceHash)}, room hash ${shortValue(roomHash)}, filing hash ${shortValue(filingHash)}.`,
+    },
+    {
+      label: "sign-off",
+      title: signatureReady
+        ? "Human approval receipt is sealed"
+        : "Human approval gate is closed",
+      status: signatureReady
+        ? "complete"
+        : report.finalCoveragePercent === 100
+          ? "review"
+          : "gated",
+      body: `${signatureMode.replaceAll("_", " ")}. ${report.nextAction}`,
+    },
+  ];
+}
+
+function buildDetailedRunReportText(context: IncidentReportContext) {
+  const sections = buildIncidentReportSections(context);
+  const lines = [
+    "RecallOps run report",
+    `Timestamp: ${context.report.completedAt}`,
+    `Case: ${context.complaintId.trim() || "unlabeled"}`,
+    `Product: ${context.product || "unknown"}`,
+    `Lot: ${context.lot || "unknown"}`,
+    `Category: ${context.productCategory}`,
+    `Severity: ${context.severity}`,
+    `Issue: ${context.defect || "No defect detail provided."}`,
+    `Decision: ${context.report.decision}`,
+    "",
+    "Plain-English report:",
+  ];
+
+  for (const section of sections) {
+    lines.push(
+      "",
+      `${section.label.toUpperCase()}: ${section.title}`,
+      `Status: ${section.status}`,
+      section.body,
+    );
+  }
+
+  lines.push(
+    "",
+    "Shipment ledger:",
+    ...context.rows.map(
+      (row) =>
+        `- ${row.source || "source"} | ${row.distributor || "distributor"} | ${row.region || "market"} | ${numeric(row.customers).toLocaleString()} customer(s) | ${numeric(row.units).toLocaleString()} unit(s) | ${row.status}`,
+    ),
+    "",
+    "Market checklist:",
+    ...(context.globalChecklist.length
+      ? context.globalChecklist.map(
+          (item) =>
+            `- ${item.market} | ${item.authority} | ${item.status} | ${item.action}`,
+        )
+      : ["- No market route was classified."]),
+    "",
+    "Live execution stream:",
+    ...(context.liveEvents.length
+      ? context.liveEvents.map(
+          (event) =>
+            `- ${event.at} | ${event.actor} | ${event.stage} | ${event.status} | ${event.detail}`,
+        )
+      : ["- No live events were recorded."]),
+    "",
+    "Proof references:",
+    `- Source hash: ${context.sourceHash ?? "pending"}`,
+    `- Room hash: ${context.roomHash ?? "pending"}`,
+    `- Filing hash: ${context.filingHash ?? "pending"}`,
+    `- Signature gate: ${context.signatureReady ? "sealed" : "closed"} (${context.signatureMode.replaceAll("_", " ")})`,
+    "",
+    "Boundaries:",
+    ...context.report.boundaryChecks.map((check) => `- ${check}`),
+  );
+
+  return lines.join("\n");
+}
+
+function downloadText(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.URL.revokeObjectURL(url);
 }

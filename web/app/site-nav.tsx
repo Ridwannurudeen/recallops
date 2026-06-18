@@ -18,7 +18,7 @@ const navItems = [
   { id: "workspace", label: "Workspace", href: "/workspace" },
   { id: "judge", label: "Judge Demo", href: "/demo/judge" },
   { id: "console", label: "Try Live", href: "/console" },
-  { id: "demo", label: "Replay", href: "/demo/bat-4421" },
+  { id: "demo", label: "Replay + Live", href: "/demo/bat-4421" },
   { id: "proof", label: "Proof", href: "/proof" },
   { id: "submission", label: "Submission", href: "/submission" },
   { id: "integrations", label: "Integrations", href: "/integrations" },
