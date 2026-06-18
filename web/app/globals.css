@@ -583,6 +583,109 @@ h2 {
   margin-top: 20px;
 }
 
+.readiness-panel {
+  margin-top: 20px;
+}
+
+.readiness-links {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.readiness-panel .panel-head a {
+  flex: 0 0 auto;
+  border: 1px solid rgba(212, 168, 95, 0.28);
+  border-radius: 6px;
+  padding: 9px 10px;
+  color: #f0dfbf;
+  background: rgba(255, 247, 232, 0.04);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.readiness-grid,
+.sync-ledger,
+.adapter-ledger,
+.blocker-strip {
+  display: grid;
+  gap: 10px;
+}
+
+.readiness-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.sync-ledger {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.adapter-ledger {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.blocker-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.readiness-grid article,
+.sync-ledger article,
+.adapter-ledger article,
+.blocker-strip span {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(230, 252, 248, 0.035);
+}
+
+.readiness-grid span,
+.sync-ledger span,
+.adapter-ledger span,
+.blocker-strip span {
+  color: var(--muted);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.readiness-grid strong,
+.sync-ledger strong,
+.adapter-ledger strong {
+  display: block;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  color: #fff7e8;
+  font-size: 15px;
+}
+
+.readiness-grid small,
+.sync-ledger small,
+.adapter-ledger small {
+  display: block;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+  color: #91c4bd;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+}
+
+.sync-ledger p,
+.adapter-ledger p {
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.42;
+}
+
 .source-grid {
   display: grid;
   grid-template-columns: minmax(360px, 1.05fr) minmax(320px, 0.95fr);
@@ -1232,6 +1335,10 @@ h2 {
   .shipment-grid,
   .proof-ledger,
   .live-runner,
+  .readiness-grid,
+  .sync-ledger,
+  .adapter-ledger,
+  .blocker-strip,
   .fact-grid,
   .shipment-ledger,
   .citation-ledger,
@@ -1274,6 +1381,10 @@ h2 {
   .drill-monitor dl,
   .proof-ledger,
   .live-runner,
+  .readiness-grid,
+  .sync-ledger,
+  .adapter-ledger,
+  .blocker-strip,
   .source-results,
   .digest-grid,
   .provider-grid,

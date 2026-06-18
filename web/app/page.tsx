@@ -1,4 +1,5 @@
 import packetJson from "../public/demo-packet.json";
+import EnterpriseReadiness from "./enterprise-readiness";
 import LiveBandRunner from "./live-band-runner";
 import LiveDrill from "./live-drill";
 import SourceEvidenceCockpit from "./source-evidence-cockpit";
@@ -202,6 +203,8 @@ export default function Home() {
 
       <SourceEvidenceCockpit apiBase={apiBase} />
 
+      <EnterpriseReadiness apiBase={apiBase} />
+
       <section className="command-grid">
         <article className="panel timeline-panel">
           <div className="panel-head">
@@ -288,6 +291,12 @@ export default function Home() {
             <a href={`${apiBase}/source-evidence`}>source api</a>
             <a href={`${apiBase}/partner-ai/status`}>ai status</a>
             <a href={`${apiBase}/submission-proof`}>proof bundle</a>
+            <a href={`${apiBase}/cases`}>cases api</a>
+            <a href={`${apiBase}/rules`}>rules api</a>
+            <a href={`${apiBase}/notifications/dry-run`}>dispatch api</a>
+            <a href={`${apiBase}/enterprise-sync`}>erp sync</a>
+            <a href={`${apiBase}/identity/status`}>identity</a>
+            <a href={`${apiBase}/erp-contract/receipts`}>erp receipts</a>
           </div>
         </aside>
       </section>

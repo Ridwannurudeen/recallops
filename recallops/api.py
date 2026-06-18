@@ -3,15 +3,35 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, Header, HTTPException, Response
 from pydantic import BaseModel
 
 from recallops import build_recall_packet, verify_packet_digest
 from recallops.approval import build_approval_receipt, verify_approval_receipt
+from recallops.cases import create_case_record, get_case_record, list_case_records
+from recallops.enterprise import (
+    EnterpriseSyncError,
+    enterprise_sync_status,
+    integration_status,
+    ops_readiness,
+    require_enterprise_write_authorization,
+    run_enterprise_sync,
+)
+from recallops.erp_contract import (
+    ContractReceiverError,
+    contract_receipts,
+    contract_status,
+    record_contract_write,
+    require_contract_authorization,
+)
+from recallops.identity import IdentityError, identity_status, resolve_approval_identity
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
+from recallops.notifications import build_dispatch_receipts
 from recallops.partner_ai import partner_ai_status as current_partner_ai_status
 from recallops.partner_ai import run_partner_ai
+from recallops.rate_limit import SpendLimitError, acquire_spend_permit, spend_limit_status
+from recallops.rules import assess_rules
 from recallops.source_evidence import (
     DEFAULT_COMPLAINT_TEXT,
     DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -44,6 +64,15 @@ class ApprovalReceiptRequest(BaseModel):
 
 class SubmissionProofRequest(BaseModel):
     run_partner_ai: bool = True
+
+
+class CreateCaseRequest(SourceEvidenceRequest):
+    pass
+
+
+class EnterpriseSyncRequest(SourceEvidenceRequest):
+    dry_run: bool = True
+    targets: tuple[Literal["sap", "oracle"], ...] = ("sap", "oracle")
 
 
 @app.get("/api/health")
@@ -134,7 +163,7 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
         shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
         recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
         partner_ai = (
-            run_partner_ai(
+            _run_partner_ai_guarded(
                 complaint_text=complaint_text,
                 shipment_csv=shipment_csv,
                 recovered_shipment_csv=recovered_shipment_csv,
@@ -174,6 +203,202 @@ def source_evidence_verify() -> dict[str, object]:
 @app.get("/api/partner-ai/status")
 def partner_ai_status() -> dict[str, object]:
     return current_partner_ai_status()
+
+
+@app.get("/api/spend-limits")
+def spend_limits() -> dict[str, object]:
+    return {"partner_ai": spend_limit_status()}
+
+
+@app.get("/api/integrations")
+def integrations() -> dict[str, object]:
+    return integration_status()
+
+
+@app.get("/api/ops-readiness")
+def readiness() -> dict[str, object]:
+    return {
+        **ops_readiness(),
+        "spend_limits": spend_limits(),
+        "identity": identity_status(),
+        "erp_contract": contract_status(),
+    }
+
+
+@app.get("/api/enterprise-sync")
+def enterprise_sync_dry_run() -> dict[str, object]:
+    return _enterprise_sync_from_inputs(
+        complaint_text=DEFAULT_COMPLAINT_TEXT,
+        shipment_csv=DEFAULT_SHIPMENT_CSV,
+        recovered_shipment_csv=DEFAULT_RECOVERED_SHIPMENT_CSV,
+        partner_ai=None,
+        dry_run=True,
+        targets=("sap", "oracle"),
+    )
+
+
+@app.post("/api/enterprise-sync")
+def enterprise_sync(
+    request: EnterpriseSyncRequest,
+    x_recallops_admin_key: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        if not request.dry_run:
+            require_enterprise_write_authorization(x_recallops_admin_key)
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        return _enterprise_sync_from_inputs(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+            dry_run=request.dry_run,
+            targets=request.targets,
+        )
+    except EnterpriseSyncError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/identity/status")
+def approval_identity_status() -> dict[str, object]:
+    return identity_status()
+
+
+@app.post("/api/identity-approval")
+def identity_approval_receipt(
+    request: ApprovalReceiptRequest,
+    x_recallops_approval_key: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        identity = resolve_approval_identity(
+            approver=request.approver,
+            provided_admin_key=x_recallops_approval_key,
+            authorization=authorization,
+        )
+        receipt = build_approval_receipt(
+            approver=request.approver,
+            decision=request.decision,
+            reason=request.reason,
+            source_audit_hash=request.source_audit_hash,
+            previous_hash=request.previous_hash,
+            identity=identity,
+        )
+    except IdentityError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "receipt": receipt.to_dict(),
+        "verification": verify_approval_receipt(receipt),
+        "identity": identity,
+        "disclosure": "Identity approval is server-verified, then sealed into the receipt hash.",
+    }
+
+
+@app.get("/api/erp-contract/status")
+def erp_contract_status() -> dict[str, object]:
+    return contract_status()
+
+
+@app.get("/api/erp-contract/receipts")
+def erp_contract_receipts() -> dict[str, object]:
+    return {"receipts": contract_receipts()}
+
+
+@app.post("/api/erp-contract/{target}")
+def erp_contract_receiver(
+    target: Literal["sap", "oracle"],
+    request: dict[str, object],
+    authorization: str | None = Header(default=None),
+    apikey: str | None = Header(default=None),
+    x_recallops_contract_token: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        require_contract_authorization(
+            authorization=authorization,
+            apikey=apikey,
+            contract_token=x_recallops_contract_token,
+        )
+        return record_contract_write(target=target, payload=request)
+    except ContractReceiverError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+
+
+@app.get("/api/rules")
+def rules() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    return assess_rules(source_packet)
+
+
+@app.get("/api/notifications/dry-run")
+def notification_dry_run() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    receipts = build_dispatch_receipts(source_packet)
+    return {
+        "mode": "dry_run_no_external_send",
+        "receipts": [receipt.to_dict() for receipt in receipts],
+    }
+
+
+@app.get("/api/cases")
+def cases() -> dict[str, object]:
+    return {"cases": list_case_records()}
+
+
+@app.post("/api/cases")
+def create_case(request: CreateCaseRequest) -> dict[str, object]:
+    try:
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        source_packet = build_source_evidence_packet(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    record = create_case_record(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+    )
+    return {"case": record}
+
+
+@app.get("/api/cases/{case_id}")
+def case_detail(case_id: str) -> dict[str, object]:
+    record = get_case_record(case_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    return {"case": record}
 
 
 @app.post("/api/approval-receipt")
@@ -250,7 +475,7 @@ def packet_download() -> Response:
 def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     recall_packet = build_recall_packet()
     partner_ai = (
-        run_partner_ai(
+        _run_partner_ai_guarded(
             complaint_text=DEFAULT_COMPLAINT_TEXT,
             shipment_csv=DEFAULT_SHIPMENT_CSV,
             recovered_shipment_csv=DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -259,6 +484,14 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         else current_partner_ai_status()
     )
     source_packet = build_source_evidence_packet(partner_ai=partner_ai)
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    enterprise_sync = run_enterprise_sync(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+        dry_run=True,
+    )
     approval = build_approval_receipt(
         approver="QA Director",
         decision="approved",
@@ -268,6 +501,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     packet_verification = verify_packet_digest(recall_packet)
     source_verification = verify_source_evidence_digest(source_packet)
     approval_verification = verify_approval_receipt(approval)
+    approval_identity = identity_status()
+    erp_contract = contract_status()
     fresh_band_status = live_drill_status()
     latest_fresh_run = fresh_band_status["latest_run"]
     captured_run = captured_band_proof()
@@ -284,6 +519,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "source_evidence": "https://recallops.gudman.xyz/api/source-evidence",
             "band_proof": "https://recallops.gudman.xyz/api/band-proof",
             "live_drill": "https://recallops.gudman.xyz/api/live-drill",
+            "enterprise_sync": "https://recallops.gudman.xyz/api/enterprise-sync",
         },
         "submission_gates": {
             "demo_url": "ready",
@@ -307,6 +543,12 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "partner_ai": source_packet.partner_ai,
             "verification": source_verification,
         },
+        "rule_assessment": rule_assessment,
+        "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
+        "enterprise_sync": enterprise_sync,
+        "identity": approval_identity,
+        "erp_contract": erp_contract,
+        "production_readiness": ops_readiness(),
         "approval_receipt": {
             "receipt": approval.to_dict(),
             "verification": approval_verification,
@@ -324,5 +566,85 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "fresh_band_run_available": latest_fresh_run is not None,
             "partner_ai_used_count": partner_ai_used_count,
             "partner_ai_used_both": partner_ai_used_count == 2,
+            "rules_approval_ready": rule_assessment["approval_ready"],
+            "dispatch_receipts_prepared": all(
+                receipt.status == "prepared" for receipt in dispatch_receipts
+            ),
+            "sap_oracle_payloads_prepared": all(
+                target["status"] == "prepared" for target in enterprise_sync["targets"]
+            ),
+            "identity_gate_ready": approval_identity["approval_gate_ready"],
+            "erp_contract_live_write_verified": erp_contract["latest_pair_verified"],
         },
     }
+
+
+def _enterprise_sync_from_inputs(
+    *,
+    complaint_text: str,
+    shipment_csv: str,
+    recovered_shipment_csv: str,
+    partner_ai: dict[str, object] | None,
+    dry_run: bool,
+    targets: tuple[Literal["sap", "oracle"], ...],
+) -> dict[str, object]:
+    source_packet = build_source_evidence_packet(
+        complaint_text=complaint_text,
+        shipment_csv=shipment_csv,
+        recovered_shipment_csv=recovered_shipment_csv,
+        partner_ai=partner_ai,
+    )
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    return {
+        "sync": run_enterprise_sync(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            dispatch_receipts=dispatch_receipts,
+            dry_run=dry_run,
+            targets=targets,
+        ),
+        "status": enterprise_sync_status(),
+    }
+
+
+def _run_partner_ai_guarded(
+    *,
+    complaint_text: str,
+    shipment_csv: str,
+    recovered_shipment_csv: str,
+) -> dict[str, object]:
+    status = current_partner_ai_status()
+    providers = status["providers"]
+    assert isinstance(providers, dict)
+    configured = any(
+        isinstance(provider, dict) and provider.get("configured") is True
+        for provider in providers.values()
+    )
+    if not configured:
+        return run_partner_ai(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+        )
+
+    permit = None
+    try:
+        permit = acquire_spend_permit()
+        partner_ai = run_partner_ai(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+        )
+        permit.record(
+            {
+                "mode": partner_ai["mode"],
+                "used_count": partner_ai["used_count"],
+            }
+        )
+        return partner_ai
+    except SpendLimitError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    finally:
+        if permit is not None:
+            permit.release()

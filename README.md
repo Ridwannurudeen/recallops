@@ -78,6 +78,17 @@ Public API endpoints:
 - `https://recallops.gudman.xyz/api/source-evidence`
 - `https://recallops.gudman.xyz/api/source-evidence/verify`
 - `https://recallops.gudman.xyz/api/partner-ai/status`
+- `https://recallops.gudman.xyz/api/spend-limits`
+- `https://recallops.gudman.xyz/api/integrations`
+- `https://recallops.gudman.xyz/api/ops-readiness`
+- `https://recallops.gudman.xyz/api/enterprise-sync`
+- `https://recallops.gudman.xyz/api/identity/status`
+- `https://recallops.gudman.xyz/api/identity-approval`
+- `https://recallops.gudman.xyz/api/erp-contract/status`
+- `https://recallops.gudman.xyz/api/erp-contract/receipts`
+- `https://recallops.gudman.xyz/api/rules`
+- `https://recallops.gudman.xyz/api/notifications/dry-run`
+- `https://recallops.gudman.xyz/api/cases`
 - `https://recallops.gudman.xyz/api/approval-receipt`
 - `https://recallops.gudman.xyz/api/submission-proof`
 - `https://recallops.gudman.xyz/api/receipts`
@@ -105,6 +116,30 @@ Python verification:
 `GET /api/submission-proof` returns a safe judge bundle without spending partner
 AI credits. `POST /api/submission-proof` runs the live partner AI proof path and
 returns the same bundle with partner provider usage.
+
+Production hardening surfaces:
+
+- SQLite case records via `/api/cases`.
+- Deterministic jurisdiction checks via `/api/rules`.
+- Dispatch-ready dry-run notification receipts via `/api/notifications/dry-run`.
+- Enterprise adapter readiness via `/api/integrations`.
+- SAP/Oracle recall payloads and credential-gated live write path via `/api/enterprise-sync`.
+- Identity-gated approval receipts via `/api/identity-approval`, using either a server-side approval key or OIDC/JWKS verification when configured.
+- Tenant-shaped ERP contract receiver receipts via `/api/erp-contract/receipts`.
+- Credit-spend guardrails via `/api/spend-limits`.
+
+SAP/Oracle live adapter configuration:
+
+- SAP: set `RECALLOPS_SAP_BASE_URL`, `RECALLOPS_SAP_API_KEY` or SAP basic-auth envs, and `RECALLOPS_SAP_RECALL_PATH` or `RECALLOPS_SAP_RECALL_URL`.
+- Oracle SCM: set `RECALLOPS_ORACLE_SCM_URL`, `RECALLOPS_ORACLE_SCM_TOKEN` or Oracle basic-auth envs, and `RECALLOPS_ORACLE_SCM_RECALL_PATH` or `RECALLOPS_ORACLE_SCM_RECALL_URL`.
+- Live writes additionally require `RECALLOPS_ENABLE_ENTERPRISE_WRITES=1` and an admin action key sent as `X-RecallOps-Admin-Key`.
+- Without those tenant settings, `/api/enterprise-sync` stays in dry-run mode and exposes the exact payload hash without writing to external ERP systems.
+
+Enterprise identity configuration:
+
+- Server-gated approvals: set `RECALLOPS_APPROVAL_ADMIN_KEY` and call `/api/identity-approval` with `X-RecallOps-Approval-Key`.
+- OIDC approvals: set `RECALLOPS_OIDC_ISSUER`, `RECALLOPS_OIDC_AUDIENCE`, and `RECALLOPS_OIDC_JWKS_URL`; send an RS256 bearer token to `/api/identity-approval`.
+- ERP contract receiver proof: set `RECALLOPS_ERP_CONTRACT_TOKEN` and point SAP/Oracle recall URLs at `/api/erp-contract/sap` and `/api/erp-contract/oracle` for a tenant-shaped live adapter smoke before using a real tenant.
 
 ## Band Live Workflow
 
