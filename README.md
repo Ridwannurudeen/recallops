@@ -1,187 +1,235 @@
-# RecallOps
+﻿<div align="center">
+  <h1>RecallOps</h1>
+  <p><strong>Band-native recall command room with source evidence, human sign-off, regulator drafts, and downloadable proof.</strong></p>
+  <p>RecallOps turns Band into a regulated operating room: five specialist agents coordinate evidence, traceability, risk holds, filing drafts, and audit receipts while the final recall action stays owned by a named human.</p>
 
-Band-native command room for live product-recall decisions.
+  <p>
+    <a href="https://recallops.gudman.xyz/demo/judge"><img alt="Live demo" src="https://img.shields.io/badge/live-demo-10b981"></a>
+    <img alt="Python" src="https://img.shields.io/badge/python-3.11+-3776ab">
+    <img alt="Next.js" src="https://img.shields.io/badge/next.js-16-111827">
+    <img alt="Tests" src="https://img.shields.io/badge/tests-74%20passing-10b981">
+    <img alt="Band" src="https://img.shields.io/badge/Band-agent%20room-d4a85f">
+  </p>
 
-Public demo: https://recallops.gudman.xyz
+  <p>
+    <a href="#why-recallops-exists">Why</a> ·
+    <a href="#what-it-does">What it does</a> ·
+    <a href="#see-it-in-action">Demo</a> ·
+    <a href="#how-it-works">How it works</a> ·
+    <a href="#quickstart">Quickstart</a> ·
+    <a href="#honest-limitations">Limits</a>
+  </p>
+</div>
 
-![RecallOps command room](docs/cover.png)
+![RecallOps judge demo](docs/cover.png)
 
-The deployed demo uses a deterministic battery-pack recall for lot `BAT-4421`
-so judges can replay the same incident every time: Evidence extracts the
-incident, Traceability finds an 82% coverage gap, Regulatory/Risk vetoes the
-plan, Traceability recovers the missing distributor file, Communications drafts
-notices, and the QA Director approves a SHA-256 audit digest.
+## Why RecallOps exists
 
-## Why It Fits Band
+Product recalls fail in the gaps between systems. Complaints sit in support tools, shipment rows sit in spreadsheets, regulatory review happens in meetings, ERP holds are drafted elsewhere, and the final approval trail often becomes a chain of screenshots and email fragments.
 
-RecallOps is built around a room, not a single assistant. The workflow needs
-specialists to join, disagree, hand off work, and preserve the decision trail:
+A regulated buyer cannot accept “the AI approved the recall.” The accountable action must stay with a qualified human. What the team needs is a source-grounded room where agents can gather facts, challenge unsafe action, recover missing traceability, prepare filing drafts, and leave a proof packet behind.
 
-- Incident Commander opens the room and recruits specialists as risk increases.
-- Evidence Agent extracts product, defect, lot, and severity.
-- Traceability Agent maps lot `BAT-4421` across shipments, stock, customers, and regions.
-- Regulatory/Risk Officer vetoes the recall plan while 864 units remain untraced.
-- Communications Agent drafts regulator, customer, and quarantine notices after approval.
-- QA Director is the human approval gate.
+RecallOps uses Band as the coordination layer and wraps it with recall-specific controls: traceability math, jurisdiction rules, filing packs, e-signature gates, ERP dry-runs, and SHA-256 receipts.
 
-The command-room surface exposes packet room ID, captured Band room ID,
-captured agent count, event count, message IDs, veto ID, approval ID, proof
-mode, receipt chain, decision graph, source citations, editable shipment CSV,
-computed traceability, approval receipt, and audit hash. The BAT-4421
-transcript is deterministic, and `docs/band-spike-proof.json` captures a
-successful Band room run: five configured Band identities, dynamic recruitment,
-`@mention` handoffs, traceability gap, risk veto, re-plan, risk approval,
-communications notice, and context fetch.
+## What it does
 
-## Hackathon Alignment
+<table>
+  <tr>
+    <td><strong>Band-first judge demo</strong><br />The primary route, <a href="https://recallops.gudman.xyz/demo/judge">/demo/judge</a>, runs source evidence, recall room, filing pack, regulator dry-run, e-sign gate, and proof export from one guided flow.</td>
+    <td><strong>Scenario selector</strong><br />Judges can run consumer battery, food contamination, medical-device, and vehicle-part recall scenarios instead of watching one hardcoded story.</td>
+  </tr>
+  <tr>
+    <td><strong>Fresh Band attempt with honest fallback</strong><br />The judge demo calls the recall-room endpoint with <code>run_live_band: true</code>. If provider state or cooldown prevents a fresh room, the UI discloses the captured Band reference mode.</td>
+    <td><strong>Visible room transcript</strong><br />The room feed shows agent, stage, and message handoffs: Evidence, Traceability, Regulatory/Risk, Communications, and QA sign-off gate.</td>
+  </tr>
+  <tr>
+    <td><strong>Adversarial coverage toggle</strong><br />“Break shipment coverage” withholds the recovered CSV. Final coverage stays below 100%, the hold path stays active, and human sign-off remains closed.</td>
+    <td><strong>Downloadable proof</strong><br />The demo exports a full audit packet plus a Band-room proof JSON with room mode, room ID, participant count, message IDs, source hash, run hash, and transcript.</td>
+  </tr>
+  <tr>
+    <td><strong>Regulator filing pack</strong><br />CPSC, EU Safety Gate, regional distributor hold, FDA RFR screen, and NHTSA screen are drafted from the same source packet.</td>
+    <td><strong>Gated enterprise actions</strong><br />SAP and Oracle payloads are public dry-runs. Real tenant writes require configured endpoints, enablement, selected targets, and an admin action key.</td>
+  </tr>
+</table>
 
-Track: Regulated & High-Stakes Workflows.
+Supporting surfaces: `/console` for the operator workflow, `/submission` for judge-readiness, `/proof` for raw proof inspection, `/docs` for endpoint review, and `/demo/bat-4421` for stable replay.
 
-- More than 3 agents: 5 agent roles plus a human approver.
-- Cross-framework target architecture: current demo uses Band SDK plus deterministic role logic; the adapter target maps Evidence to Pydantic AI, Traceability to LangGraph, and Risk review to CrewAI.
-- Band-native mechanics: recruitment, `@mention` handoffs, veto, re-plan, approval, and captured room transcript proof.
-- Source-grounded evidence: complaint text and shipment CSV are parsed into facts, citations, coverage snapshots, source digests, and a recomputable approval receipt.
-- Partner AI path: `/api/source-evidence` can call Featherless for evidence extraction and AI/ML API for risk review through their OpenAI-compatible chat APIs when provider keys are configured; response hashes and compact JSON outputs are surfaced in the cockpit.
-- Enterprise value: compresses product-recall triage from fragmented meetings into one auditable decision room.
-- Presentation hook: live drill mode, source cockpit, exposure clock, visible veto, recovered missing distributor file, receipt chain, and final packet.
+## See it in action
 
-## Product Demo
+Start here: https://recallops.gudman.xyz/demo/judge
 
-Generate the tested recall packet:
+Demo path for judges:
 
-```powershell
-.venv\Scripts\python.exe scripts\generate_demo_packet.py
+1. Select **Consumer battery recall**.
+2. Click **Run fresh Band room demo**.
+3. Watch the room mode, participant count, and transcript panel.
+4. Download **Band proof** or the full audit packet.
+5. Enable **Break shipment coverage** and run again to prove the hold path.
+6. Open `/proof` to verify the deployed proof bundle.
+
+Cooldown-safe narration:
+
+```text
+RecallOps attempts a fresh Band room by default. If the Band provider is in cooldown or runtime state prevents a new room, the product does not fake it. It shows the captured Band reference mode, room IDs, message IDs, transcript, and proof labels so judges can distinguish live, captured, deterministic, dry-run, and gated behavior.
 ```
 
-Run the command-room UI:
+## How it works
 
-```powershell
-cd web
-npm install
-npm run dev -- --port 3068
+```text
+Complaint text + shipment CSV
+          |
+          v
+Source evidence engine
+- parses product, lot, defect, severity
+- computes initial/final traceability
+- emits citations and source digests
+          |
+          v
+Band-backed recall room
+- Commander recruits specialists
+- Evidence extracts facts
+- Traceability finds coverage gaps
+- Regulatory/Risk raises or clears hold
+- Communications prepares notices
+          |
+          v
+Filing + dispatch layer
+- regulator filing pack
+- dry-run regulator dispatch
+- SAP / Oracle dry-run payloads
+          |
+          v
+Human sign-off gate
+- e-signature receipt requires verified approval material
+- public demo proves the gate is closed without a key
+          |
+          v
+Proof packet
+- source hash
+- room run hash
+- filing pack hash
+- Band proof
+- regulator dispatch proof
+- final SHA-256 receipts
 ```
 
-Run the local API:
+The same source inputs drive the room narrative, filing pack, dispatch dry-run, and proof exports. That is the core product claim.
 
-```powershell
-.venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098
-```
+## Quickstart
 
-Public API endpoints:
-
-- `https://recallops.gudman.xyz/api/health`
-- `https://recallops.gudman.xyz/api/packet`
-- `https://recallops.gudman.xyz/api/transcript`
-- `https://recallops.gudman.xyz/api/proof`
-- `https://recallops.gudman.xyz/api/band-proof`
-- `https://recallops.gudman.xyz/api/live-drill`
-- `https://recallops.gudman.xyz/api/source-evidence`
-- `https://recallops.gudman.xyz/api/source-evidence/verify`
-- `https://recallops.gudman.xyz/api/partner-ai/status`
-- `https://recallops.gudman.xyz/api/spend-limits`
-- `https://recallops.gudman.xyz/api/integrations`
-- `https://recallops.gudman.xyz/api/ops-readiness`
-- `https://recallops.gudman.xyz/api/sap-api-hub`
-- `https://recallops.gudman.xyz/api/enterprise-sync`
-- `https://recallops.gudman.xyz/api/identity/status`
-- `https://recallops.gudman.xyz/api/identity-approval`
-- `https://recallops.gudman.xyz/api/erp-contract/status`
-- `https://recallops.gudman.xyz/api/erp-contract/receipts`
-- `https://recallops.gudman.xyz/api/rules`
-- `https://recallops.gudman.xyz/api/notifications/dry-run`
-- `https://recallops.gudman.xyz/api/cases`
-- `https://recallops.gudman.xyz/api/approval-receipt`
-- `https://recallops.gudman.xyz/api/submission-proof`
-- `https://recallops.gudman.xyz/api/receipts`
-- `https://recallops.gudman.xyz/api/decision-graph`
-- `https://recallops.gudman.xyz/api/verify`
-- `https://recallops.gudman.xyz/api/packet.json`
-
-Production check:
-
-```powershell
-cd web
-npm run typecheck
-npm run build
-npm audit --audit-level=moderate
-```
-
-Python verification:
-
-```powershell
-.venv\Scripts\python.exe -m ruff format .
-.venv\Scripts\python.exe -m ruff check --fix .
-.venv\Scripts\python.exe -m pytest
-```
-
-`GET /api/submission-proof` returns a safe judge bundle without spending partner
-AI credits. `POST /api/submission-proof` runs the live partner AI proof path and
-returns the same bundle with partner provider usage.
-
-Production hardening surfaces:
-
-- SQLite case records via `/api/cases`.
-- Deterministic jurisdiction checks via `/api/rules`.
-- Dispatch-ready dry-run notification receipts via `/api/notifications/dry-run`.
-- Enterprise adapter readiness via `/api/integrations`.
-- SAP Business Accelerator Hub sandbox read proof via `/api/sap-api-hub`.
-- SAP/Oracle recall payloads and credential-gated live write path via `/api/enterprise-sync`.
-- Identity-gated approval receipts via `/api/identity-approval`, using either a server-side approval key or OIDC/JWKS verification when configured.
-- Tenant-shaped ERP contract receiver receipts via `/api/erp-contract/receipts`.
-- Credit-spend guardrails via `/api/spend-limits`.
-
-SAP/Oracle live adapter configuration:
-
-- SAP API Hub sandbox proof: set `RECALLOPS_SAP_API_HUB_KEY`; this verifies a live SAP S/4HANA Cloud sandbox read, not a customer tenant write.
-- SAP: set `RECALLOPS_SAP_BASE_URL`, `RECALLOPS_SAP_API_KEY` or SAP basic-auth envs, and `RECALLOPS_SAP_RECALL_PATH` or `RECALLOPS_SAP_RECALL_URL`.
-- Oracle SCM: set `RECALLOPS_ORACLE_SCM_URL`, `RECALLOPS_ORACLE_SCM_TOKEN` or Oracle basic-auth envs, and `RECALLOPS_ORACLE_SCM_RECALL_PATH` or `RECALLOPS_ORACLE_SCM_RECALL_URL`.
-- Live writes additionally require `RECALLOPS_ENABLE_ENTERPRISE_WRITES=1` and an admin action key sent as `X-RecallOps-Admin-Key`.
-- Without those tenant settings, `/api/enterprise-sync` stays in dry-run mode and exposes the exact payload hash without writing to external ERP systems.
-
-Enterprise identity configuration:
-
-- Server-gated approvals: set `RECALLOPS_APPROVAL_ADMIN_KEY` and call `/api/identity-approval` with `X-RecallOps-Approval-Key`.
-- OIDC approvals: set `RECALLOPS_OIDC_ISSUER`, `RECALLOPS_OIDC_AUDIENCE`, and `RECALLOPS_OIDC_JWKS_URL`; send an RS256 bearer token to `/api/identity-approval`.
-- ERP contract receiver proof: set `RECALLOPS_ERP_CONTRACT_TOKEN` and point SAP/Oracle recall URLs at `/api/erp-contract/sap` and `/api/erp-contract/oracle` for a tenant-shaped live adapter smoke before using a real tenant.
-
-## Band Live Workflow
-
-Live workflow goal:
-
-- create a real Band room as the Commander agent
-- recruit Evidence, Traceability, Risk, and Communications into that room
-- send `@mention` handoffs between each specialist
-- execute a veto, re-plan, approval, and notice chain
-- fetch Band room context and print a proof summary with room/message IDs
-
-## Spike Setup
-
-Install dependencies:
+### Run locally
 
 ```powershell
 uv sync --extra dev
+.venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098
+cd web
+npm install; npm run dev -- --port 3068
 ```
 
-Create `agent_config.yaml` from `agent_config.yaml.example` and fill in five Band remote-agent credentials:
+### Try it without installing
 
-- `commander`
-- `evidence`
-- `traceability`
-- `risk`
-- `communications`
+Open `https://recallops.gudman.xyz/demo/judge`, run the guided demo, then toggle `Break shipment coverage` to prove the hold path.
 
-Run the live workflow:
+### Use the API directly
+
+```bash
+curl -X POST https://recallops.gudman.xyz/api/source-evidence \
+  -H "content-type: application/json" \
+  -d '{
+    "complaint_text":"C-901 | product: Harbor Sensor Battery Pack | lot: LOT-900 | defect: overheating | severity: critical",
+    "shipment_csv":"source,distributor,region,customers,units,status\nSHIP-901,Northstar,US-West,18,240,traced\nSHIP-902,Baltic Retail,EU-North,7,80,missing",
+    "recovered_shipment_csv":"source,distributor,region,customers,units,status\nSHIP-901,Northstar,US-West,18,240,traced\nSHIP-902,Baltic Retail,EU-North,7,80,traced"
+  }'
+```
+
+Key routes and endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/demo/judge` | Primary judge demo with scenario selector, Band proof, failure toggle, and exports |
+| `GET` | `/submission` | Judge-ready pitch, status map, demo script, and boundaries |
+| `GET` | `/proof` | Human-readable proof explorer |
+| `GET` | `/api/submission-proof` | Full deployed proof bundle |
+| `POST` | `/api/source-evidence` | Recompute facts, traceability, citations, and source hash |
+| `POST` | `/api/recall-room/run` | Run the source-bound room with optional fresh Band attempt |
+| `POST` | `/api/filing-pack` | Build the multi-jurisdiction filing pack |
+| `POST` | `/api/regulator-filing` | Prepare regulator dispatch dry-runs; external submission stays gated |
+| `POST` | `/api/esignature-approval` | Seal human sign-off when approval identity is verified |
+| `POST` | `/api/enterprise-sync` | SAP/Oracle dry-run or admin-gated live tenant action |
+| `GET` | `/api/verify` | Verify the deterministic packet digest |
+
+## Architecture
+
+- Backend: FastAPI, deterministic recall engine, Band SDK integration, SHA-256 receipts.
+- Frontend: Next.js App Router, React 19, route-level proof/demo surfaces.
+- Data model: source evidence packet, rule assessment, recall room run, filing pack, dispatch receipts, e-signature receipt.
+- Auth gates: approval key or OIDC/JWKS for human sign-off; admin key for live enterprise actions.
+- External writes: off by default. Public demo only prepares dry-run payloads unless deployment gates are configured.
+- Partner AI: optional and spend-gated. The deterministic parser remains the public source of truth.
+
+## Project layout
+
+```text
+recallops/
+  api.py                 FastAPI routes and proof bundle assembly
+  source_evidence.py     Complaint and shipment parser, citations, traceability math
+  recall_room.py         Source-packet-to-room narrative and Band binding
+  filing_pack.py         Multi-jurisdiction filing draft generation
+  regulatory.py          Regulator dispatch dry-run/live-gate layer
+  esignature.py          Human sign-off receipt hashing and verification
+  enterprise.py          SAP/Oracle dry-run and live-write gates
+scripts/
+  band_spike.py          Live Band room spike and proof capture
+web/app/
+  demo/judge/            Primary judge demo, Band-first transcript, exports, failure toggle
+  console/               Operator workflow
+  proof/                 Proof explorer
+  submission/            Submission-readiness page
+  recall-data.ts         Shared public copy, endpoint list, proof labels
+  operator-workflow.tsx  Full practical operator flow
+docs/
+  band-spike-proof.json  Captured Band proof fixture
+  cover.png              README screenshot
+```
+
+## Honest limitations
+
+- Fresh Band rooms depend on configured server-side Band credentials, provider state, cooldown, and daily cap. The UI attempts fresh Band first and discloses fallback mode.
+- Public regulator dispatch is a dry-run. Real external submission requires deployment gates and explicit authorization.
+- Public SAP/Oracle paths are dry-runs unless real tenant endpoints and admin approval are configured.
+- The e-signature receipt is Part-11-style attributable audit evidence, not a certified 21 CFR Part 11 product.
+- The current room agents are deterministic specialist roles around Band coordination, not autonomous legal decision-makers.
+
+## Roadmap
+
+- [ ] Attach certified Part 11 e-signature provider for regulated pilots.
+- [ ] Add tenant-specific SAP and Oracle sandbox mappings for a named enterprise demo.
+- [ ] Add regulator-specific submission adapters after legal review.
+- [ ] Add external audit replay CLI for downloaded audit packets.
+- [ ] Expand scenario templates for pharma, food, vehicles, batteries, and medical devices.
+
+## Contributing
+
+- Keep public copy human-owned: the system recommends and prepares; the named human signs.
+- Do not enable real external submissions or tenant writes without explicit approval and configured gates.
+- Add tests for backend proof behavior before changing API response shapes.
+- Run frontend typecheck/build after touching `web/app`.
+- Do not commit secrets, `.env` files, or AI attribution footers.
+
+## Development scripts
 
 ```powershell
-uv run python scripts/band_spike.py
+.venv\Scripts\python.exe -m pytest                 # backend test suite
+.venv\Scripts\python.exe -m ruff format recallops tests scripts
+.venv\Scripts\python.exe -m ruff check --fix recallops tests scripts
+cd web; npm run typecheck                           # TypeScript check
+cd web; npm run build                               # production Next build
+cd web; npm run dev -- --port 3068                  # local frontend
+.venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098
 ```
 
-Latest live proof captured:
+## License and contact
 
-- room: `6dcd1018-bce3-481f-88d6-1ab67f6db452`
-- Risk veto: `bed6e1f4-f1cd-48a4-8f36-c09d7d9c9de9`
-- Communications notice: `db2e10f0-f8f6-4fc4-a324-c99929911500`
-- participants: `5`
-- context items: `8`
+License: hackathon prototype, source available for review.
 
-No final hackathon submission will be made without explicit approval.
+Live: https://recallops.gudman.xyz · Source: https://github.com/Ridwannurudeen/recallops · Primary demo: https://recallops.gudman.xyz/demo/judge
