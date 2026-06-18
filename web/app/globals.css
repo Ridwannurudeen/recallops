@@ -289,6 +289,78 @@ h2 {
   margin-top: 20px;
 }
 
+.tabbed-product {
+  margin-top: 20px;
+}
+
+.tab-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.tab-list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tab-list label {
+  min-width: 0;
+  min-height: 76px;
+  border: 1px solid rgba(212, 168, 95, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  color: #d9c8a8;
+  background: rgba(255, 247, 232, 0.035);
+  cursor: pointer;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.tab-list label span {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.tab-list label:hover {
+  border-color: rgba(125, 211, 252, 0.42);
+  color: #fff7e8;
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel > :first-child {
+  margin-top: 0;
+}
+
+#tab-command:checked ~ .tab-list label[for="tab-command"],
+#tab-evidence:checked ~ .tab-list label[for="tab-evidence"],
+#tab-enterprise:checked ~ .tab-list label[for="tab-enterprise"],
+#tab-market:checked ~ .tab-list label[for="tab-market"],
+#tab-deployment:checked ~ .tab-list label[for="tab-deployment"] {
+  border-color: rgba(125, 211, 252, 0.58);
+  color: #e8fbff;
+  background: rgba(125, 211, 252, 0.1);
+}
+
+#tab-command:checked ~ .tab-panels .tab-command-panel,
+#tab-evidence:checked ~ .tab-panels .tab-evidence-panel,
+#tab-enterprise:checked ~ .tab-panels .tab-enterprise-panel,
+#tab-market:checked ~ .tab-panels .tab-market-panel,
+#tab-deployment:checked ~ .tab-panels .tab-deployment-panel {
+  display: block;
+}
+
 .exposure dl {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1604,6 +1676,7 @@ h2 {
   .matrix-table,
   .command-proof-grid,
   .deployment-grid,
+  .tab-list,
   .operating-layers,
   .live-runner,
   .readiness-grid,
@@ -1656,6 +1729,7 @@ h2 {
   .proof-stat-grid,
   .proof-link-grid,
   .proof-strip,
+  .tab-list,
   .drill-monitor dl,
   .proof-ledger,
   .live-runner,
