@@ -1,0 +1,335 @@
+.shell {
+  display: grid;
+  gap: 20px;
+}
+
+.leadGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+.scenarioPicker,
+.scenarioCard,
+.stepRail article,
+.resultsGrid article,
+.bandPanel,
+.dispatchPanel,
+.scriptPanel {
+  border: 1px solid rgba(212, 168, 95, 0.18);
+  border-radius: 8px;
+  background: rgba(10, 18, 28, 0.72);
+}
+
+.scenarioPicker,
+.scenarioCard,
+.bandPanel,
+.dispatchPanel,
+.scriptPanel {
+  padding: 18px;
+}
+
+.kicker {
+  margin: 0 0 10px;
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.scenarioList {
+  display: grid;
+  gap: 8px;
+}
+
+.scenarioList button,
+.actions button {
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 7px;
+  background: rgba(230, 252, 248, 0.05);
+  color: #fff7e8;
+  cursor: pointer;
+}
+
+.scenarioList button {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  text-align: left;
+}
+
+.scenarioList button[aria-pressed="true"] {
+  border-color: rgba(212, 168, 95, 0.58);
+  background: rgba(212, 168, 95, 0.12);
+}
+
+.scenarioList span,
+.scenarioList small,
+.metaStrip,
+.stepRail p,
+.resultsGrid p,
+.bandPanel p,
+.dispatchPanel p,
+.scriptPanel li,
+.scenarioCard p,
+.targetGrid p {
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.scenarioList strong,
+.scenarioCard h2,
+.bandPanel h2,
+.dispatchPanel h2 {
+  color: #fff7e8;
+}
+
+.scenarioCard {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.scenarioCard h2 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 48px);
+  letter-spacing: -0.035em;
+}
+
+.scenarioCard label {
+  display: grid;
+  gap: 7px;
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.scenarioCard input {
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 6px;
+  padding: 11px 12px;
+  background: rgba(7, 16, 25, 0.72);
+  color: #fff7e8;
+  font: 13px/1.4 inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.metaStrip,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metaStrip span {
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 999px;
+  padding: 6px 9px;
+}
+
+.actions button {
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.actions button:first-child {
+  border-color: rgba(212, 168, 95, 0.5);
+  background: rgba(212, 168, 95, 0.16);
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.stepRail {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stepRail article {
+  min-width: 0;
+  padding: 13px;
+}
+
+.stepRail span,
+.resultsGrid span,
+.bandStats span,
+.targetGrid span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stepRail strong,
+.resultsGrid strong,
+.bandStats strong,
+.targetGrid strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff7e8;
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.stepRail code,
+.resultsGrid code,
+.bandStats code {
+  display: block;
+  overflow: hidden;
+  margin-top: 10px;
+  color: #9fe7d6;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+.complete {
+  border-color: rgba(90, 211, 154, 0.35) !important;
+}
+
+.running {
+  border-color: rgba(212, 168, 95, 0.58) !important;
+}
+
+.gated {
+  border-color: rgba(255, 184, 77, 0.35) !important;
+}
+
+.failed {
+  border-color: rgba(255, 93, 93, 0.4) !important;
+}
+
+.waiting {
+  opacity: 0.78;
+}
+
+.error {
+  margin: 0;
+  border: 1px solid rgba(255, 93, 93, 0.35);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 93, 93, 0.08);
+  color: #ffd0d0;
+}
+
+.resultsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resultsGrid article {
+  min-width: 0;
+  padding: 14px;
+}
+
+.bandPanel,
+.dispatchPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.bandStats,
+.targetGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.bandStats div,
+.targetGrid article {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.14);
+  border-radius: 6px;
+  padding: 12px;
+  background: rgba(7, 16, 25, 0.48);
+}
+
+.targetGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.scriptPanel ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+html[data-theme="light"] .scenarioPicker,
+html[data-theme="light"] .scenarioCard,
+html[data-theme="light"] .stepRail article,
+html[data-theme="light"] .resultsGrid article,
+html[data-theme="light"] .bandPanel,
+html[data-theme="light"] .dispatchPanel,
+html[data-theme="light"] .scriptPanel,
+html[data-theme="light"] .bandStats div,
+html[data-theme="light"] .targetGrid article {
+  border-color: rgba(111, 134, 153, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme="light"] .scenarioList strong,
+html[data-theme="light"] .scenarioCard h2,
+html[data-theme="light"] .bandPanel h2,
+html[data-theme="light"] .dispatchPanel h2,
+html[data-theme="light"] .stepRail strong,
+html[data-theme="light"] .resultsGrid strong,
+html[data-theme="light"] .bandStats strong,
+html[data-theme="light"] .targetGrid strong {
+  color: #071019;
+}
+
+html[data-theme="light"] .scenarioList span,
+html[data-theme="light"] .scenarioList small,
+html[data-theme="light"] .metaStrip,
+html[data-theme="light"] .stepRail p,
+html[data-theme="light"] .resultsGrid p,
+html[data-theme="light"] .bandPanel p,
+html[data-theme="light"] .dispatchPanel p,
+html[data-theme="light"] .scriptPanel li,
+html[data-theme="light"] .scenarioCard p,
+html[data-theme="light"] .targetGrid p {
+  color: #45576a;
+}
+
+html[data-theme="light"] .scenarioList button,
+html[data-theme="light"] .actions button,
+html[data-theme="light"] .scenarioCard input {
+  border-color: rgba(111, 134, 153, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+  color: #071019;
+}
+
+@media (max-width: 980px) {
+  .leadGrid,
+  .bandPanel,
+  .dispatchPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .stepRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .resultsGrid,
+  .targetGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .stepRail {
+    grid-template-columns: 1fr;
+  }
+}

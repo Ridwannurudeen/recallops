@@ -126,7 +126,7 @@ export default function LiveBandRunner({ apiBase }: { apiBase: string }) {
               <dd>{latestRun.context_items}</dd>
             </div>
             <div>
-              <dt>veto</dt>
+              <dt>hold</dt>
               <dd>{latestRun.risk_veto_id}</dd>
             </div>
             <div>

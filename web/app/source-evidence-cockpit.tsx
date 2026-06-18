@@ -627,7 +627,7 @@ export default function SourceEvidenceCockpit({
               />
             </label>
             <button type="button" disabled={loading} onClick={approvePacket}>
-              approve packet
+              seal packet receipt
             </button>
           </div>
         </>

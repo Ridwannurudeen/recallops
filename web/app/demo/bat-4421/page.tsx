@@ -319,7 +319,7 @@ export default function Bat4421DemoPage() {
       <section className="page-hero compact-page-hero">
         <div>
           <p className="section-kicker">BAT-4421 incident replay</p>
-          <h1>Watch the recall move from blocked to approved.</h1>
+          <h1>Watch the recall move from blocked to human-signed.</h1>
           <p>
             Use this page for the stable BAT-4421 story. For the practical
             operator workflow, open the live demo and test the case flow without
@@ -456,7 +456,7 @@ export default function Bat4421DemoPage() {
         <section className="panel raw-proof">
           <div className="panel-head">
             <div>
-              <p className="kicker">Write mode</p>
+              <p className="kicker">Protected live-action check</p>
               <h2>Run the recall workflow like a real operator.</h2>
             </div>
             <ProofLabel status="GATED">stateful writes and dry-runs</ProofLabel>

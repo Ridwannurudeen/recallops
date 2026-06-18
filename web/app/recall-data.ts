@@ -229,7 +229,7 @@ export const proofExplorerSections = [
   "Filing pack",
   "Regulator dispatch",
   "Decision events",
-  "Veto and approval",
+  "Hold and human sign-off",
   "Human e-signature",
   "Notices",
   "Identity gate",
@@ -250,7 +250,7 @@ export const integrationClaims: {
     status: "CAPTURED",
     headline: "Five-agent room proof captured from the Band spike.",
     detail:
-      "The deterministic BAT-4421 packet references captured room, participant, handoff, veto, and notice IDs.",
+      "The deterministic BAT-4421 packet references captured room, participant, handoff, hold, and notice IDs.",
   },
   {
     name: "SAP",

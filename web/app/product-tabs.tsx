@@ -60,7 +60,7 @@ const stageLabels: Record<Packet["events"][number]["stage"], string> = {
   traceability_gap: "gap",
   regulatory_veto: "hold",
   traceability_resolved: "resolved",
-  risk_approved: "approved",
+  risk_approved: "cleared",
   notice_drafted: "notice",
   human_approved: "human gate",
 };
@@ -203,7 +203,7 @@ export default function ProductTabs({
               <ProofRow label="captured room" value={capturedRun.room_id} />
               <ProofRow label="captured at" value={capturedRun.captured_at} />
               <ProofRow
-                label="captured veto"
+                label="captured hold"
                 value={capturedRun.risk_veto_id}
               />
               <ProofRow
@@ -332,8 +332,8 @@ export default function ProductTabs({
                 ))}
               </div>
               <div className="gate">
-                <span>{veto?.id} risk veto cleared</span>
-                <span>{approval?.id} human approval locked</span>
+                <span>{veto?.id} risk hold cleared</span>
+                <span>{approval?.id} human sign-off locked</span>
               </div>
             </article>
           </section>

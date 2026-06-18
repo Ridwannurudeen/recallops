@@ -44,8 +44,8 @@ export default function IntegrationsPage() {
           <h2>Dry-run hold payload plus sandbox read.</h2>
           <p>
             RecallOps prepares a tenant-shaped SAP hold request from the
-            approved recall action, verifies the SAP API Hub sandbox, and keeps
-            real writes behind an admin key.
+            human-signed recall action, verifies the SAP API Hub sandbox, and
+            keeps real writes behind an admin key.
           </p>
           <a href={`${apiBase}/sap-api-hub`}>Open SAP sandbox proof</a>
         </article>

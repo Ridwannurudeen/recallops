@@ -150,10 +150,10 @@ export default function Home() {
           </p>
           <div className="hero-actions-v2">
             <a className="primary-action" href="/console">
-              Try the interactive demo
+              Open operator console
             </a>
-            <a className="secondary-action" href="/demo/bat-4421">
-              Replay BAT-4421
+            <a className="secondary-action" href="/demo/judge">
+              Start judge demo
             </a>
           </div>
           <p className="trust-line">
@@ -191,8 +191,8 @@ export default function Home() {
           <strong>The named human decides and signs.</strong>
           <p>
             The system can flag blockers and prepare evidence. The approval
-            receipt records who approved, why, and which source hash supported
-            the decision.
+            receipt records who signed, why, and which source hash supported the
+            action.
           </p>
         </article>
       </section>
@@ -309,7 +309,7 @@ export default function Home() {
             remaining exceptions, ERP hold payload, and identity are sealed into
             the receipt.
           </p>
-          <a href="/console">Approve recall action in the live demo</a>
+          <a href="/console">Seal human sign-off in the live demo</a>
         </article>
       </section>
 
@@ -397,8 +397,11 @@ export default function Home() {
           </p>
         </div>
         <div className="landing-final-actions">
-          <a className="primary-action" href="/console">
-            Try the interactive demo
+          <a className="primary-action" href="/demo/judge">
+            Start judge demo
+          </a>
+          <a className="secondary-action" href="/console">
+            Open operator console
           </a>
           <a className="secondary-action" href="/proof">
             Inspect proof

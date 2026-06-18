@@ -166,7 +166,7 @@ export default function ProofExplorer() {
         value: proof.packet.incident_id,
       },
       {
-        label: "Veto and approval",
+        label: "Hold and human sign-off",
         status: proof.approval_receipt.verification.ok ? "ok" : "warn",
         detail: proof.approval_receipt.disclosure,
         value: String(
@@ -272,8 +272,9 @@ export default function ProofExplorer() {
           <h1>Every claim gets a status label and a receipt.</h1>
           <p>
             This page turns the deployed proof bundle into a readable packet:
-            Band room, source digest, veto, approval, notices, ERP contracts,
-            provider receipts, spend controls, and final SHA-256 digest.
+            Band room, source digest, hold recommendation, human sign-off,
+            notices, ERP contracts, provider receipts, spend controls, and final
+            SHA-256 digest.
           </p>
         </div>
         <div className="proof-digest-card">

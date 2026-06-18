@@ -67,8 +67,8 @@ const replaySteps: ReplayStep[] = [
   },
   {
     key: "veto",
-    tag: "VETO",
-    status: "VETO-01 issued",
+    tag: "HOLD",
+    status: "HOLD-01 issued",
     decision: "BLOCKED",
     actor: "Regulatory/Risk",
     message:
@@ -128,7 +128,7 @@ const replaySteps: ReplayStep[] = [
     decision: "APPROVED",
     actor: "QA Director",
     message:
-      "Recall action approved. SAP and Oracle dry-run payloads are prepared and the receipt chain is inspectable.",
+      "Human sign-off sealed. SAP and Oracle dry-run payloads are prepared and the receipt chain is inspectable.",
     coverage: 100,
     untraced: 0,
     digest: "da1c570d2fc1b9ca86fe7c2f872bd74895e51bd868766b6f373335306d10ff2b",
@@ -401,8 +401,8 @@ export default function Bat4421Replay({
               {approving
                 ? "Approving..."
                 : sealed
-                  ? "Recall action approved"
-                  : "Approve recall action"}
+                  ? "Human sign-off sealed"
+                  : "Seal human sign-off"}
             </button>
             {approvalError ? <small>{approvalError}</small> : null}
           </div>
@@ -410,7 +410,7 @@ export default function Bat4421Replay({
       </div>
 
       <div className="decision-chain">
-        {["SOURCE", "FACT", "VETO", "RECOVERY", "APPROVAL", "RECEIPT"].map(
+        {["SOURCE", "FACT", "HOLD", "RECOVERY", "SIGN-OFF", "RECEIPT"].map(
           (item, index) => (
             <span
               className={index <= chainIndex(step.key) ? "chain-active" : ""}
@@ -460,7 +460,7 @@ function eventTag(stage: string) {
     case "traceability_gap":
       return "FACT";
     case "regulatory_veto":
-      return "VETO";
+      return "HOLD";
     case "traceability_resolved":
       return "SOURCE";
     case "risk_approved":
