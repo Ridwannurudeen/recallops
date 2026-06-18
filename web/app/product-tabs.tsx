@@ -1,4 +1,4 @@
-import type { Packet } from "./page";
+import type { Packet } from "./recall-data";
 import EnterpriseReadiness from "./enterprise-readiness";
 import LiveBandRunner from "./live-band-runner";
 import LiveDrill from "./live-drill";
