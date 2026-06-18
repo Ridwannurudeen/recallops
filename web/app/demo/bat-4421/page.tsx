@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-import RecallWorkspace, { type WorkspaceSeed } from "../../workspace/recall-workspace";
+import RecallWorkspace, {
+  type WorkspaceSeed,
+} from "../../workspace/recall-workspace";
 import { apiBase, packet } from "../../recall-data";
 import Bat4421Replay from "../../bat-4421-replay";
 import ProofLabel from "../../proof-label";
@@ -86,7 +88,7 @@ export default function Bat4421DemoPage() {
   const selectedSeed =
     seedId === "blank"
       ? null
-      : demoSeeds.find((seed) => seed.id === seedId) ?? demoSeeds[0];
+      : (demoSeeds.find((seed) => seed.id === seedId) ?? demoSeeds[0]);
 
   return (
     <main className="command-shell">
@@ -94,25 +96,27 @@ export default function Bat4421DemoPage() {
 
       <section className="page-hero compact-page-hero">
         <div>
-          <p className="section-kicker">BAT-4421 scenario</p>
-          <h1>Run the full story live, then watch the replay.</h1>
+          <p className="section-kicker">BAT-4421 demo</p>
+          <h1>Replay the hold, recovery, approval, and receipt.</h1>
           <p>
-            This page starts with a live workspace where judges and users can
-            edit shipment data, run real services, and export action artifacts.
-            The deterministic replay stays available as an optional fallback for
-            judge consistency.
+            BAT-4421 demonstrates the product model: incomplete traceability
+            blocks approval, a recovered distributor file changes the source
+            packet, coverage reaches 100%, and a named human approves the recall
+            action.
           </p>
         </div>
-        <ProofLabel status="LIVE">live workspace (BAT-4421 seeded)</ProofLabel>
+        <ProofLabel status="DETERMINISTIC">guided replay</ProofLabel>
       </section>
+
+      <Bat4421Replay packet={packet} variant="full" apiBase={apiBase} />
 
       <section className="panel" id="live-workspace">
         <div className="panel-head">
-          <p className="kicker">Live workspace first</p>
-          <h2>Use one workspace to test inputs and approvals.</h2>
+          <p className="kicker">Operate with live inputs</p>
+          <h2>Use the same workflow with editable case data.</h2>
           <p>
-            Build a live run with real API calls, check the live event stream,
-            and download a full action pack or Band-room proof.
+            Load the blocked or recovered version of the scenario, then analyze
+            it through the live API-backed workspace.
           </p>
         </div>
         <div className="buttonRow">
@@ -135,38 +139,21 @@ export default function Bat4421DemoPage() {
             onClick={() => setSeedId("blank")}
             type="button"
           >
-            Start blank case
+            Create new case
           </button>
-          <a className="secondary-action" href="/demo/judge">
-            Open judge runner
-          </a>
-          <a className="secondary-action" href="/workspace">
-            Open blank workspace
+          <a className="secondary-action" href="/app">
+            Open command room
           </a>
         </div>
       </section>
 
-        <section className="panel">
-        <details>
-          <summary>
-            <span className="kicker" style={{ marginRight: 6 }}>
-              Optional scripted replay
-            </span>
-            Need a deterministic judge script? Expand this to replay BAT-4421.
-          </summary>
-          <div style={{ marginTop: 14 }}>
-            <Bat4421Replay packet={packet} variant="full" apiBase={apiBase} />
-          </div>
-        </details>
-      </section>
-
       <section className="panel">
         <div className="panel-head">
-          <p className="kicker">Live workspace for this case</p>
+          <p className="kicker">Live command room for this case</p>
           <h2>Run, review, and export artifacts from live inputs.</h2>
           <p>
-            Every run uses real API calls for source evidence, room run,
-            filing pack, regulator dry-run, and signature gate status.
+            Every run uses real API calls for source evidence, room run, filing
+            pack, regulator dry-run, and signature gate status.
           </p>
         </div>
         <RecallWorkspace apiBase={apiBase} seed={selectedSeed} />

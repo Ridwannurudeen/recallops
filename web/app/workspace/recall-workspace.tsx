@@ -172,6 +172,11 @@ type AgentRole = {
 
 const agentRoles: AgentRole[] = [
   {
+    actor: "Commander",
+    role: "coordinates the case",
+    output: "case state, handoffs, next action",
+  },
+  {
     actor: "Evidence",
     role: "reads the complaint",
     output: "product, lot, defect, severity",
@@ -190,11 +195,6 @@ const agentRoles: AgentRole[] = [
     actor: "Communications",
     role: "prepares notices",
     output: "customer, distributor, filing drafts",
-  },
-  {
-    actor: "Recall owner",
-    role: "keeps final action human-owned",
-    output: "sign-off gate and proof packet",
   },
 ];
 
@@ -345,9 +345,9 @@ export default function RecallWorkspace({
       : runReport?.decision === "Run failed"
         ? "Fix the run first and retry."
         : traceability?.coverage_percent === 100
-          ? "Enter approval code to seal a human-readable receipt."
-          : "Traceability must be 100% before sign-off."
-    : "Run the action center first.";
+          ? "Enter approval code to review and approve the recall."
+          : "Traceability must be 100% before approval."
+    : "Analyze the case first.";
   const incidentReportSections = runReport
     ? buildIncidentReportSections({
         report: runReport,
@@ -488,7 +488,7 @@ export default function RecallWorkspace({
 
     try {
       await trackLiveEvent(
-        "Recall owner",
+        "Commander",
         "case opened",
         `${complaintId.trim()} is open for ${product.trim()} lot ${lot.trim()}. Final action stays human-owned.`,
         "running",
@@ -598,11 +598,11 @@ export default function RecallWorkspace({
           final_coverage_percent:
             evidence.packet.final_traceability.coverage_percent,
           disclosure:
-            "Human sign-off stayed closed because traceability is incomplete.",
+            "Human approval stayed closed because traceability is incomplete.",
         };
         await trackLiveEvent(
-          "Recall owner",
-          "sign-off blocked",
+          "QA Director",
+          "approval blocked",
           "Human approval stayed closed because shipment traceability is not 100%.",
           "gated",
         );
@@ -622,10 +622,10 @@ export default function RecallWorkspace({
         });
         signatureGate = signatureResult.body;
         await trackLiveEvent(
-          "Recall owner",
-          signatureResult.signed ? "sign-off sealed" : "sign-off gated",
+          "QA Director",
+          signatureResult.signed ? "approval sealed" : "approval gated",
           signatureResult.signed
-            ? "Verified approval material sealed the human sign-off receipt."
+            ? "Verified approval material sealed the human approval receipt."
             : "No approval code was provided, so RecallOps proves the gate stays closed.",
           signatureResult.signed ? "complete" : "gated",
         );
@@ -813,9 +813,9 @@ export default function RecallWorkspace({
     setApprovalActionMessage(null);
     try {
       await appendLiveEvent(
-        "Recall owner",
-        "sign-off requested",
-        "Submitting approval code to seal the human gate.",
+        "QA Director",
+        "approval requested",
+        "Submitting approval code to review and approve the recall.",
         "running",
       );
       const signatureResult = await runSignatureGate({
@@ -828,8 +828,8 @@ export default function RecallWorkspace({
 
       if (!signatureResult.signed) {
         await appendLiveEvent(
-          "Recall owner",
-          "sign-off gated",
+          "QA Director",
+          "approval gated",
           "Approval could not be sealed with current key.",
           "gated",
         );
@@ -868,8 +868,8 @@ export default function RecallWorkspace({
       );
       setActiveTab("proof");
       await appendLiveEvent(
-        "Recall owner",
-        "sign-off sealed",
+        "QA Director",
+        "approval sealed",
         "Human approval receipt was successfully sealed.",
         "complete",
       );
@@ -880,8 +880,8 @@ export default function RecallWorkspace({
           : "Failed to seal human approval receipt.";
       setApprovalActionMessage(message);
       await appendLiveEvent(
-        "Recall owner",
-        "sign-off failed",
+        "QA Director",
+        "approval failed",
         message,
         "failed",
       );
@@ -1019,7 +1019,7 @@ export default function RecallWorkspace({
         "This pack is decision support, not legal advice.",
         "No external regulator submission was sent.",
         "No SAP or Oracle tenant write was performed.",
-        "A named human remains responsible for final recall sign-off.",
+        "A named human remains responsible for final recall approval.",
       ],
     };
     downloadJson(actionPack, `recallops-${lot || "case"}-action-pack.json`);
@@ -1119,7 +1119,7 @@ export default function RecallWorkspace({
     <section className={styles.commandCenter}>
       <section className={styles.heroBoard}>
         <article className={styles.verdictCard} data-ready={isReady}>
-          <p className={styles.kicker}>Live verdict</p>
+          <p className={styles.kicker}>Decision readiness</p>
           <h2>
             {result
               ? isReady
@@ -1131,19 +1131,19 @@ export default function RecallWorkspace({
             {result
               ? isReady
                 ? "All shipped units are traced. Review drafts and route to the accountable recall owner."
-                : "Some shipped units are untraced. Recover shipment evidence before sign-off or external action."
+                : "Some shipped units are untraced. Add recovered shipment evidence before approval or external action."
               : "Upload or enter the incident, then run analysis to get the action board."}
           </p>
           <div className={styles.buttonRow}>
             <button disabled={busy} onClick={() => analyzeCase()} type="button">
-              {busy ? "Building action center..." : "Build action center"}
+              {busy ? "Analyzing recall case..." : "Analyze recall case"}
             </button>
             <button
               disabled={busy || missingRows.length === 0}
               onClick={markAllAndRerun}
               type="button"
             >
-              {busy ? "Rebuilding..." : "Recover missing + rebuild"}
+              {busy ? "Recomputing..." : "Add recovered file and rerun"}
             </button>
           </div>
           {error ? <strong>{error}</strong> : null}
@@ -1153,24 +1153,25 @@ export default function RecallWorkspace({
         <article className={styles.metricStrip}>
           <div>
             <span>Coverage</span>
-            <strong>{traceability?.coverage_percent ?? 0}%</strong>
+            <strong>
+              {traceability ? `${traceability.coverage_percent}%` : "-"}
+            </strong>
           </div>
           <div>
             <span>Untraced units</span>
             <strong>
-              {(
-                traceability?.untraced_units ??
-                missingRows.reduce((sum, row) => sum + numeric(row.units), 0)
-              ).toLocaleString()}
+              {traceability
+                ? traceability.untraced_units.toLocaleString()
+                : "-"}
             </strong>
           </div>
           <div>
             <span>Urgent tasks</span>
-            <strong>{urgentTasks.length}</strong>
+            <strong>{result ? urgentTasks.length : "-"}</strong>
           </div>
           <div>
-            <span>Markets</span>
-            <strong>{globalChecklist.length}</strong>
+            <span>Regions</span>
+            <strong>{result ? globalChecklist.length : "-"}</strong>
           </div>
         </article>
       </section>
@@ -1183,7 +1184,7 @@ export default function RecallWorkspace({
             <p>
               The active role changes during the run, so an external user can
               see who is reading evidence, calculating coverage, drafting
-              notices, checking regulator routes, and holding final sign-off.
+              notices, checking regulator routes, and holding final approval.
             </p>
           </div>
           <div className={styles.agentGrid}>
@@ -1209,10 +1210,12 @@ export default function RecallWorkspace({
           <div className={styles.executionHeader}>
             <div>
               <p className={styles.kicker}>Execution stream</p>
-              <h2>{busy ? "Running live..." : "Ready to run"}</h2>
+              <h2>
+                {busy ? "Running analysis..." : "Waiting for case analysis"}
+              </h2>
               <p>
                 Every real API call, Band-room attempt, filing draft, regulator
-                dry-run, and human gate decision appears here as it happens.
+                dry-run, and approval gate decision appears here as it happens.
               </p>
             </div>
             <strong>
@@ -1239,9 +1242,9 @@ export default function RecallWorkspace({
                 <div>
                   <strong>waiting for case run</strong>
                   <p>
-                    Click Build action center to watch source evidence,
+                    Click Analyze recall case to watch source evidence,
                     traceability, Band-room handoff, filing drafts, regulator
-                    dry-run, and sign-off gate checks unfold.
+                    dry-run, and approval gate checks unfold.
                   </p>
                 </div>
                 <code>ready</code>
@@ -1289,7 +1292,7 @@ export default function RecallWorkspace({
               <p>
                 {runReport?.decision === "Ready for human review"
                   ? "Coverage reached 100% and the case moved to review mode."
-                  : "Coverage is incomplete; sign-off is blocked until evidence is complete."}
+                  : "Coverage is incomplete; approval is blocked until evidence is complete."}
               </p>
             </article>
             <article>
@@ -1298,7 +1301,7 @@ export default function RecallWorkspace({
                 {runReport?.initialCoveragePercent ??
                   initialTraceability?.coverage_percent ??
                   0}
-                % →{" "}
+                {"% -> "}
                 {runReport?.finalCoveragePercent ??
                   traceability?.coverage_percent ??
                   0}
@@ -1330,8 +1333,8 @@ export default function RecallWorkspace({
               <p>
                 {runReport?.roomParticipants ?? roomParticipants} participants,{" "}
                 {runReport?.signatureReady
-                  ? "human gate sealed"
-                  : "human gate closed"}
+                  ? "approval gate sealed"
+                  : "approval gate closed"}
                 , source hash{" "}
                 {runReport?.sourceHash || sourceHash ? "available" : "pending"}.
               </p>
@@ -1379,7 +1382,7 @@ export default function RecallWorkspace({
               </p>
             </div>
             <div>
-              <span>Markets</span>
+              <span>Regions</span>
               <strong>{globalChecklist.length} route(s)</strong>
               <p>
                 {globalChecklist.map((item) => item.market).join(", ") ||
@@ -1400,7 +1403,7 @@ export default function RecallWorkspace({
           ["case", "Case intake"],
           ["tasks", "Task board"],
           ["drafts", "Drafts"],
-          ["proof", "Proof & exports"],
+          ["proof", "Audit and exports"],
         ].map(([id, label]) => (
           <button
             aria-pressed={activeTab === id}
@@ -1694,7 +1697,7 @@ export default function RecallWorkspace({
                   ? "Sealing approval..."
                   : signatureReady
                     ? "Approval already sealed"
-                    : "Seal human approval receipt"}
+                    : "Review and approve recall"}
               </button>
               <button
                 disabled={!result}
@@ -1941,7 +1944,7 @@ async function runSignatureGate({
   if (response.status === 403 && !approvalKey) {
     return { signed: false, body };
   }
-  throw new Error(formatError(body, "Human sign-off gate failed."));
+  throw new Error(formatError(body, "Human approval gate failed."));
 }
 
 function buildComplaintText({
@@ -2084,7 +2087,7 @@ function buildTasks({
   const tasks: Task[] = [];
   if (!isReady) {
     tasks.push({
-      title: "Recover missing shipment evidence",
+      title: "Add recovered shipment evidence",
       owner: "Traceability",
       deadline: "Now",
       status: "blocked",
@@ -2092,12 +2095,12 @@ function buildTasks({
     });
   }
   tasks.push({
-    title: isReady ? "Review recall scope" : "Hold sign-off",
+    title: isReady ? "Review recall scope" : "Hold approval",
     owner: "QA / Legal",
     deadline: isReady ? "Today" : "Blocked",
     status: isReady ? "review" : "blocked",
     detail: isReady
-      ? "Coverage is complete. Review drafts before named human sign-off."
+      ? "Coverage is complete. Review drafts before named human approval."
       : "Do not approve final action until traceability reaches 100%.",
   });
   for (const filing of filings) {
@@ -2474,7 +2477,7 @@ function buildIncidentReportSections({
       body: `${report.roomParticipants} participant(s) were recorded and ${liveEvents.length} live event(s) were streamed. Source hash ${shortValue(sourceHash)}, room hash ${shortValue(roomHash)}, filing hash ${shortValue(filingHash)}.`,
     },
     {
-      label: "sign-off",
+      label: "approval",
       title: signatureReady
         ? "Human approval receipt is sealed"
         : "Human approval gate is closed",

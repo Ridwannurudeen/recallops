@@ -62,7 +62,7 @@ const stageLabels: Record<Packet["events"][number]["stage"], string> = {
   traceability_resolved: "resolved",
   risk_approved: "cleared",
   notice_drafted: "notice",
-  human_approved: "human gate",
+  human_approved: "approval gate",
 };
 
 export default function ProductTabs({
@@ -333,7 +333,7 @@ export default function ProductTabs({
               </div>
               <div className="gate">
                 <span>{veto?.id} risk hold cleared</span>
-                <span>{approval?.id} human sign-off locked</span>
+                <span>{approval?.id} human approval locked</span>
               </div>
             </article>
           </section>

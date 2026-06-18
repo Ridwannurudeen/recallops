@@ -128,7 +128,7 @@ const replaySteps: ReplayStep[] = [
     decision: "APPROVED",
     actor: "QA Director",
     message:
-      "Human sign-off sealed. SAP and Oracle dry-run payloads are prepared and the receipt chain is inspectable.",
+      "Human approval sealed. SAP and Oracle dry-run payloads are prepared and the receipt chain is inspectable.",
     coverage: 100,
     untraced: 0,
     digest: "da1c570d2fc1b9ca86fe7c2f872bd74895e51bd868766b6f373335306d10ff2b",
@@ -401,8 +401,8 @@ export default function Bat4421Replay({
               {approving
                 ? "Approving..."
                 : sealed
-                  ? "Human sign-off sealed"
-                  : "Seal human sign-off"}
+                  ? "Human approval sealed"
+                  : "Approve recall action"}
             </button>
             {approvalError ? <small>{approvalError}</small> : null}
           </div>
@@ -410,7 +410,7 @@ export default function Bat4421Replay({
       </div>
 
       <div className="decision-chain">
-        {["SOURCE", "FACT", "HOLD", "RECOVERY", "SIGN-OFF", "RECEIPT"].map(
+        {["SOURCE", "FACT", "HOLD", "RECOVERY", "APPROVAL", "RECEIPT"].map(
           (item, index) => (
             <span
               className={index <= chainIndex(step.key) ? "chain-active" : ""}

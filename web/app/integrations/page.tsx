@@ -7,6 +7,29 @@ import {
 import ProofLabel from "../proof-label";
 import SiteNav from "../site-nav";
 
+const normalizedActionBranches = [
+  {
+    label: "SAP hold",
+    shape: "Tenant-shaped payload",
+    state: "DRY RUN / GATED",
+  },
+  {
+    label: "Oracle hold",
+    shape: "Tenant-shaped payload",
+    state: "DRY RUN / GATED",
+  },
+  {
+    label: "Regulator pack",
+    shape: "Jurisdiction-shaped filing",
+    state: "DRY RUN / GATED",
+  },
+  {
+    label: "ERP receiver",
+    shape: "Transport receipt",
+    state: "LIVE / VERIFIED",
+  },
+];
+
 export default function IntegrationsPage() {
   return (
     <main className="command-shell">
@@ -26,6 +49,30 @@ export default function IntegrationsPage() {
         <ProofLabel status="GATED">
           tenant write authorization required
         </ProofLabel>
+      </section>
+
+      <section className="normalized-action-diagram">
+        <div>
+          <p className="section-kicker">Normalized recall action</p>
+          <h2>One human-approved action, several gated representations.</h2>
+          <p>
+            RecallOps does not treat integration logos as proof. Each branch
+            shows the capability, current environment, evidence type, and
+            mutation boundary.
+          </p>
+        </div>
+        <div className="action-branch-map">
+          <strong>Human-approved recall action</strong>
+          <div>
+            {normalizedActionBranches.map((branch) => (
+              <article key={branch.label}>
+                <span>{branch.label}</span>
+                <p>{branch.shape}</p>
+                <code>{branch.state}</code>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="integration-status-grid">

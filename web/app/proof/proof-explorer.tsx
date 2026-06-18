@@ -1,12 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  apiBase,
-  packet,
-  proofExplorerSections,
-  shortHash,
-} from "../recall-data";
+import { apiBase, packet, shortHash } from "../recall-data";
 import ProofLabel from "../proof-label";
 
 type Verification = {
@@ -119,54 +114,32 @@ export default function ProofExplorer() {
 
   const proofNodes = useMemo<ProofNode[]>(() => {
     if (!proof) {
-      return proofExplorerSections.map((section) => ({
-        label: section,
-        status: "warn",
-        detail: "Loading deployed proof endpoint.",
-        value: "pending",
-      }));
+      return [];
     }
 
     return [
       {
-        label: "Band room",
-        status: proof.checks.captured_band_has_five_agents ? "ok" : "warn",
-        detail: `${proof.band.captured_run.participant_count} captured agents, ${proof.band.captured_run.context_items} context items.`,
-        value: proof.band.captured_run.room_id,
-      },
-      {
-        label: "Source packet",
+        label: "Source evidence",
         status: proof.source_evidence.verification.ok ? "ok" : "warn",
         detail:
-          "Complaint, shipment CSV, recovered distributor file, citations.",
+          "Complaint packet, shipment ledger, recovered distributor file, citations, and source digest.",
         value: proof.source_evidence.audit_hash,
       },
       {
-        label: "Recall room run",
+        label: "Analysis",
         status: proof.recall_room_run.verification.ok ? "ok" : "warn",
-        detail: `${proof.recall_room_run.band.mode.replaceAll("_", " ")} with ${proof.recall_room_run.band.participant_count} Band agents referenced.`,
+        detail: `${proof.recall_room_run.band.mode.replaceAll("_", " ")} room run with ${proof.recall_room_run.band.participant_count} participants and traceability checks.`,
         value: proof.recall_room_run.run_hash,
       },
       {
-        label: "Filing pack",
-        status: proof.filing_pack.verification.ok ? "ok" : "warn",
-        detail: `${proof.filing_pack.filings.length} regulator, distributor, and applicability drafts from the source packet.`,
-        value: proof.filing_pack.pack_hash,
-      },
-      {
-        label: "Regulator dispatch",
-        status: proof.checks.regulator_dispatch_prepared ? "ok" : "warn",
-        detail: `${proof.regulator_dispatch.targets.length} target dispatches prepared; ${proof.regulator_dispatch.mode.replaceAll("_", " ")}.`,
-        value: proof.regulator_dispatch.mode,
-      },
-      {
-        label: "Decision events",
+        label: "Decision",
         status: proof.packet.verification.ok ? "ok" : "warn",
-        detail: "Deterministic BAT-4421 room replay with hash verification.",
+        detail:
+          "Risk hold, recovery, clearance, and deterministic BAT-4421 decision graph.",
         value: proof.packet.incident_id,
       },
       {
-        label: "Hold and human sign-off",
+        label: "Human authority",
         status: proof.approval_receipt.verification.ok ? "ok" : "warn",
         detail: proof.approval_receipt.disclosure,
         value: String(
@@ -174,54 +147,19 @@ export default function ProofExplorer() {
         ),
       },
       {
-        label: "Human e-signature",
-        status: proof.checks.esignature_gate_ready ? "ok" : "gated",
-        detail:
-          "Verified human approval receipt endpoint binds signer identity to source, room, and filing hashes.",
-        value: proof.links.esignature_approval ?? "/api/esignature-approval",
-      },
-      {
-        label: "Notices",
-        status: proof.checks.dispatch_receipts_prepared ? "ok" : "warn",
-        detail: "Regulator, customer, and warehouse notices prepared.",
-        value: `${proof.dispatch_receipts.length} receipts`,
-      },
-      {
-        label: "Identity gate",
-        status: proof.checks.identity_gate_ready ? "ok" : "gated",
-        detail:
-          "Approval identity is disclosed as ready, admin-gated, or demo-only.",
-        value: String(
-          proof.identity.approval_gate_ready ?? "approval gate status unknown",
-        ),
-      },
-      {
-        label: "SAP and Oracle contracts",
+        label: "Downstream action",
         status: proof.checks.erp_contract_live_write_verified ? "ok" : "gated",
-        detail: "Transport receiver receipts are separate from tenant writes.",
+        detail: `${proof.filing_pack.filings.length} filing drafts, ${proof.regulator_dispatch.targets.length} regulator targets, and SAP/Oracle payload boundaries.`,
         value: String(
           proof.erp_contract.latest_pair_verified ??
             "contract verification unknown",
         ),
       },
       {
-        label: "Provider receipts",
-        status: proof.checks.partner_ai_used_both ? "ok" : "warn",
-        detail: proof.checks.partner_ai_used_both
-          ? "Partner AI usage is counted and disclosed, not hidden."
-          : "Default proof avoids spend; run provider proof to invoke both adapters.",
-        value: `${proof.checks.partner_ai_used_count} provider calls`,
-      },
-      {
-        label: "Spend controls",
-        status: "ok",
-        detail: "Partner AI calls run behind daily limits and cooldowns.",
-        value: JSON.stringify(proof.production_readiness).slice(0, 92),
-      },
-      {
-        label: "Final SHA-256 digest",
+        label: "Receipts",
         status: proof.packet.verification.ok ? "ok" : "warn",
-        detail: `${proof.packet.verification.algorithm} verification result.`,
+        detail:
+          "Band IDs, ERP transport receipts, provider controls, and final SHA-256 digest.",
         value: proof.packet.audit_hash,
       },
     ];
@@ -268,13 +206,12 @@ export default function ProofExplorer() {
     <section className="proof-explorer" id="structured-proof">
       <div className="proof-explorer-head">
         <div>
-          <p className="section-kicker">Submission Proof</p>
-          <h1>Every claim gets a status label and a receipt.</h1>
+          <p className="section-kicker">Audit packet</p>
+          <h1>Verify the decision from source to receipt.</h1>
           <p>
-            This page turns the deployed proof bundle into a readable packet:
-            Band room, source digest, hold recommendation, human sign-off,
-            notices, ERP contracts, provider receipts, spend controls, and final
-            SHA-256 digest.
+            The proof bundle is organized by causality: source evidence,
+            analysis, decision events, human authority, downstream action, and
+            receipts. Each item says what it proves and what remains gated.
           </p>
         </div>
         <div className="proof-digest-card">
@@ -312,6 +249,16 @@ export default function ProofExplorer() {
         </div>
       ) : null}
       {error ? <p className="runner-error">{error}</p> : null}
+
+      {!proof && !error ? (
+        <div className="proof-loading-skeleton" aria-live="polite">
+          <strong>Loading audit packet</strong>
+          <p>
+            Fetching source evidence, room proof, approval receipt, downstream
+            actions, and final digest from the deployed proof endpoint.
+          </p>
+        </div>
+      ) : null}
 
       <div className="proof-node-grid">
         {proofNodes.map((node) => (

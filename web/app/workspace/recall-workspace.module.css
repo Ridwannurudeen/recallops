@@ -829,6 +829,10 @@ html[data-theme="light"] .tabs button[aria-pressed="true"] {
   color: #071019;
 }
 
+html[data-theme="light"] .metricStrip > div {
+  background: rgba(255, 255, 255, 0.64);
+}
+
 html[data-theme="light"] .agentGrid article[data-active="true"] {
   background:
     radial-gradient(

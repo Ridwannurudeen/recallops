@@ -5,7 +5,7 @@ import SiteNav from "../site-nav";
 export default function DocsPage() {
   return (
     <main className="command-shell">
-      <SiteNav />
+      <SiteNav active="docs" />
 
       <section className="page-hero compact-page-hero">
         <div>

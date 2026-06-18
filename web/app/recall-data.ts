@@ -207,10 +207,19 @@ export const roomResponsibilities = [
     authority: "Prepares notices",
     assignment: "Drafts regulator, customer, and quarantine communications.",
   },
+];
+
+export const accountableHuman = {
+  role: "QA Director",
+  authority: "Can approve",
+  assignment: "Authorizes recall scope, ERP hold, and the final receipt.",
+};
+
+export const authorityModel = [
+  ...roomResponsibilities,
   {
-    role: "QA Director",
-    authority: "Can approve",
-    assignment: "Authorizes recall scope, ERP hold, and the final receipt.",
+    ...accountableHuman,
+    authority: "Accountable human",
   },
 ];
 
@@ -229,7 +238,7 @@ export const proofExplorerSections = [
   "Filing pack",
   "Regulator dispatch",
   "Decision events",
-  "Hold and human sign-off",
+  "Hold and human approval",
   "Human e-signature",
   "Notices",
   "Identity gate",

@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RecallOps | Run the Recall. Prove the Decision.",
   description:
-    "Proof-carrying command room for product recalls. Coordinate evidence, traceability, hold recommendations, human sign-off, ERP-ready actions, and audit receipts.",
+    "Proof-carrying command room for product recalls. Coordinate evidence, traceability, hold recommendations, human approval, ERP-ready actions, and audit receipts.",
   keywords: [
     "product recall management software",
     "AI recall management",
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "RecallOps | Run the Recall. Prove the Decision.",
     description:
-      "A Band-native recall command room that turns source evidence, hold recommendations, human sign-off, ERP-ready actions, and receipts into one verifiable decision chain.",
+      "A Band-native recall command room that turns source evidence, hold recommendations, human approval, ERP-ready actions, and receipts into one verifiable decision chain.",
     url: "https://recallops.gudman.xyz",
     siteName: "RecallOps",
     type: "website",
@@ -32,7 +32,7 @@ export default function RootLayout({
       <body>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("recallops-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme="dark";document.documentElement.style.colorScheme="dark"}`,
+            __html: `try{var t=localStorage.getItem("recallops-theme");if(t!=="light"&&t!=="dark"){t="light"}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme="light";document.documentElement.style.colorScheme="light"}`,
           }}
         />
         {children}

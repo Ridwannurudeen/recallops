@@ -3,26 +3,21 @@ import ThemeToggle from "./theme-toggle";
 type SiteNavProps = {
   active?:
     | "product"
-    | "workspace"
-    | "console"
-    | "judge"
+    | "app"
     | "demo"
     | "proof"
-    | "submission"
+    | "trust"
     | "integrations"
-    | "security";
+    | "security"
+    | "docs";
 };
 
 const navItems = [
   { id: "product", label: "Product", href: "/" },
-  { id: "workspace", label: "Workspace", href: "/workspace" },
-  { id: "judge", label: "Judge Demo", href: "/demo/judge" },
-  { id: "console", label: "Try Live", href: "/console" },
-  { id: "demo", label: "Replay + Live", href: "/demo/bat-4421" },
-  { id: "proof", label: "Proof", href: "/proof" },
-  { id: "submission", label: "Submission", href: "/submission" },
+  { id: "demo", label: "Demo", href: "/demo/bat-4421" },
   { id: "integrations", label: "Integrations", href: "/integrations" },
-  { id: "security", label: "Security", href: "/security" },
+  { id: "trust", label: "Trust Center", href: "/trust" },
+  { id: "docs", label: "Docs", href: "/docs" },
 ] as const;
 
 export default function SiteNav({ active }: SiteNavProps) {
@@ -45,8 +40,8 @@ export default function SiteNav({ active }: SiteNavProps) {
       </nav>
       <div className="site-actions">
         <ThemeToggle />
-        <a className="judge-link" href="/demo/judge">
-          Open judge demo
+        <a className="judge-link" href="/app">
+          Open command room
         </a>
       </div>
     </header>
