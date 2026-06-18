@@ -41,6 +41,18 @@ type Readiness = {
     };
   };
   production_blockers_remaining: string[];
+  identity: {
+    approval_gate_ready: boolean;
+    approval_admin_key_configured: boolean;
+    oidc: {
+      verification_ready: boolean;
+    };
+  };
+  erp_contract: {
+    token_configured: boolean;
+    receipt_count: number;
+    latest_pair_verified: boolean;
+  };
   spend_limits: {
     partner_ai: {
       runnable: boolean;
@@ -113,6 +125,19 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
               <small>{readiness.access_control.mode}</small>
             </article>
             <article>
+              <span>approval identity</span>
+              <strong>
+                {readiness.identity.approval_gate_ready ? "gated" : "open"}
+              </strong>
+              <small>
+                {readiness.identity.oidc.verification_ready
+                  ? "oidc jwks ready"
+                  : readiness.identity.approval_admin_key_configured
+                    ? "admin key ready"
+                    : "demo receipt only"}
+              </small>
+            </article>
+            <article>
               <span>erp write gate</span>
               <strong>
                 {readiness.integrations.enterprise_sync.live_writes_enabled
@@ -123,6 +148,20 @@ export default function EnterpriseReadiness({ apiBase }: { apiBase: string }) {
                 {readiness.integrations.enterprise_sync.admin_key_configured
                   ? "admin key set"
                   : "admin key absent"}
+              </small>
+            </article>
+            <article>
+              <span>erp contract</span>
+              <strong>
+                {readiness.erp_contract.latest_pair_verified
+                  ? "verified"
+                  : "pending"}
+              </strong>
+              <small>
+                {readiness.erp_contract.receipt_count} receipts /{" "}
+                {readiness.erp_contract.token_configured
+                  ? "token set"
+                  : "token absent"}
               </small>
             </article>
           </div>

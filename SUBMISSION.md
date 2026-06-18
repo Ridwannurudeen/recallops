@@ -41,7 +41,8 @@ The `/api/submission-proof` endpoint bundles the packet digest, source digest,
 approval receipt, captured Band proof, latest fresh Band drill status, partner
 AI status, and submission gates into one judge-readable JSON object.
 It also includes deterministic jurisdiction-rule checks, dry-run dispatch
-receipts, SAP/Oracle sync payloads, and production adapter readiness.
+receipts, SAP/Oracle sync payloads, identity-gate status, ERP contract
+receiver receipts, and production adapter readiness.
 
 ## Agents
 
@@ -66,7 +67,8 @@ receipts, SAP/Oracle sync payloads, and production adapter readiness.
 - Source evidence endpoints recompute facts, citations, coverage, source digests, and approval receipts from visible complaint/shipment inputs.
 - Partner AI execution is wired as a real key-gated path: Featherless reviews the complaint text as the Evidence Agent, and AI/ML API reviews the shipment CSVs as the Regulatory/Risk Officer. The cockpit exposes provider status, model IDs, response hashes, and compact JSON outputs when those calls run.
 - Submission proof endpoint: safe GET bundle for judges; live POST bundle for a fresh partner-AI proof run.
-- Case persistence, jurisdiction rules, dry-run dispatch receipts, integration readiness, SAP/Oracle recall payloads, and spend controls are exposed as production-hardening surfaces. Live SAP/Oracle writes are implemented behind tenant endpoint configuration plus a server-side admin gate; the public demo stays in dry-run mode unless an approved tenant is configured.
+- Case persistence, jurisdiction rules, dry-run dispatch receipts, integration readiness, SAP/Oracle recall payloads, identity-gated approvals, ERP contract receiver receipts, and spend controls are exposed as production-hardening surfaces. Live SAP/Oracle writes are implemented behind tenant endpoint configuration plus a server-side admin gate; the public demo can exercise the live adapter path against a tenant-shaped contract receiver and stays away from real customer ERP writes unless an approved tenant is configured.
+- Enterprise identity is implemented as a protected approval path: `/api/identity-approval` accepts either a server-side approval admin key or an RS256 OIDC token verified through JWKS, then seals the verified identity into the approval receipt hash.
 - Cross-framework support is the target adapter architecture: current demo logic runs through Band SDK and deterministic role logic, with Evidence mapped to a Pydantic AI adapter target, Traceability to a LangGraph adapter target, and Risk review to a CrewAI adapter target.
 - The deployed packet reports whether provider keys are configured, and does not claim partner LLM usage when the deterministic parser handled the run.
 

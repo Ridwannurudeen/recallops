@@ -19,6 +19,7 @@ class ApprovalReceipt:
     reason: str
     source_audit_hash: str
     previous_hash: str
+    identity: dict[str, object]
     receipt_hash: str
 
     def to_dict(self) -> dict[str, object]:
@@ -32,6 +33,7 @@ def build_approval_receipt(
     reason: str,
     source_audit_hash: str,
     previous_hash: str = "0" * 64,
+    identity: dict[str, object] | None = None,
 ) -> ApprovalReceipt:
     clean_approver = approver.strip()
     clean_reason = reason.strip()
@@ -55,6 +57,12 @@ def build_approval_receipt(
         "reason": clean_reason,
         "source_audit_hash": source_audit_hash,
         "previous_hash": previous_hash,
+        "identity": identity
+        or {
+            "mode": "receipt_only",
+            "subject": clean_approver,
+            "assurance_level": "unsigned_human_label",
+        },
     }
     return ApprovalReceipt(receipt_hash=_audit_hash(fields), **fields)
 

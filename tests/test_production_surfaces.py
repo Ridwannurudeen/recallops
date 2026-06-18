@@ -1,4 +1,6 @@
 import pytest
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from recallops import build_recall_packet
 from recallops.cases import create_case_record, get_case_record, list_case_records
@@ -9,6 +11,8 @@ from recallops.enterprise import (
     require_enterprise_write_authorization,
     run_enterprise_sync,
 )
+from recallops.erp_contract import contract_receipts, contract_status, record_contract_write
+from recallops.identity import identity_status, resolve_approval_identity
 from recallops.notifications import build_dispatch_receipts
 from recallops.rate_limit import SpendLimitSettings, acquire_spend_permit, spend_limit_status
 from recallops.rules import assess_rules
@@ -154,6 +158,90 @@ def test_enterprise_write_authorization_requires_enablement_and_admin_key(monkey
     require_enterprise_write_authorization("correct-key")
 
 
+def test_identity_admin_key_status_and_resolution(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_APPROVAL_ADMIN_KEY", "approval-key")
+
+    status = identity_status()
+    identity = resolve_approval_identity(
+        approver="QA Director",
+        provided_admin_key="approval-key",
+        authorization=None,
+    )
+
+    assert status["approval_gate_ready"] is True
+    assert identity["mode"] == "server_admin_key"
+    assert identity["display_name"] == "QA Director"
+    assert len(identity["identity_proof_hash"]) == 64
+
+
+def test_identity_oidc_jwks_verifies_rs256_token(monkeypatch) -> None:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_numbers = private_key.public_key().public_numbers()
+    kid = "recallops-test-key"
+    jwk = {
+        "kty": "RSA",
+        "kid": kid,
+        "n": _b64url(public_numbers.n.to_bytes(256, "big")),
+        "e": _b64url(public_numbers.e.to_bytes(3, "big")),
+    }
+    token = _signed_jwt(
+        private_key=private_key,
+        kid=kid,
+        payload={
+            "iss": "https://issuer.example",
+            "aud": "recallops",
+            "sub": "user-123",
+            "email": "qa@example.com",
+            "name": "QA Director",
+            "iat": 1,
+            "exp": 2_000_000_000,
+        },
+    )
+    monkeypatch.setenv("RECALLOPS_OIDC_ISSUER", "https://issuer.example")
+    monkeypatch.setenv("RECALLOPS_OIDC_AUDIENCE", "recallops")
+    monkeypatch.setenv("RECALLOPS_OIDC_JWKS_URL", "https://issuer.example/jwks")
+    monkeypatch.setattr("recallops.identity._fetch_jwks", lambda _: {"keys": [jwk]})
+
+    identity = resolve_approval_identity(
+        approver="ignored",
+        provided_admin_key=None,
+        authorization=f"Bearer {token}",
+    )
+
+    assert identity["mode"] == "oidc_jwks"
+    assert identity["subject"] == "user-123"
+    assert identity["assurance_level"] == "verified_oidc_jwt"
+    assert len(identity["token_hash"]) == 64
+
+
+def test_erp_contract_records_sap_and_oracle_pair(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_ERP_CONTRACT_LOG", str(tmp_path / "contract.jsonl"))
+    source_packet = build_source_evidence_packet()
+    sap = record_contract_write(
+        target="sap",
+        payload={
+            "IncidentID": source_packet.incident_id,
+            "LotNumber": "BAT-4421",
+            "SourceAuditHash": source_packet.audit_hash,
+            "RecallAction": "HOLD_AND_NOTIFY",
+        },
+    )
+    oracle = record_contract_write(
+        target="oracle",
+        payload={
+            "incidentId": source_packet.incident_id,
+            "lotNumber": "BAT-4421",
+            "sourceAuditHash": source_packet.audit_hash,
+            "recallAction": "HOLD_AND_NOTIFY",
+        },
+    )
+
+    assert sap["accepted"] is True
+    assert oracle["accepted"] is True
+    assert contract_status()["latest_pair_verified"] is True
+    assert {receipt["target"] for receipt in contract_receipts()} == {"sap", "oracle"}
+
+
 def test_case_store_persists_source_rules_and_dispatch(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("RECALLOPS_CASE_DB", str(tmp_path / "cases.sqlite3"))
     source_packet = build_source_evidence_packet()
@@ -194,3 +282,29 @@ def test_partner_ai_spend_limit_blocks_cooldown(tmp_path) -> None:
 
 def test_build_recall_packet_still_available() -> None:
     assert build_recall_packet().decision["status"] == "approved"
+
+
+def _signed_jwt(
+    *,
+    private_key: rsa.RSAPrivateKey,
+    kid: str,
+    payload: dict[str, object],
+) -> str:
+    header = {"alg": "RS256", "kid": kid, "typ": "JWT"}
+    signing_input = f"{_json_segment(header)}.{_json_segment(payload)}".encode("ascii")
+    signature = private_key.sign(signing_input, padding.PKCS1v15(), hashes.SHA256())
+    return f"{signing_input.decode('ascii')}.{_b64url(signature)}"
+
+
+def _json_segment(payload: dict[str, object]) -> str:
+    import json
+
+    return _b64url(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+
+
+def _b64url(value: bytes | int) -> str:
+    import base64
+
+    if isinstance(value, int):
+        value = bytes([value])
+    return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")

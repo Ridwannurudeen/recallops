@@ -23,6 +23,19 @@ def post(path: str, body: dict[str, object]) -> httpx.Response:
     return asyncio.run(request())
 
 
+def post_with_headers(
+    path: str,
+    body: dict[str, object],
+    headers: dict[str, str],
+) -> httpx.Response:
+    async def request() -> httpx.Response:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            return await client.post(path, json=body, headers=headers)
+
+    return asyncio.run(request())
+
+
 def test_health_exposes_packet_identity() -> None:
     response = get("/api/health")
 
@@ -148,6 +161,8 @@ def test_integrations_and_ops_readiness_are_explicit() -> None:
     assert readiness.status_code == 200
     assert integrations.json()["mode"] == "credential_gated_adapter_registry"
     assert readiness.json()["persistence"]["mode"] == "sqlite_case_store"
+    assert "identity" in readiness.json()
+    assert "erp_contract" in readiness.json()
     assert "production_blockers_remaining" in readiness.json()
 
 
@@ -170,6 +185,58 @@ def test_enterprise_sync_live_requires_admin_gate(monkeypatch) -> None:
 
     assert response.status_code == 403
     assert "disabled" in response.json()["detail"]
+
+
+def test_identity_status_and_protected_approval(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_APPROVAL_ADMIN_KEY", "approval-key")
+    source = get("/api/source-evidence").json()["packet"]
+    approval_body = {
+        "approver": "QA Director",
+        "decision": "approved",
+        "reason": "Traceability reached 100% and the veto cleared.",
+        "source_audit_hash": source["audit_hash"],
+    }
+    status = get("/api/identity/status")
+    blocked = post("/api/identity-approval", approval_body)
+    approved = post_with_headers(
+        "/api/identity-approval",
+        approval_body,
+        {"x-recallops-approval-key": "approval-key"},
+    )
+
+    assert status.status_code == 200
+    assert status.json()["approval_gate_ready"] is True
+    assert blocked.status_code == 403
+    assert approved.status_code == 200
+    body = approved.json()
+    assert body["identity"]["mode"] == "server_admin_key"
+    assert body["receipt"]["identity"]["assurance_level"] == "server_verified_shared_secret"
+    assert body["verification"]["ok"] is True
+
+
+def test_erp_contract_receiver_records_redacted_receipts(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("RECALLOPS_ERP_CONTRACT_TOKEN", "contract-key")
+    monkeypatch.setenv("RECALLOPS_ERP_CONTRACT_LOG", str(tmp_path / "erp.jsonl"))
+    source = get("/api/source-evidence").json()["packet"]
+    sap_payload = {
+        "IncidentID": source["incident_id"],
+        "SourceAuditHash": source["audit_hash"],
+        "LotNumber": "BAT-4421",
+        "RecallAction": "HOLD_AND_NOTIFY",
+    }
+    blocked = post("/api/erp-contract/sap", sap_payload)
+    accepted = post_with_headers(
+        "/api/erp-contract/sap",
+        sap_payload,
+        {"apikey": "contract-key"},
+    )
+    receipts = get("/api/erp-contract/receipts")
+
+    assert blocked.status_code == 403
+    assert accepted.status_code == 200
+    assert accepted.json()["accepted"] is True
+    assert receipts.status_code == 200
+    assert receipts.json()["receipts"][0]["target"] == "sap"
 
 
 def test_rules_endpoint_returns_recall_gates() -> None:
@@ -250,8 +317,12 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["checks"]["rules_approval_ready"] is True
     assert body["checks"]["dispatch_receipts_prepared"] is True
     assert body["checks"]["sap_oracle_payloads_prepared"] is True
+    assert "identity_gate_ready" in body["checks"]
+    assert "erp_contract_live_write_verified" in body["checks"]
     assert len(body["dispatch_receipts"]) == 3
     assert body["enterprise_sync"]["mode"] == "dry_run_no_external_write"
+    assert "identity" in body
+    assert "erp_contract" in body
     assert body["production_readiness"]["persistence"]["mode"] == "sqlite_case_store"
     assert body["submission_gates"]["repo_visibility"] == "private_until_user_approves_public_flip"
 

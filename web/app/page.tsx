@@ -295,6 +295,8 @@ export default function Home() {
             <a href={`${apiBase}/rules`}>rules api</a>
             <a href={`${apiBase}/notifications/dry-run`}>dispatch api</a>
             <a href={`${apiBase}/enterprise-sync`}>erp sync</a>
+            <a href={`${apiBase}/identity/status`}>identity</a>
+            <a href={`${apiBase}/erp-contract/receipts`}>erp receipts</a>
           </div>
         </aside>
       </section>

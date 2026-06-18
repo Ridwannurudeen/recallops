@@ -10,10 +10,11 @@ Last full local verification: 2026-06-17.
 .venv\Scripts\python.exe -m pytest
 ```
 
-Result: `57 passed`, including API endpoint tests, source parser coverage,
+Result: `62 passed`, including API endpoint tests, source parser coverage,
 citation integrity, partner AI missing-key checks, mocked partner AI execution,
 submission proof bundle checks, SQLite case persistence, jurisdiction rules,
-dispatch receipts, SAP/Oracle sync payloads, integration readiness, spend-limit checks, approval receipt
+dispatch receipts, SAP/Oracle sync payloads, identity-gated approval, OIDC/JWKS verification,
+ERP contract receiver receipts, integration readiness, spend-limit checks, approval receipt
 hashing, static packet drift protection, workflow gates, receipt hash chaining,
 decision graph checks, digest verification, and mocked Band spike ordering.
 
@@ -59,6 +60,9 @@ curl.exe -fsSL https://recallops.gudman.xyz/api/spend-limits
 curl.exe -fsSL https://recallops.gudman.xyz/api/integrations
 curl.exe -fsSL https://recallops.gudman.xyz/api/ops-readiness
 curl.exe -fsSL https://recallops.gudman.xyz/api/enterprise-sync
+curl.exe -fsSL https://recallops.gudman.xyz/api/identity/status
+curl.exe -fsSL https://recallops.gudman.xyz/api/erp-contract/status
+curl.exe -fsSL https://recallops.gudman.xyz/api/erp-contract/receipts
 curl.exe -fsSL https://recallops.gudman.xyz/api/rules
 curl.exe -fsSL https://recallops.gudman.xyz/api/notifications/dry-run
 curl.exe -fsSL https://recallops.gudman.xyz/api/submission-proof
@@ -89,6 +93,9 @@ digest verification, approval receipt verification, captured Band proof, latest
 fresh Band drill status, partner AI readiness, and explicit submission gates.
 The enterprise sync dry-run endpoint returns SAP and Oracle recall payloads with
 payload hashes and no external ERP write.
+The identity status endpoint reports whether admin-key or OIDC/JWKS approval is
+available, and the ERP contract receiver exposes redacted SAP/Oracle adapter
+receipts after a live contract smoke.
 Live `POST /api/submission-proof` returned `partner_ai_assisted`,
 `partner_ai_used_count: 2`, and `partner_ai_used_both: true`. `/favicon.ico`
 returns HTTP 200 so opening the raw JSON endpoint does not create a browser

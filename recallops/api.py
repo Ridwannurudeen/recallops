@@ -17,6 +17,14 @@ from recallops.enterprise import (
     require_enterprise_write_authorization,
     run_enterprise_sync,
 )
+from recallops.erp_contract import (
+    ContractReceiverError,
+    contract_receipts,
+    contract_status,
+    record_contract_write,
+    require_contract_authorization,
+)
+from recallops.identity import IdentityError, identity_status, resolve_approval_identity
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
 from recallops.notifications import build_dispatch_receipts
@@ -209,7 +217,12 @@ def integrations() -> dict[str, object]:
 
 @app.get("/api/ops-readiness")
 def readiness() -> dict[str, object]:
-    return {**ops_readiness(), "spend_limits": spend_limits()}
+    return {
+        **ops_readiness(),
+        "spend_limits": spend_limits(),
+        "identity": identity_status(),
+        "erp_contract": contract_status(),
+    }
 
 
 @app.get("/api/enterprise-sync")
@@ -256,6 +269,73 @@ def enterprise_sync(
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/identity/status")
+def approval_identity_status() -> dict[str, object]:
+    return identity_status()
+
+
+@app.post("/api/identity-approval")
+def identity_approval_receipt(
+    request: ApprovalReceiptRequest,
+    x_recallops_approval_key: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        identity = resolve_approval_identity(
+            approver=request.approver,
+            provided_admin_key=x_recallops_approval_key,
+            authorization=authorization,
+        )
+        receipt = build_approval_receipt(
+            approver=request.approver,
+            decision=request.decision,
+            reason=request.reason,
+            source_audit_hash=request.source_audit_hash,
+            previous_hash=request.previous_hash,
+            identity=identity,
+        )
+    except IdentityError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "receipt": receipt.to_dict(),
+        "verification": verify_approval_receipt(receipt),
+        "identity": identity,
+        "disclosure": "Identity approval is server-verified, then sealed into the receipt hash.",
+    }
+
+
+@app.get("/api/erp-contract/status")
+def erp_contract_status() -> dict[str, object]:
+    return contract_status()
+
+
+@app.get("/api/erp-contract/receipts")
+def erp_contract_receipts() -> dict[str, object]:
+    return {"receipts": contract_receipts()}
+
+
+@app.post("/api/erp-contract/{target}")
+def erp_contract_receiver(
+    target: Literal["sap", "oracle"],
+    request: dict[str, object],
+    authorization: str | None = Header(default=None),
+    apikey: str | None = Header(default=None),
+    x_recallops_contract_token: str | None = Header(default=None),
+) -> dict[str, object]:
+    try:
+        require_contract_authorization(
+            authorization=authorization,
+            apikey=apikey,
+            contract_token=x_recallops_contract_token,
+        )
+        return record_contract_write(target=target, payload=request)
+    except ContractReceiverError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @app.get("/api/rules")
@@ -421,6 +501,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     packet_verification = verify_packet_digest(recall_packet)
     source_verification = verify_source_evidence_digest(source_packet)
     approval_verification = verify_approval_receipt(approval)
+    approval_identity = identity_status()
+    erp_contract = contract_status()
     fresh_band_status = live_drill_status()
     latest_fresh_run = fresh_band_status["latest_run"]
     captured_run = captured_band_proof()
@@ -464,6 +546,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         "rule_assessment": rule_assessment,
         "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
         "enterprise_sync": enterprise_sync,
+        "identity": approval_identity,
+        "erp_contract": erp_contract,
         "production_readiness": ops_readiness(),
         "approval_receipt": {
             "receipt": approval.to_dict(),
@@ -489,6 +573,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "sap_oracle_payloads_prepared": all(
                 target["status"] == "prepared" for target in enterprise_sync["targets"]
             ),
+            "identity_gate_ready": approval_identity["approval_gate_ready"],
+            "erp_contract_live_write_verified": erp_contract["latest_pair_verified"],
         },
     }
 

@@ -70,7 +70,8 @@ real room creation, Evidence, Traceability, Risk, Communications, risk veto,
 communications notice, and context fetch."
 
 Show the final packet, notices, audit seal, production-readiness panel,
-SAP/Oracle dry-run proof, and `/api/submission-proof` bundle.
+identity-gate status, SAP/Oracle dry-run proof, ERP contract receipts, and
+`/api/submission-proof` bundle.
 
 ## 3:00-3:10 - Close
 
