@@ -5,6 +5,19 @@ const apiTarget = process.env.RECALLOPS_API_TARGET || "";
 const nextConfig = {
   ...(basePath ? { basePath } : {}),
   reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0, must-revalidate",
+          },
+        ],
+      },
+    ];
+  },
   async rewrites() {
     if (!apiTarget) {
       return [];
