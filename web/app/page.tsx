@@ -155,6 +155,36 @@ const stageLabels: Record<EventStage, string> = {
   human_approved: "human gate",
 };
 
+const proofStats = [
+  {
+    label: "live agents",
+    value: packet.band_proof.captured_band_run.participant_count.toString(),
+    detail: "Band room roles recruited in sequence",
+  },
+  {
+    label: "traceability",
+    value: `${packet.final_traceability.coverage_percent}%`,
+    detail: "approval blocked until lot coverage cleared",
+  },
+  {
+    label: "partner AI",
+    value: "2",
+    detail: "AI/ML API and Featherless proof path",
+  },
+  {
+    label: "ERP proof",
+    value: "SAP + Oracle",
+    detail: "adapter payloads, SAP sandbox, contract receipts",
+  },
+];
+
+const proofLinks = [
+  { label: "proof bundle", href: `${apiBase}/submission-proof` },
+  { label: "SAP proof", href: `${apiBase}/sap-api-hub` },
+  { label: "ERP receipts", href: `${apiBase}/erp-contract/receipts` },
+  { label: "digest verify", href: `${apiBase}/verify` },
+];
+
 const marketSignals = [
   {
     company: "Oracle",
@@ -212,6 +242,113 @@ const marketSignals = [
   },
 ];
 
+const capabilityMatrix = [
+  {
+    capability: "Recall lifecycle",
+    incumbent:
+      "Oracle structures the native recall record, tasks, quarantine, and closure.",
+    recallops:
+      "Coordinates the decision layer above ERP so SAP, Oracle, QMS, support, and regulators see the same incident proof.",
+  },
+  {
+    capability: "AI intake",
+    incumbent:
+      "Honeywell and Oracle show the market wants AI-assisted recall signal parsing.",
+    recallops:
+      "Publishes prompt hashes, response hashes, source citations, and provider status instead of hiding model output.",
+  },
+  {
+    capability: "Targeted response",
+    incumbent:
+      "TraceLink and Trustwell focus on targeted alerts, site response, and recall execution speed.",
+    recallops:
+      "Routes notices only after traceability clears, risk vetoes resolve, and dispatch receipts are prepared.",
+  },
+  {
+    capability: "Quality closure",
+    incumbent:
+      "MasterControl and ETQ anchor the QMS record, CAPA, documentation, audit, and risk workflow.",
+    recallops:
+      "Adds cross-system proof: who challenged the decision, who approved, what changed, and which hash verifies it.",
+  },
+  {
+    capability: "Enterprise write path",
+    incumbent:
+      "Incumbents often assume they own the workflow or the system of record.",
+    recallops:
+      "Keeps writes gated and tenant-shaped: dry-run by default, admin-key live mode, redacted ERP receipts.",
+  },
+];
+
+const commandProofs = [
+  {
+    label: "source evidence",
+    headline: "Every fact cites the complaint or shipment ledger",
+    copy: "The incident starts as source text and CSV data, not a hand-written demo state. RecallOps hashes the source packet before it moves.",
+  },
+  {
+    label: "risk veto",
+    headline: "Approval is impossible while coverage is incomplete",
+    copy: "The Risk Officer blocks the recall packet at 82% coverage, forces a re-plan, and only clears after the missing distributor file is recovered.",
+  },
+  {
+    label: "identity gate",
+    headline: "The human approval becomes part of the receipt",
+    copy: "Approvals can be sealed with a server-side admin key or OIDC/JWKS verification, then included in the recall audit chain.",
+  },
+  {
+    label: "ERP contract",
+    headline: "SAP and Oracle actions are provable without unsafe writes",
+    copy: "The public demo proves tenant-shaped payloads and live receiver receipts while keeping real customer ERP writes behind explicit configuration.",
+  },
+];
+
+const buyerOutcomes = [
+  {
+    team: "Quality and regulatory",
+    outcome: "Walk into a board review with one verifiable recall packet.",
+    proof:
+      "source digest, risk veto, approval receipt, jurisdiction rules, dispatch receipts",
+  },
+  {
+    team: "Supply chain",
+    outcome:
+      "Know exactly which lots, shipments, distributors, and regions are still unresolved.",
+    proof:
+      "coverage delta, affected regions, missing sources, final shipment ledger",
+  },
+  {
+    team: "Enterprise IT",
+    outcome:
+      "Integrate without replacing SAP, Oracle, QMS, or support systems.",
+    proof:
+      "adapter status, dry-run payloads, write gates, redacted transport receipts",
+  },
+  {
+    team: "Executives",
+    outcome: "See the decision, not a vague dashboard status.",
+    proof: "agent handoffs, re-plan evidence, final action, audit seal",
+  },
+];
+
+const deploymentPath = [
+  {
+    phase: "01",
+    title: "Read-only command layer",
+    copy: "Ingest complaints, supplier notices, shipment exports, and QMS records. Produce a source-cited incident packet without writing back.",
+  },
+  {
+    phase: "02",
+    title: "Controlled execution pilot",
+    copy: "Enable SAP/Oracle dry-runs, approval identity, dispatch receipts, and partner-AI review for one non-production recall workflow.",
+  },
+  {
+    phase: "03",
+    title: "Write-gated enterprise rollout",
+    copy: "Turn on tenant writes only after admin authorization, endpoint review, legal rule validation, and security approval.",
+  },
+];
+
 const operatingLayers = [
   {
     layer: "signal",
@@ -248,7 +385,7 @@ const productSchema = {
   operatingSystem: "Web",
   url: "https://recallops.gudman.xyz",
   description:
-    "AI product recall command center for SAP, Oracle SCM, QMS, support, and regulatory workflows.",
+    "Verifiable product recall command center for SAP, Oracle SCM, QMS, support, and regulatory workflows.",
   featureList: [
     "AI product recall management",
     "SAP and Oracle recall adapter proof",
@@ -273,42 +410,69 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
       />
       <section className="mast">
-        <div>
-          <p className="kicker">RecallOps | AI product recall command center</p>
-          <h1>Recall execution for teams that already run SAP and Oracle.</h1>
+        <div className="hero-copy">
+          <p className="kicker">RecallOps | verifiable recall command layer</p>
+          <h1>The proof layer above every product recall.</h1>
           <p className="lede">
-            Coordinate source evidence, lot traceability, risk vetoes, human
-            approvals, ERP holds, notifications, and regulator-ready proof from
-            one live agent room. The {packet.lot} drill below shows the system
-            blocking approval until coverage resolves and the audit seal
-            recomputes.
+            Oracle can hold the recall record. TrackWise, MasterControl, and ETQ
+            can hold the quality workflow. TraceLink and Trustwell can target
+            the response. RecallOps owns the missing control plane: live
+            decision orchestration, risk vetoes, human approval, ERP execution
+            gates, and a regulator-readable proof bundle.
           </p>
           <div className="hero-claims">
-            <span>multi-agent recall room</span>
-            <span>SAP/Oracle adapter proof</span>
-            <span>hash-linked audit receipts</span>
+            <a href={`${apiBase}/submission-proof`}>open live proof</a>
+            <a href={`${apiBase}/live-drill`}>fresh Band drill</a>
+            <a href={`${apiBase}/sap-api-hub`}>SAP sandbox proof</a>
           </div>
         </div>
-        <aside className="exposure">
+        <aside className="hero-proof-console">
           <span className="live-dot" />
-          <p className="kicker">exposure clock</p>
-          <strong>{packet.exposure_clock.unit_hours.toLocaleString()}</strong>
-          <span>unit-hours in market</span>
-          <dl>
-            <div>
-              <dt>Units</dt>
-              <dd>{packet.exposure_clock.units_in_market.toLocaleString()}</dd>
-            </div>
-            <div>
-              <dt>Hours</dt>
-              <dd>{packet.exposure_clock.hours_since_first_report}</dd>
-            </div>
-            <div>
-              <dt>Regions</dt>
-              <dd>{packet.final_traceability.regions}</dd>
-            </div>
-          </dl>
+          <p className="kicker">live proof console</p>
+          <strong>{packet.lot}</strong>
+          <span>risk veto cleared only after coverage reached 100%</span>
+          <div className="proof-stat-grid">
+            {proofStats.map((stat) => (
+              <div key={stat.label}>
+                <small>{stat.label}</small>
+                <b>{stat.value}</b>
+                <em>{stat.detail}</em>
+              </div>
+            ))}
+          </div>
+          <div className="proof-link-grid">
+            {proofLinks.map((link) => (
+              <a href={link.href} key={link.label}>
+                {link.label}
+              </a>
+            ))}
+          </div>
         </aside>
+      </section>
+
+      <section className="proof-strip">
+        <article>
+          <span>exposure clock</span>
+          <strong>{packet.exposure_clock.unit_hours.toLocaleString()}</strong>
+          <p>unit-hours in market</p>
+        </article>
+        <article>
+          <span>affected customers</span>
+          <strong>
+            {packet.final_traceability.affected_customers.toLocaleString()}
+          </strong>
+          <p>covered in final packet</p>
+        </article>
+        <article>
+          <span>receipts</span>
+          <strong>{packet.receipts.length}</strong>
+          <p>hash-linked decision records</p>
+        </article>
+        <article>
+          <span>audit seal</span>
+          <code>{packet.audit_hash.slice(0, 18)}...</code>
+          <p>recomputed by API</p>
+        </article>
       </section>
 
       <LiveDrill packet={packet} />
@@ -321,17 +485,20 @@ export default function Home() {
         <div className="panel-head">
           <div>
             <p className="kicker">category thesis</p>
-            <h2>Incumbents manage recalls. RecallOps proves decisions.</h2>
+            <h2>
+              Incumbents manage recalls. RecallOps proves command decisions.
+            </h2>
           </div>
-          <span className="mono-stat">6-market benchmark</span>
+          <span className="mono-stat">six-company synthesis</span>
         </div>
         <p className="category-copy">
-          Oracle, Honeywell TrackWise, TraceLink, Trustwell, MasterControl, and
-          ETQ all validate the market: recall buyers need traceability,
-          workflow, alerts, dashboards, compliance records, and quality-system
-          closure. RecallOps takes the next step: an auditable command layer
-          that shows how the decision was reached, which agent challenged it,
-          which ERP action was prepared, and which proof a regulator can verify.
+          The category is already real. Oracle formalizes recall records and
+          tasks. Honeywell validates AI-assisted regulated recall workflows.
+          TraceLink and Trustwell prove the need for targeted response.
+          MasterControl and ETQ prove that quality teams need compliance
+          closure. The opening is the layer between them: a command room that
+          makes the decision path inspectable before the recall propagates into
+          ERP, QMS, support, and regulator channels.
         </p>
         <div className="market-grid">
           {marketSignals.map((signal) => (
@@ -342,6 +509,24 @@ export default function Home() {
               <strong>{signal.product}</strong>
               <p>{signal.signal}</p>
               <small>{signal.recallops}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel capability-matrix">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">incumbent gap map</p>
+            <h2>What the market already expects, and what RecallOps adds</h2>
+          </div>
+        </div>
+        <div className="matrix-table">
+          {capabilityMatrix.map((row) => (
+            <article key={row.capability}>
+              <span>{row.capability}</span>
+              <p>{row.incumbent}</p>
+              <strong>{row.recallops}</strong>
             </article>
           ))}
         </div>
@@ -368,45 +553,59 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="panel command-proofs">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">proof-led architecture</p>
+            <h2>Designed so the strongest claim is always verifiable</h2>
+          </div>
+          <a href={`${apiBase}/proof`}>packet proof</a>
+        </div>
+        <div className="command-proof-grid">
+          {commandProofs.map((proof) => (
+            <article key={proof.label}>
+              <span>{proof.label}</span>
+              <strong>{proof.headline}</strong>
+              <p>{proof.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="panel buyer-proof">
         <div>
           <p className="kicker">why it can outrank</p>
           <h2>Built for the search intent incumbents answer only halfway</h2>
         </div>
         <div className="buyer-grid">
-          <article>
-            <span>for quality leaders</span>
-            <strong>Audit-ready evidence, not just workflow status</strong>
-            <p>
-              Quality teams can show the complaint facts, coverage gap,
-              regulatory veto, approval identity, and closure receipts in the
-              same packet.
-            </p>
-          </article>
-          <article>
-            <span>for supply chain</span>
-            <strong>Traceability gates before execution</strong>
-            <p>
-              Distribution and warehouse actions do not move until RecallOps
-              resolves affected lots, regions, customers, and missing files.
-            </p>
-          </article>
-          <article>
-            <span>for enterprise IT</span>
-            <strong>Layer above SAP, Oracle, QMS, and support</strong>
-            <p>
-              The product does not ask an enterprise to rip out systems of
-              record. It coordinates them and records the exact adapter payload.
-            </p>
-          </article>
-          <article>
-            <span>for executives</span>
-            <strong>Board-readable recall command record</strong>
-            <p>
-              Every high-risk incident becomes a concise, verifiable narrative:
-              what happened, who decided, what changed, and what proof remains.
-            </p>
-          </article>
+          {buyerOutcomes.map((buyer) => (
+            <article key={buyer.team}>
+              <span>{buyer.team}</span>
+              <strong>{buyer.outcome}</strong>
+              <p>{buyer.proof}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="panel deployment-path">
+        <div className="panel-head">
+          <div>
+            <p className="kicker">enterprise deployment path</p>
+            <h2>
+              Ambitious without pretending production controls are optional
+            </h2>
+          </div>
+          <span className="mono-stat">write-gated by design</span>
+        </div>
+        <div className="deployment-grid">
+          {deploymentPath.map((phase) => (
+            <article key={phase.phase}>
+              <span>{phase.phase}</span>
+              <strong>{phase.title}</strong>
+              <p>{phase.copy}</p>
+            </article>
+          ))}
         </div>
       </section>
 
