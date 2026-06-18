@@ -163,9 +163,11 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
   const sourceHash = getString(packet, "audit_hash");
   const incidentId = getString(packet, "incident_id");
   const roomHash =
+    getPathString(roomRun, ["run", "run_hash"]) ??
     getPathString(roomRun, ["recall_room_run", "run_hash"]) ??
     getPathString(roomRun, ["room_run", "run_hash"]) ??
     getString(roomRun, "run_hash") ??
+    getPathString(roomRun, ["run", "room", "room_hash"]) ??
     getPathString(roomRun, ["room", "room_hash"]) ??
     sourceHash;
   const filingHash =
@@ -173,16 +175,19 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     getString(filingPack, "pack_hash") ??
     sourceHash;
   const bandMode =
+    getPathString(roomRun, ["run", "band", "mode"]) ??
     getPathString(roomRun, ["recall_room_run", "band", "mode"]) ??
     getPathString(roomRun, ["band", "mode"]) ??
     getPathString(proof, ["recall_room_run", "band", "mode"]) ??
     "not run yet";
   const bandParticipants =
+    getPathNumber(roomRun, ["run", "band", "participant_count"]) ??
     getPathNumber(roomRun, ["recall_room_run", "band", "participant_count"]) ??
     getPathNumber(roomRun, ["band", "participant_count"]) ??
     getPathNumber(proof, ["band", "captured_run", "participant_count"]) ??
     0;
   const capturedRoom =
+    getPathString(roomRun, ["run", "band", "room_id"]) ??
     getPathString(proof, ["band", "captured_run", "room_id"]) ??
     getPathString(roomRun, ["band", "captured_room_id"]) ??
     "pending";
@@ -269,6 +274,7 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
         approvalKey: approvalKey.trim(),
         sourceHash: getPathString(nextEvidence, ["packet", "audit_hash"]),
         roomHash:
+          getPathString(nextRoomRun, ["run", "run_hash"]) ??
           getPathString(nextRoomRun, ["recall_room_run", "run_hash"]) ??
           getPathString(nextRoomRun, ["room_run", "run_hash"]) ??
           getString(nextRoomRun, "run_hash"),
