@@ -2,7 +2,7 @@ import type { Packet } from "./recall-data";
 import EnterpriseReadiness from "./enterprise-readiness";
 import LiveBandRunner from "./live-band-runner";
 import LiveDrill from "./live-drill";
-import SourceEvidenceCockpit from "./source-evidence-cockpit";
+import OperatorWorkflow from "./operator-workflow";
 
 type MarketSignal = {
   company: string;
@@ -58,7 +58,7 @@ const stageLabels: Record<Packet["events"][number]["stage"], string> = {
   evidence_extracted: "evidence",
   agent_recruited: "recruit",
   traceability_gap: "gap",
-  regulatory_veto: "veto",
+  regulatory_veto: "hold",
   traceability_resolved: "resolved",
   risk_approved: "approved",
   notice_drafted: "notice",
@@ -88,13 +88,13 @@ export default function ProductTabs({
         type="radio"
         name="recallops-tabs"
         id="tab-command"
-        defaultChecked
       />
       <input
         className="tab-input"
         type="radio"
         name="recallops-tabs"
         id="tab-evidence"
+        defaultChecked
       />
       <input
         className="tab-input"
@@ -116,11 +116,11 @@ export default function ProductTabs({
       />
 
       <div className="tab-list" role="tablist" aria-label="RecallOps sections">
-        <label htmlFor="tab-command" role="tab">
-          Live Command <span>drill and room proof</span>
-        </label>
         <label htmlFor="tab-evidence" role="tab">
-          Evidence <span>sources and receipts</span>
+          Interactive Demo <span>edit, run, approve</span>
+        </label>
+        <label htmlFor="tab-command" role="tab">
+          Scripted Room <span>walkthrough and proof</span>
         </label>
         <label htmlFor="tab-enterprise" role="tab">
           Enterprise <span>SAP, Oracle, identity</span>
@@ -142,7 +142,7 @@ export default function ProductTabs({
               <div className="panel-head">
                 <div>
                   <p className="kicker">Band transcript</p>
-                  <h2>Veto, re-plan, approval</h2>
+                  <h2>Hold, re-plan, approval</h2>
                 </div>
                 <span className="status-pill">{packet.decision.status}</span>
               </div>
@@ -193,7 +193,7 @@ export default function ProductTabs({
                 value={packet.receipts.length.toString()}
               />
               <ProofRow
-                label="veto"
+                label="hold"
                 value={packet.band_proof.veto_message_id}
               />
               <ProofRow
@@ -259,7 +259,7 @@ export default function ProductTabs({
         </section>
 
         <section className="tab-panel tab-evidence-panel">
-          <SourceEvidenceCockpit apiBase={apiBase} />
+          <OperatorWorkflow apiBase={apiBase} />
 
           <section className="panel command-proofs">
             <div className="panel-head">

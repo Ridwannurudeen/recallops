@@ -12,8 +12,8 @@ type SiteNavProps = {
 
 const navItems = [
   { id: "product", label: "Product", href: "/" },
-  { id: "console", label: "Console", href: "/console" },
-  { id: "demo", label: "Demo", href: "/demo/bat-4421" },
+  { id: "console", label: "Try Live", href: "/console" },
+  { id: "demo", label: "Replay", href: "/demo/bat-4421" },
   { id: "proof", label: "Proof", href: "/proof" },
   { id: "integrations", label: "Integrations", href: "/integrations" },
   { id: "security", label: "Security", href: "/security" },

@@ -141,12 +141,12 @@ export default function ConsolePage() {
 
       <section className="page-hero compact-page-hero">
         <div>
-          <p className="section-kicker">Interactive console</p>
-          <h1>Try a recall case against the live engine.</h1>
+          <p className="section-kicker">Interactive live demo</p>
+          <h1>Test RecallOps without URL flags or hidden modes.</h1>
           <p>
-            Edit source evidence, recompute traceability, create a case, inspect
-            proof artifacts, and prepare enterprise dry-runs from one operator
-            surface.
+            Edit source evidence, recompute traceability, create a case,
+            generate approval proof, and preview enterprise actions from one
+            operator surface.
           </p>
         </div>
       </section>

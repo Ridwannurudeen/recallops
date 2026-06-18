@@ -150,7 +150,7 @@ export default function Home() {
           </p>
           <div className="hero-actions-v2">
             <a className="primary-action" href="/console">
-              Try the live console
+              Try the interactive demo
             </a>
             <a className="secondary-action" href="/demo/bat-4421">
               Replay BAT-4421
@@ -227,7 +227,7 @@ export default function Home() {
             <h2>From incident intake to verifiable approval.</h2>
           </div>
           <a className="secondary-action" href="/console">
-            Open the interactive console
+            Open the live demo
           </a>
         </div>
         <div className="workflow-rail">
@@ -309,7 +309,7 @@ export default function Home() {
             remaining exceptions, ERP hold payload, and identity are sealed into
             the receipt.
           </p>
-          <a href="/demo/bat-4421">Approve recall action in the replay</a>
+          <a href="/console">Approve recall action in the live demo</a>
         </article>
       </section>
 
@@ -398,7 +398,7 @@ export default function Home() {
         </div>
         <div className="landing-final-actions">
           <a className="primary-action" href="/console">
-            Try the console
+            Try the interactive demo
           </a>
           <a className="secondary-action" href="/proof">
             Inspect proof

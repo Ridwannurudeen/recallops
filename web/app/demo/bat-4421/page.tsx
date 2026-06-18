@@ -321,9 +321,9 @@ export default function Bat4421DemoPage() {
           <p className="section-kicker">BAT-4421 incident replay</p>
           <h1>Watch the recall move from blocked to approved.</h1>
           <p>
-            Use Read mode to follow the story in plain language. Use Write mode
-            for a guided flow: build a case, run a safety check, then request a
-            live hold only if you're ready.
+            Use this page for the stable BAT-4421 story. For the practical
+            operator workflow, open the live demo and test the case flow without
+            touching URL modes.
           </p>
         </div>
         {mode === "read" ? (
@@ -339,14 +339,14 @@ export default function Bat4421DemoPage() {
           type="button"
           onClick={() => setModeAndUrl("read")}
         >
-          Read mode
+          Scripted walkthrough
         </button>
         <button
           aria-pressed={mode === "write"}
           type="button"
           onClick={() => setModeAndUrl("write")}
         >
-          Write mode
+          Internal write check
         </button>
       </section>
 
@@ -354,7 +354,7 @@ export default function Bat4421DemoPage() {
         <>
           <section className="panel read-brief">
             <div className="panel-head">
-              <p className="kicker">Read mode</p>
+              <p className="kicker">scripted walkthrough</p>
               <h2>Plain-language incident story</h2>
             </div>
             <p>
