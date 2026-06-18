@@ -32,6 +32,7 @@ from recallops.partner_ai import partner_ai_status as current_partner_ai_status
 from recallops.partner_ai import run_partner_ai
 from recallops.rate_limit import SpendLimitError, acquire_spend_permit, spend_limit_status
 from recallops.rules import assess_rules
+from recallops.sap_sandbox import run_sap_api_hub_probe, sap_api_hub_status
 from recallops.source_evidence import (
     DEFAULT_COMPLAINT_TEXT,
     DEFAULT_RECOVERED_SHIPMENT_CSV,
@@ -222,6 +223,7 @@ def readiness() -> dict[str, object]:
         "spend_limits": spend_limits(),
         "identity": identity_status(),
         "erp_contract": contract_status(),
+        "sap_api_hub": sap_api_hub_status(),
     }
 
 
@@ -235,6 +237,11 @@ def enterprise_sync_dry_run() -> dict[str, object]:
         dry_run=True,
         targets=("sap", "oracle"),
     )
+
+
+@app.get("/api/sap-api-hub")
+def sap_api_hub() -> dict[str, object]:
+    return run_sap_api_hub_probe()
 
 
 @app.post("/api/enterprise-sync")
@@ -503,6 +510,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     approval_verification = verify_approval_receipt(approval)
     approval_identity = identity_status()
     erp_contract = contract_status()
+    sap_api_hub = run_sap_api_hub_probe()
     fresh_band_status = live_drill_status()
     latest_fresh_run = fresh_band_status["latest_run"]
     captured_run = captured_band_proof()
@@ -548,6 +556,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         "enterprise_sync": enterprise_sync,
         "identity": approval_identity,
         "erp_contract": erp_contract,
+        "sap_api_hub": sap_api_hub,
         "production_readiness": ops_readiness(),
         "approval_receipt": {
             "receipt": approval.to_dict(),
@@ -575,6 +584,7 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             ),
             "identity_gate_ready": approval_identity["approval_gate_ready"],
             "erp_contract_live_write_verified": erp_contract["latest_pair_verified"],
+            "sap_api_hub_sandbox_verified": sap_api_hub["verified"],
         },
     }
 

@@ -297,6 +297,7 @@ export default function Home() {
             <a href={`${apiBase}/enterprise-sync`}>erp sync</a>
             <a href={`${apiBase}/identity/status`}>identity</a>
             <a href={`${apiBase}/erp-contract/receipts`}>erp receipts</a>
+            <a href={`${apiBase}/sap-api-hub`}>sap sandbox</a>
           </div>
         </aside>
       </section>

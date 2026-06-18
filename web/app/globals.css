@@ -1399,6 +1399,15 @@ h2 {
   .runner-status {
     justify-items: start;
   }
+
+  .readiness-panel .panel-head {
+    flex-direction: column;
+  }
+
+  .readiness-links {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

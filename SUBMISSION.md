@@ -42,7 +42,7 @@ approval receipt, captured Band proof, latest fresh Band drill status, partner
 AI status, and submission gates into one judge-readable JSON object.
 It also includes deterministic jurisdiction-rule checks, dry-run dispatch
 receipts, SAP/Oracle sync payloads, identity-gate status, ERP contract
-receiver receipts, and production adapter readiness.
+receiver receipts, SAP API Hub sandbox-read proof, and production adapter readiness.
 
 ## Agents
 
@@ -68,6 +68,7 @@ receiver receipts, and production adapter readiness.
 - Partner AI execution is wired as a real key-gated path: Featherless reviews the complaint text as the Evidence Agent, and AI/ML API reviews the shipment CSVs as the Regulatory/Risk Officer. The cockpit exposes provider status, model IDs, response hashes, and compact JSON outputs when those calls run.
 - Submission proof endpoint: safe GET bundle for judges; live POST bundle for a fresh partner-AI proof run.
 - Case persistence, jurisdiction rules, dry-run dispatch receipts, integration readiness, SAP/Oracle recall payloads, identity-gated approvals, ERP contract receiver receipts, and spend controls are exposed as production-hardening surfaces. Live SAP/Oracle writes are implemented behind tenant endpoint configuration plus a server-side admin gate; the public demo can exercise the live adapter path against a tenant-shaped contract receiver and stays away from real customer ERP writes unless an approved tenant is configured.
+- SAP Business Accelerator Hub access is used honestly as a live S/4HANA Cloud sandbox read proof via `/api/sap-api-hub`; it is not represented as a customer S/4HANA tenant write.
 - Enterprise identity is implemented as a protected approval path: `/api/identity-approval` accepts either a server-side approval admin key or an RS256 OIDC token verified through JWKS, then seals the verified identity into the approval receipt hash.
 - Cross-framework support is the target adapter architecture: current demo logic runs through Band SDK and deterministic role logic, with Evidence mapped to a Pydantic AI adapter target, Traceability to a LangGraph adapter target, and Risk review to a CrewAI adapter target.
 - The deployed packet reports whether provider keys are configured, and does not claim partner LLM usage when the deterministic parser handled the run.
