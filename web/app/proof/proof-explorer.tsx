@@ -37,6 +37,19 @@ type SubmissionProof = {
     verification: Verification;
   };
   rule_assessment: Record<string, unknown>;
+  recall_room_run: {
+    run_hash: string;
+    verification: Verification;
+    band: {
+      mode: string;
+      participant_count: number;
+    };
+  };
+  filing_pack: {
+    pack_hash: string;
+    verification: Verification;
+    filings: Record<string, unknown>[];
+  };
   dispatch_receipts: Record<string, unknown>[];
   enterprise_sync: {
     mode?: string;
@@ -123,6 +136,18 @@ export default function ProofExplorer() {
         detail:
           "Complaint, shipment CSV, recovered distributor file, citations.",
         value: proof.source_evidence.audit_hash,
+      },
+      {
+        label: "Recall room run",
+        status: proof.recall_room_run.verification.ok ? "ok" : "warn",
+        detail: `${proof.recall_room_run.band.mode.replaceAll("_", " ")} with ${proof.recall_room_run.band.participant_count} Band agents referenced.`,
+        value: proof.recall_room_run.run_hash,
+      },
+      {
+        label: "Filing pack",
+        status: proof.filing_pack.verification.ok ? "ok" : "warn",
+        detail: `${proof.filing_pack.filings.length} regulator, distributor, and applicability drafts from the source packet.`,
+        value: proof.filing_pack.pack_hash,
       },
       {
         label: "Decision events",

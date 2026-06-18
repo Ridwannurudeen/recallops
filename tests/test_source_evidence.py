@@ -7,6 +7,7 @@ from recallops.source_evidence import (
     build_source_evidence_packet,
     verify_source_evidence_digest,
 )
+from recallops.notifications import build_dispatch_receipts
 
 
 def test_source_evidence_packet_computes_traceability_from_sources() -> None:
@@ -56,6 +57,31 @@ def test_approval_receipt_hashes_source_packet() -> None:
     assert receipt.approval_id.startswith(f"approval-{packet.audit_hash[:12]}")
     assert receipt.source_audit_hash == packet.audit_hash
     assert verify_approval_receipt(receipt)["ok"] is True
+
+
+def test_dispatch_receipts_are_source_packet_specific() -> None:
+    packet = build_source_evidence_packet(
+        complaint_text=(
+            "C-900 | product: Harbor Sensor | lot: LOT-900 | "
+            "defect: cracked housing | severity: critical"
+        ),
+        shipment_csv=(
+            "source,distributor,region,customers,units,status\n"
+            "SHIP-900,North Hub,US-West,10,100,traced\n"
+        ),
+        recovered_shipment_csv=(
+            "source,distributor,region,customers,units,status\n"
+            "SHIP-900,North Hub,US-West,10,100,traced\n"
+        ),
+    )
+
+    receipts = build_dispatch_receipts(packet)
+
+    assert receipts[0].status == "prepared"
+    assert (
+        receipts[0].payload_hash
+        != build_dispatch_receipts(build_source_evidence_packet())[0].payload_hash
+    )
 
 
 def test_partner_ai_status_never_exposes_keys(monkeypatch: pytest.MonkeyPatch) -> None:

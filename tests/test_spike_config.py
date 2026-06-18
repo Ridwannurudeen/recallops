@@ -98,6 +98,28 @@ ws_url: "wss://band.example/socket"
     assert config.ws_url == "wss://band.example/socket"
 
 
+def test_spike_incident_can_be_parameterized() -> None:
+    incident = band_spike._coerce_incident(
+        {
+            "product": "Harbor Sensor",
+            "lot": "LOT-900",
+            "defect": "cracked housing",
+            "severity": "critical",
+            "complaint_count": 1,
+            "shipped_units": 200,
+            "initial_coverage_percent": 50,
+            "untraced_units": 100,
+            "recovered_units": 100,
+            "final_coverage_percent": 100,
+        }
+    )
+
+    assert incident.product == "Harbor Sensor"
+    assert incident.lot == "LOT-900"
+    assert incident.initial_coverage_percent == 50
+    assert incident.untraced_units == 100
+
+
 @pytest.mark.anyio("asyncio")
 async def test_run_spike_executes_five_agent_live_chain(
     monkeypatch: pytest.MonkeyPatch,

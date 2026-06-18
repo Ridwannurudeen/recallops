@@ -39,15 +39,36 @@ class SpikeConfig:
     ws_url: str
 
 
+@dataclass(frozen=True)
+class SpikeIncident:
+    product: str
+    lot: str
+    defect: str
+    severity: str
+    complaint_count: int
+    shipped_units: int
+    initial_coverage_percent: int
+    untraced_units: int
+    recovered_units: int
+    final_coverage_percent: int
+
+
 class ConfigError(ValueError):
     pass
 
 
 class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
-    def __init__(self, *, commander_id: str, traceability_id: str) -> None:
+    def __init__(
+        self,
+        *,
+        commander_id: str,
+        traceability_id: str,
+        incident: SpikeIncident,
+    ) -> None:
         super().__init__()
         self.commander_id = commander_id
         self.traceability_id = traceability_id
+        self.incident = incident
 
     async def on_message(
         self,
@@ -66,7 +87,11 @@ class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
             return
 
         await tools.send_event(
-            content="Evidence extracted product, defect, lot BAT-4421, and critical severity.",
+            content=(
+                f"Evidence extracted product {self.incident.product}, defect "
+                f"{self.incident.defect}, lot {self.incident.lot}, and "
+                f"{self.incident.severity} severity."
+            ),
             message_type="task",
             metadata={"spike": "recallops", "stage": "evidence_extracted"},
         )
@@ -80,7 +105,8 @@ class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
         )
         await tools.send_message(
             content=(
-                "LIVE_EVIDENCE_ACK extracted three overheating complaints for BAT-4421. "
+                f"LIVE_EVIDENCE_ACK extracted {self.incident.complaint_count} "
+                f"{self.incident.defect} complaint(s) for {self.incident.lot}. "
                 "RECALLOPS_TRACEABILITY Please map shipped units, open stock, and gaps."
             ),
             mentions=[commander, traceability],
@@ -88,10 +114,11 @@ class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
 
 
 class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
-    def __init__(self, *, commander_id: str, risk_id: str) -> None:
+    def __init__(self, *, commander_id: str, risk_id: str, incident: SpikeIncident) -> None:
         super().__init__()
         self.commander_id = commander_id
         self.risk_id = risk_id
+        self.incident = incident
 
     async def on_message(
         self,
@@ -115,13 +142,16 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
 
     async def _send_gap(self, tools: AgentToolsProtocol) -> None:
         await tools.send_event(
-            content="Traceability found 4,800 shipped units but only 82% shipment coverage.",
+            content=(
+                f"Traceability found {self.incident.shipped_units:,} shipped units but only "
+                f"{self.incident.initial_coverage_percent}% shipment coverage."
+            ),
             message_type="task",
             metadata={
                 "spike": "recallops",
                 "stage": "traceability_gap",
-                "coverage_percent": 82,
-                "untraced_units": 864,
+                "coverage_percent": self.incident.initial_coverage_percent,
+                "untraced_units": self.incident.untraced_units,
             },
         )
         await tools.add_participant(self.risk_id)
@@ -132,8 +162,9 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
         risk = _participant_mention(_find_configured_participant(participants, self.risk_id))
         await tools.send_message(
             content=(
-                "LIVE_TRACEABILITY_GAP mapped 4,800 shipped units across 6 regions, "
-                "but 864 units are still untraced. RECALLOPS_RISK Please review recall readiness."
+                f"LIVE_TRACEABILITY_GAP mapped {self.incident.shipped_units:,} shipped units, "
+                f"but {self.incident.untraced_units} units are still untraced. "
+                "RECALLOPS_RISK Please review recall readiness."
             ),
             mentions=[commander, risk],
         )
@@ -145,18 +176,22 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
         )
         risk = _participant_mention(_find_configured_participant(participants, self.risk_id))
         await tools.send_event(
-            content="Traceability recovered the Kestrel Distributor file and restored 100% coverage.",
+            content=(
+                f"Traceability recovered {self.incident.recovered_units} units and restored "
+                f"{self.incident.final_coverage_percent}% coverage."
+            ),
             message_type="task",
             metadata={
                 "spike": "recallops",
                 "stage": "traceability_resolved",
-                "coverage_percent": 100,
-                "recovered_units": 864,
+                "coverage_percent": self.incident.final_coverage_percent,
+                "recovered_units": self.incident.recovered_units,
             },
         )
         await tools.send_message(
             content=(
-                "LIVE_TRACEABILITY_RESOLVED recovered the missing distributor file; coverage is 100%. "
+                f"LIVE_TRACEABILITY_RESOLVED recovered the missing source file; coverage is "
+                f"{self.incident.final_coverage_percent}%. "
                 "RECALLOPS_APPROVAL Please clear the regulated recall path."
             ),
             mentions=[commander, risk],
@@ -164,11 +199,19 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
 
 
 class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
-    def __init__(self, *, commander_id: str, traceability_id: str, communications_id: str) -> None:
+    def __init__(
+        self,
+        *,
+        commander_id: str,
+        traceability_id: str,
+        communications_id: str,
+        incident: SpikeIncident,
+    ) -> None:
         super().__init__()
         self.commander_id = commander_id
         self.traceability_id = traceability_id
         self.communications_id = communications_id
+        self.incident = incident
 
     async def on_message(
         self,
@@ -199,18 +242,22 @@ class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
             _find_configured_participant(participants, self.traceability_id)
         )
         await tools.send_event(
-            content="Risk vetoed the recall plan while 864 units remained untraced.",
+            content=(
+                f"Risk raised a human-review hold while {self.incident.untraced_units} "
+                "units remained untraced."
+            ),
             message_type="task",
             metadata={
                 "spike": "recallops",
                 "stage": "regulatory_veto",
                 "veto": True,
-                "untraced_units": 864,
+                "untraced_units": self.incident.untraced_units,
             },
         )
         await tools.send_message(
             content=(
-                "LIVE_RISK_VETO customer notice is blocked while 864 units remain untraced. "
+                f"LIVE_RISK_VETO customer notice is blocked while "
+                f"{self.incident.untraced_units} units remain untraced. "
                 "RECALLOPS_REPLAN Traceability must close the distributor gap."
             ),
             mentions=[commander, traceability],
@@ -232,17 +279,18 @@ class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
         )
         await tools.send_message(
             content=(
-                "LIVE_RISK_APPROVED coverage is complete; RECALLOPS_COMMS draft regulator, "
-                "customer, and warehouse notices."
+                f"LIVE_RISK_APPROVED {self.incident.lot} coverage is complete; "
+                "RECALLOPS_COMMS draft regulator, customer, and warehouse notices."
             ),
             mentions=[commander, communications],
         )
 
 
 class CommunicationsSpikeAdapter(SimpleAdapter[HistoryProvider]):
-    def __init__(self, *, commander_id: str) -> None:
+    def __init__(self, *, commander_id: str, incident: SpikeIncident) -> None:
         super().__init__()
         self.commander_id = commander_id
+        self.incident = incident
 
     async def on_message(
         self,
@@ -272,7 +320,7 @@ class CommunicationsSpikeAdapter(SimpleAdapter[HistoryProvider]):
         await tools.send_message(
             content=(
                 "SPIKE_DONE LIVE_COMMS_NOTICE drafted regulator notice, customer stop-use notice, "
-                "and warehouse quarantine order for BAT-4421."
+                f"and warehouse quarantine order for {self.incident.lot}."
             ),
             mentions=[commander],
         )
@@ -329,12 +377,18 @@ def _load_agent(raw: dict[str, Any], key: str) -> BandAgentCredentials:
     return BandAgentCredentials(agent_id=agent_id, api_key=api_key)
 
 
-async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, Any]:
+async def run_spike(
+    config: SpikeConfig,
+    timeout_seconds: float,
+    incident: SpikeIncident | dict[str, object] | None = None,
+) -> dict[str, Any]:
+    active_incident = _coerce_incident(incident)
     agents = [
         Agent.create(
             adapter=EvidenceSpikeAdapter(
                 commander_id=config.commander.agent_id,
                 traceability_id=config.traceability.agent_id,
+                incident=active_incident,
             ),
             agent_id=config.evidence.agent_id,
             api_key=config.evidence.api_key,
@@ -345,6 +399,7 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
             adapter=TraceabilitySpikeAdapter(
                 commander_id=config.commander.agent_id,
                 risk_id=config.risk.agent_id,
+                incident=active_incident,
             ),
             agent_id=config.traceability.agent_id,
             api_key=config.traceability.api_key,
@@ -356,6 +411,7 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
                 commander_id=config.commander.agent_id,
                 traceability_id=config.traceability.agent_id,
                 communications_id=config.communications.agent_id,
+                incident=active_incident,
             ),
             agent_id=config.risk.agent_id,
             api_key=config.risk.api_key,
@@ -363,7 +419,10 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
             rest_url=config.rest_url,
         ),
         Agent.create(
-            adapter=CommunicationsSpikeAdapter(commander_id=config.commander.agent_id),
+            adapter=CommunicationsSpikeAdapter(
+                commander_id=config.commander.agent_id,
+                incident=active_incident,
+            ),
             agent_id=config.communications.agent_id,
             api_key=config.communications.api_key,
             ws_url=config.ws_url,
@@ -395,7 +454,7 @@ async def run_spike(config: SpikeConfig, timeout_seconds: float) -> dict[str, An
         )
         commander_message = await tools.send_message(
             content=(
-                "RECALLOPS_EVIDENCE Start the BAT-4421 live Band workflow. "
+                f"RECALLOPS_EVIDENCE Start the {active_incident.lot} live Band workflow. "
                 "Extract incident facts and recruit Traceability if severity requires it."
             ),
             mentions=[evidence_mention],
@@ -464,6 +523,36 @@ def _find_context_id(context_items: list[dict[str, Any]], marker: str) -> str | 
         if marker in content:
             return str(item.get("id") or "")
     return None
+
+
+def _coerce_incident(incident: SpikeIncident | dict[str, object] | None) -> SpikeIncident:
+    if isinstance(incident, SpikeIncident):
+        return incident
+    if incident is None:
+        return SpikeIncident(
+            product="Northstar Home Battery Pack",
+            lot="BAT-4421",
+            defect="overheating during overnight charge",
+            severity="critical",
+            complaint_count=3,
+            shipped_units=4_800,
+            initial_coverage_percent=82,
+            untraced_units=864,
+            recovered_units=864,
+            final_coverage_percent=100,
+        )
+    return SpikeIncident(
+        product=str(incident["product"]),
+        lot=str(incident["lot"]),
+        defect=str(incident["defect"]),
+        severity=str(incident["severity"]),
+        complaint_count=int(incident["complaint_count"]),
+        shipped_units=int(incident["shipped_units"]),
+        initial_coverage_percent=int(incident["initial_coverage_percent"]),
+        untraced_units=int(incident["untraced_units"]),
+        recovered_units=int(incident["recovered_units"]),
+        final_coverage_percent=int(incident["final_coverage_percent"]),
+    )
 
 
 def parse_args() -> argparse.Namespace:

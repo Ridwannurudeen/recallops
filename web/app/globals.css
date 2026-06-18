@@ -1235,7 +1235,7 @@ h2 {
 
 .write-action-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px;
   margin-top: 14px;
 }
@@ -1403,6 +1403,112 @@ h2 {
   max-height: 260px;
   overflow: auto;
   white-space: pre-wrap;
+}
+
+.judge-artifact-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.judge-artifact-card {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(230, 252, 248, 0.04);
+}
+
+.judge-artifact-card > span,
+.judge-artifact-card span,
+.artifact-card-head span,
+.artifact-event-list span,
+.filing-grid span {
+  color: var(--gilt-2);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.judge-artifact-card > strong,
+.artifact-card-head strong,
+.artifact-event-list strong,
+.filing-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: #fff7e8;
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.judge-artifact-card p,
+.artifact-event-list p,
+.filing-grid p,
+.filing-grid small,
+.artifact-warning {
+  display: block;
+  margin: 8px 0 0;
+  color: #d9c8a8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.artifact-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.artifact-metrics code,
+.artifact-card-head code {
+  border: 1px solid rgba(125, 211, 252, 0.16);
+  border-radius: 999px;
+  padding: 5px 7px;
+  color: #91c4bd;
+  background: rgba(125, 211, 252, 0.055);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 10px;
+}
+
+.artifact-event-list,
+.filing-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.artifact-event-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.artifact-event-list div,
+.filing-grid article {
+  min-width: 0;
+  border: 1px solid rgba(125, 211, 252, 0.12);
+  border-radius: 6px;
+  padding: 10px;
+  background: rgba(7, 16, 25, 0.38);
+}
+
+.artifact-warning {
+  color: #ffb0a8;
+}
+
+.filing-pack-card {
+  margin-top: 12px;
+}
+
+.artifact-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: start;
+  justify-content: space-between;
+}
+
+.filing-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .read-brief > p {
@@ -3864,6 +3970,27 @@ html[data-theme="light"] .write-output {
   color: #071019;
 }
 
+html[data-theme="light"] .judge-artifact-card,
+html[data-theme="light"] .artifact-event-list div,
+html[data-theme="light"] .filing-grid article {
+  border-color: rgba(111, 134, 153, 0.22);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+html[data-theme="light"] .judge-artifact-card > strong,
+html[data-theme="light"] .artifact-card-head strong,
+html[data-theme="light"] .artifact-event-list strong,
+html[data-theme="light"] .filing-grid strong {
+  color: #071019;
+}
+
+html[data-theme="light"] .judge-artifact-card p,
+html[data-theme="light"] .artifact-event-list p,
+html[data-theme="light"] .filing-grid p,
+html[data-theme="light"] .filing-grid small {
+  color: #45576a;
+}
+
 html[data-theme="light"] .digest-card,
 html[data-theme="light"] .proof-label {
   background: rgba(9, 105, 218, 0.08);
@@ -3964,6 +4091,8 @@ html[data-theme="light"] .trace-dot.traced {
   .citation-ledger,
   .write-summary-grid,
   .write-auth-grid,
+  .judge-artifact-grid,
+  .filing-grid,
   .read-incident-grid,
   .approval-strip,
   .fresh-proof dl {
@@ -4031,6 +4160,9 @@ html[data-theme="light"] .trace-dot.traced {
   .csv-upload-grid,
   .write-action-grid,
   .write-auth-grid,
+  .judge-artifact-grid,
+  .artifact-event-list,
+  .filing-grid,
   .write-summary-grid,
   .read-incident-grid,
   .buyer-grid,

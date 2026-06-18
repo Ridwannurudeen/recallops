@@ -225,6 +225,8 @@ export const fragmentedSurfaces = [
 export const proofExplorerSections = [
   "Band room",
   "Source packet",
+  "Recall room run",
+  "Filing pack",
   "Decision events",
   "Veto and approval",
   "Notices",
@@ -305,6 +307,26 @@ export const docsEndpoints = [
     method: "POST",
     path: "/api/source-evidence",
     purpose: "Recompute the source packet and optionally run partner AI.",
+  },
+  {
+    method: "GET",
+    path: "/api/recall-room/run",
+    purpose: "Default source-packet-to-room run with Band proof binding.",
+  },
+  {
+    method: "POST",
+    path: "/api/recall-room/run",
+    purpose: "Run a recall room from edited evidence and optional live Band.",
+  },
+  {
+    method: "GET",
+    path: "/api/filing-pack",
+    purpose: "Default multi-jurisdiction recall filing pack.",
+  },
+  {
+    method: "POST",
+    path: "/api/filing-pack",
+    purpose: "Draft filing pack from edited complaint and shipment evidence.",
   },
   {
     method: "GET",

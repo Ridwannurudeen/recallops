@@ -146,6 +146,82 @@ def test_source_evidence_recompute_generates_parameterized_room() -> None:
     assert len(body["room"]["room_hash"]) == 64
 
 
+def test_recall_room_run_binds_source_packet_to_band_reference() -> None:
+    response = post(
+        "/api/recall-room/run",
+        {
+            "complaint_text": (
+                "C-900 | product: Harbor Sensor | lot: LOT-900 | "
+                "defect: cracked housing | severity: critical"
+            ),
+            "shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,South Hub,US-East,10,100,missing\n"
+            ),
+            "recovered_shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,South Hub,US-East,10,100,traced\n"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    run = body["run"]
+    assert body["packet"]["incident_id"] == "INC-SOURCE-LOT-900"
+    assert run["proof_kind"] == "source_packet_to_recall_room_run"
+    assert run["verification"]["ok"] is True
+    assert run["room"]["incident_id"] == "INC-SOURCE-LOT-900"
+    assert run["band"]["mode"] == "captured_band_reference_with_parameterized_source_room"
+    assert run["band"]["participant_count"] == 5
+    assert len(run["run_hash"]) == 64
+
+
+def test_recall_room_run_live_band_falls_back_honestly_when_disabled() -> None:
+    response = post("/api/recall-room/run", {"run_live_band": True})
+
+    assert response.status_code == 200
+    run = response.json()["run"]
+    assert run["verification"]["ok"] is True
+    assert run["band"]["live_error"]["status_code"] == 503
+    assert "disabled" in run["band"]["live_error"]["detail"]
+
+
+def test_filing_pack_generates_multijurisdiction_drafts() -> None:
+    response = post(
+        "/api/filing-pack",
+        {
+            "complaint_text": (
+                "C-900 | product: Harbor Sensor | lot: LOT-900 | "
+                "defect: cracked housing | severity: critical"
+            ),
+            "shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,Euro Hub,EU-Central,10,100,missing\n"
+            ),
+            "recovered_shipment_csv": (
+                "source,distributor,region,customers,units,status\n"
+                "SHIP-900,North Hub,US-West,10,100,traced\n"
+                "SHIP-901,Euro Hub,EU-Central,10,100,traced\n"
+            ),
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    filing_pack = body["filing_pack"]
+    filing_ids = {filing["id"] for filing in filing_pack["filings"]}
+    assert filing_pack["proof_kind"] == "multi_jurisdiction_recall_filing_pack"
+    assert filing_pack["verification"]["ok"] is True
+    assert "cpsc-15b-draft" in filing_ids
+    assert "eu-safety-gate-draft" in filing_ids
+    assert "Harbor Sensor" in filing_pack["notices"][0]["draft"]
+    assert len(filing_pack["pack_hash"]) == 64
+
+
 def test_source_evidence_recompute_rejects_bad_csv() -> None:
     response = post(
         "/api/source-evidence",
@@ -364,7 +440,11 @@ def test_submission_proof_endpoint_returns_safe_bundle() -> None:
     assert body["packet"]["verification"]["ok"] is True
     assert body["source_evidence"]["verification"]["ok"] is True
     assert body["approval_receipt"]["verification"]["ok"] is True
+    assert body["recall_room_run"]["verification"]["ok"] is True
+    assert body["filing_pack"]["verification"]["ok"] is True
     assert body["checks"]["captured_band_has_five_agents"] is True
+    assert body["checks"]["recall_room_run_ok"] is True
+    assert body["checks"]["filing_pack_ok"] is True
     assert body["checks"]["rules_approval_ready"] is True
     assert body["checks"]["dispatch_receipts_prepared"] is True
     assert body["checks"]["sap_oracle_payloads_prepared"] is True

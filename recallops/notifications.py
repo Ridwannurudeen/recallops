@@ -4,7 +4,6 @@ import hashlib
 import json
 from dataclasses import asdict, dataclass
 
-from recallops import build_recall_packet
 from recallops.source_evidence import SourceEvidencePacket
 
 
@@ -22,8 +21,7 @@ class DispatchReceipt:
 
 
 def build_dispatch_receipts(packet: SourceEvidencePacket) -> tuple[DispatchReceipt, ...]:
-    recall_packet = build_recall_packet()
-    notices = recall_packet.notices
+    notices = _notices(packet)
     ready = packet.final_traceability.coverage_percent == 100
     return (
         _receipt(
@@ -45,6 +43,20 @@ def build_dispatch_receipts(packet: SourceEvidencePacket) -> tuple[DispatchRecei
             ready=ready,
         ),
     )
+
+
+def _notices(packet: SourceEvidencePacket) -> dict[str, str]:
+    facts = {fact.key: fact.value for fact in packet.facts}
+    product = facts["product"]
+    lot = facts["lot"]
+    defect = facts["defect"]
+    return {
+        "regulator": (
+            f"Notify regional product-safety authority of {lot} {product} risk: {defect}."
+        ),
+        "customer": f"Stop using {product} lot {lot} pending recall instructions.",
+        "warehouse": f"Quarantine remaining inventory for {product} lot {lot}.",
+    }
 
 
 def _receipt(

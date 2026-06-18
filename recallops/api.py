@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Literal
 
@@ -25,6 +24,7 @@ from recallops.erp_contract import (
     record_contract_write,
     require_contract_authorization,
 )
+from recallops.filing_pack import build_filing_pack, verify_filing_pack
 from recallops.identity import IdentityError, identity_status, resolve_approval_identity
 from recallops.live_drill import LiveDrillError, live_drill_status, run_live_drill
 from recallops.live_proof import captured_band_proof
@@ -32,6 +32,12 @@ from recallops.notifications import build_dispatch_receipts
 from recallops.partner_ai import partner_ai_status as current_partner_ai_status
 from recallops.partner_ai import run_partner_ai
 from recallops.rate_limit import SpendLimitError, acquire_spend_permit, spend_limit_status
+from recallops.recall_room import (
+    build_recall_room_run,
+    build_source_room,
+    spike_incident_payload,
+    verify_recall_room_run,
+)
 from recallops.rules import assess_rules
 from recallops.sap_sandbox import run_sap_api_hub_probe, sap_api_hub_status
 from recallops.source_evidence import (
@@ -54,6 +60,14 @@ class SourceEvidenceRequest(BaseModel):
     shipment_csv: str | None = None
     recovered_shipment_csv: str | None = None
     use_partner_ai: bool = False
+
+
+class RecallRoomRunRequest(SourceEvidenceRequest):
+    run_live_band: bool = False
+
+
+class FilingPackRequest(SourceEvidenceRequest):
+    pass
 
 
 class ApprovalReceiptRequest(BaseModel):
@@ -155,7 +169,7 @@ def source_evidence() -> dict[str, object]:
             "recovered_shipment_csv": DEFAULT_RECOVERED_SHIPMENT_CSV,
         },
         "packet": packet.to_dict(),
-        "room": _source_room_from_packet(packet, rule_assessment),
+        "room": build_source_room(packet, rule_assessment),
         "verification": verify_source_evidence_digest(packet),
     }
 
@@ -192,8 +206,150 @@ def recompute_source_evidence(request: SourceEvidenceRequest) -> dict[str, objec
             "recovered_shipment_csv": recovered_shipment_csv,
         },
         "packet": packet.to_dict(),
-        "room": _source_room_from_packet(packet, rule_assessment),
+        "room": build_source_room(packet, rule_assessment),
         "verification": verify_source_evidence_digest(packet),
+    }
+
+
+@app.get("/api/recall-room/run")
+def default_recall_room_run() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    rule_assessment = assess_rules(source_packet)
+    run = build_recall_room_run(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        live_band_status=live_drill_status(),
+    )
+    return {
+        "inputs": {
+            "complaint_text": DEFAULT_COMPLAINT_TEXT,
+            "shipment_csv": DEFAULT_SHIPMENT_CSV,
+            "recovered_shipment_csv": DEFAULT_RECOVERED_SHIPMENT_CSV,
+        },
+        "packet": source_packet.to_dict(),
+        "rule_assessment": rule_assessment,
+        "run": run,
+    }
+
+
+@app.post("/api/recall-room/run")
+async def run_recall_room(request: RecallRoomRunRequest) -> dict[str, object]:
+    try:
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        source_packet = build_source_evidence_packet(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+        )
+        rule_assessment = assess_rules(source_packet)
+        fresh_band_run = None
+        live_band_error = None
+        if request.run_live_band:
+            try:
+                fresh_band_run = await run_live_drill(
+                    incident=spike_incident_payload(source_packet)
+                )
+            except LiveDrillError as exc:
+                live_band_error = {
+                    "status_code": exc.status_code,
+                    "detail": exc.detail,
+                }
+        run = build_recall_room_run(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            live_band_status=live_drill_status(),
+            fresh_band_run=fresh_band_run,
+            live_band_error=live_band_error,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "inputs": {
+            "complaint_text": complaint_text,
+            "shipment_csv": shipment_csv,
+            "recovered_shipment_csv": recovered_shipment_csv,
+        },
+        "packet": source_packet.to_dict(),
+        "rule_assessment": rule_assessment,
+        "run": run,
+    }
+
+
+@app.get("/api/filing-pack")
+def default_filing_pack() -> dict[str, object]:
+    source_packet = build_source_evidence_packet()
+    rule_assessment = assess_rules(source_packet)
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    filing_pack = build_filing_pack(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+    )
+    return {
+        "inputs": {
+            "complaint_text": DEFAULT_COMPLAINT_TEXT,
+            "shipment_csv": DEFAULT_SHIPMENT_CSV,
+            "recovered_shipment_csv": DEFAULT_RECOVERED_SHIPMENT_CSV,
+        },
+        "packet": source_packet.to_dict(),
+        "rule_assessment": rule_assessment,
+        "filing_pack": filing_pack,
+    }
+
+
+@app.post("/api/filing-pack")
+def run_filing_pack(request: FilingPackRequest) -> dict[str, object]:
+    try:
+        complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+        shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+        recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+        partner_ai = (
+            _run_partner_ai_guarded(
+                complaint_text=complaint_text,
+                shipment_csv=shipment_csv,
+                recovered_shipment_csv=recovered_shipment_csv,
+            )
+            if request.use_partner_ai
+            else None
+        )
+        source_packet = build_source_evidence_packet(
+            complaint_text=complaint_text,
+            shipment_csv=shipment_csv,
+            recovered_shipment_csv=recovered_shipment_csv,
+            partner_ai=partner_ai,
+        )
+        rule_assessment = assess_rules(source_packet)
+        dispatch_receipts = build_dispatch_receipts(source_packet)
+        filing_pack = build_filing_pack(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            dispatch_receipts=dispatch_receipts,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "inputs": {
+            "complaint_text": complaint_text,
+            "shipment_csv": shipment_csv,
+            "recovered_shipment_csv": recovered_shipment_csv,
+        },
+        "packet": source_packet.to_dict(),
+        "rule_assessment": rule_assessment,
+        "filing_pack": filing_pack,
     }
 
 
@@ -498,6 +654,16 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
     source_packet = build_source_evidence_packet(partner_ai=partner_ai)
     rule_assessment = assess_rules(source_packet)
     dispatch_receipts = build_dispatch_receipts(source_packet)
+    recall_room_run = build_recall_room_run(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        live_band_status=live_drill_status(),
+    )
+    filing_pack = build_filing_pack(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+    )
     enterprise_sync = run_enterprise_sync(
         source_packet=source_packet,
         rule_assessment=rule_assessment,
@@ -532,6 +698,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "source_evidence": "https://recallops.gudman.xyz/api/source-evidence",
             "band_proof": "https://recallops.gudman.xyz/api/band-proof",
             "live_drill": "https://recallops.gudman.xyz/api/live-drill",
+            "recall_room_run": "https://recallops.gudman.xyz/api/recall-room/run",
+            "filing_pack": "https://recallops.gudman.xyz/api/filing-pack",
             "enterprise_sync": "https://recallops.gudman.xyz/api/enterprise-sync",
         },
         "submission_gates": {
@@ -557,6 +725,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
             "verification": source_verification,
         },
         "rule_assessment": rule_assessment,
+        "recall_room_run": recall_room_run,
+        "filing_pack": filing_pack,
         "dispatch_receipts": [receipt.to_dict() for receipt in dispatch_receipts],
         "enterprise_sync": enterprise_sync,
         "identity": approval_identity,
@@ -575,6 +745,8 @@ def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
         "checks": {
             "packet_digest_ok": packet_verification["ok"],
             "source_digest_ok": source_verification["ok"],
+            "recall_room_run_ok": verify_recall_room_run(recall_room_run)["ok"],
+            "filing_pack_ok": verify_filing_pack(filing_pack)["ok"],
             "approval_receipt_ok": approval_verification["ok"],
             "captured_band_has_five_agents": captured_participants == 5,
             "fresh_band_run_available": latest_fresh_run is not None,
@@ -620,121 +792,6 @@ def _enterprise_sync_from_inputs(
             targets=targets,
         ),
         "status": enterprise_sync_status(),
-    }
-
-
-def _source_room_from_packet(
-    source_packet: object,
-    rule_assessment: dict[str, object],
-) -> dict[str, object]:
-    packet = source_packet
-    facts = {fact.key: fact.value for fact in packet.facts}
-    initial = packet.initial_traceability
-    final = packet.final_traceability
-    initial_blockers = rule_assessment["initial_blockers"]
-    final_blockers = rule_assessment["final_blockers"]
-    next_deadline = rule_assessment["next_deadline"]
-
-    hold_message = (
-        f"Regulatory/Risk raises a human-review hold: {initial_blockers[0]['reason']}"
-        if isinstance(initial_blockers, list) and initial_blockers
-        else "Regulatory/Risk finds no initial traceability hold."
-    )
-    deadline_message = (
-        f"Rules desk prepares {next_deadline['authority']} filing within "
-        f"{next_deadline['deadline_hours']}h for "
-        f"{', '.join(next_deadline['matched_regions'])}."
-        if isinstance(next_deadline, dict)
-        else "Rules desk finds no triggered jurisdiction deadline."
-    )
-    approval_message = (
-        f"QA can approve after reviewing source hash {packet.audit_hash[:12]} and "
-        "the generated enterprise hold payload."
-        if rule_assessment["approval_ready"] is True
-        else "QA approval waits on final blockers: "
-        + "; ".join(
-            str(blocker["reason"])
-            for blocker in final_blockers
-            if isinstance(blocker, dict) and "reason" in blocker
-        )
-    )
-    events = [
-        {
-            "id": "source-room-001",
-            "stage": "source_opened",
-            "agent": "Evidence",
-            "message": (
-                f"Opened {facts['complaints']} complaint(s) for {facts['product']} "
-                f"lot {facts['lot']}: {facts['defect']}."
-            ),
-            "metrics": {"severity": facts["severity"]},
-        },
-        {
-            "id": "source-room-002",
-            "stage": "traceability_gap",
-            "agent": "Traceability",
-            "message": (
-                f"Initial shipment coverage is {initial.coverage_percent}% with "
-                f"{initial.untraced_units} untraced units across {initial.regions} regions."
-            ),
-            "metrics": {
-                "coverage_percent": initial.coverage_percent,
-                "untraced_units": initial.untraced_units,
-            },
-        },
-        {
-            "id": "source-room-003",
-            "stage": "human_review_hold",
-            "agent": "Regulatory/Risk",
-            "message": hold_message,
-            "metrics": {"blocker_count": len(initial_blockers)},
-        },
-        {
-            "id": "source-room-004",
-            "stage": "recovered_sources",
-            "agent": "Traceability",
-            "message": (
-                f"Recovered source set reaches {final.coverage_percent}% coverage with "
-                f"{final.untraced_units} untraced units remaining."
-            ),
-            "metrics": {
-                "coverage_percent": final.coverage_percent,
-                "untraced_units": final.untraced_units,
-            },
-        },
-        {
-            "id": "source-room-005",
-            "stage": "jurisdiction_rules",
-            "agent": "Rules",
-            "message": deadline_message,
-            "metrics": {
-                "applied_rules": len(rule_assessment["applied_rules"]),
-            },
-        },
-        {
-            "id": "source-room-006",
-            "stage": "human_approval_gate",
-            "agent": "QA Director",
-            "message": approval_message,
-            "metrics": {"approval_ready": rule_assessment["approval_ready"]},
-        },
-    ]
-    room_hash = hashlib.sha256(
-        json.dumps(events, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
-    return {
-        "mode": "source_packet_parameterized_room",
-        "disclosure": (
-            "Generated from the current source-evidence packet and deterministic rules; "
-            "not a live Band room."
-        ),
-        "room_id": f"source-room-{packet.audit_hash[:12]}",
-        "incident_id": packet.incident_id,
-        "source_audit_hash": packet.audit_hash,
-        "approval_ready": rule_assessment["approval_ready"],
-        "next_deadline": next_deadline,
-        "events": events,
-        "room_hash": room_hash,
     }
 
 

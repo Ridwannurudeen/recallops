@@ -68,7 +68,11 @@ def live_drill_status(settings: LiveDrillSettings | None = None) -> dict[str, ob
     }
 
 
-async def run_live_drill(settings: LiveDrillSettings | None = None) -> dict[str, object]:
+async def run_live_drill(
+    settings: LiveDrillSettings | None = None,
+    *,
+    incident: dict[str, object] | None = None,
+) -> dict[str, object]:
     active_settings = settings or live_drill_settings()
     status = live_drill_status(active_settings)
     if not active_settings.enabled:
@@ -89,7 +93,15 @@ async def run_live_drill(settings: LiveDrillSettings | None = None) -> dict[str,
             rest_url=DEFAULT_REST_URL,
             ws_url=DEFAULT_WS_URL,
         )
-        spike_result = await _run_spike_once(config, active_settings.timeout_seconds)
+        spike_result = (
+            await _run_spike_once(
+                config,
+                active_settings.timeout_seconds,
+                incident=incident,
+            )
+            if incident is not None
+            else await _run_spike_once(config, active_settings.timeout_seconds)
+        )
         completed_at = _now()
         proof = {
             "proof_kind": "fresh_live_band_run",
@@ -114,8 +126,13 @@ def latest_live_drill(settings: LiveDrillSettings | None = None) -> dict[str, ob
     return json.loads(latest_path.read_text(encoding="utf-8"))
 
 
-async def _run_spike_once(config: Any, timeout_seconds: float) -> dict[str, Any]:
-    return await run_spike(config, timeout_seconds=timeout_seconds)
+async def _run_spike_once(
+    config: Any,
+    timeout_seconds: float,
+    *,
+    incident: dict[str, object] | None = None,
+) -> dict[str, Any]:
+    return await run_spike(config, timeout_seconds=timeout_seconds, incident=incident)
 
 
 def _fresh_band_proof(result: dict[str, Any], *, captured_at: str) -> dict[str, object]:

@@ -18,6 +18,88 @@ type ActionResponse = {
   body: unknown;
 };
 
+type RecallRoomRunResponse = {
+  run: {
+    proof_kind: string;
+    mode: string;
+    disclosure: string;
+    incident_id: string;
+    source_audit_hash: string;
+    approval_ready: boolean;
+    room: {
+      room_id: string;
+      room_hash: string;
+      events: {
+        id: string;
+        stage: string;
+        agent: string;
+        message: string;
+      }[];
+    };
+    band: {
+      mode: string;
+      room_id: string;
+      proof_mode: string;
+      participant_count: number;
+      message_ids: string[];
+      live_error?: {
+        status_code: number;
+        detail: string;
+      };
+    };
+    causality_chain: string[];
+    run_hash: string;
+    verification: {
+      ok: boolean;
+      algorithm: string;
+      expected_hash: string;
+      actual_hash: string;
+    };
+  };
+};
+
+type FilingPackResponse = {
+  filing_pack: {
+    proof_kind: string;
+    mode: string;
+    disclosure: string;
+    source_audit_hash: string;
+    approval_ready: boolean;
+    source_summary: {
+      product: string;
+      lot: string;
+      severity: string;
+      final_traceability: {
+        coverage_percent: number;
+        untraced_units: number;
+      };
+    };
+    filings: {
+      id: string;
+      authority: string;
+      label: string;
+      status: string;
+      deadline_hours: number | null;
+      matched_regions: string[];
+      required_human_action: string;
+    }[];
+    notices: {
+      id: string;
+      recipient: string;
+      status: string;
+      payload_hash: string;
+      draft: string;
+    }[];
+    pack_hash: string;
+    verification: {
+      ok: boolean;
+      algorithm: string;
+      expected_hash: string;
+      actual_hash: string;
+    };
+  };
+};
+
 function ensureTargets(targets: SyncTargets): ("sap" | "oracle")[] {
   const chosen: ("sap" | "oracle")[] = [];
   if (targets.sap) {
@@ -39,6 +121,10 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<ActionResponse | null>(null);
+  const [recallRun, setRecallRun] = useState<RecallRoomRunResponse | null>(
+    null,
+  );
+  const [filingPack, setFilingPack] = useState<FilingPackResponse | null>(null);
   const [caseDrafted, setCaseDrafted] = useState(false);
   const [dryRunDone, setDryRunDone] = useState(false);
   const [liveHoldDone, setLiveHoldDone] = useState(false);
@@ -49,7 +135,10 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   const hasAdminKey = normalizedAdminKey.length > 0;
   const hasEvidence = evidence !== null;
   const hasTargets = selectedTargets.length > 0;
-  const canCreateCase = hasEvidence && !actionBusy;
+  const canRunRecallRoom = hasEvidence && !actionBusy;
+  const canGenerateFilingPack =
+    hasEvidence && recallRun !== null && !actionBusy;
+  const canCreateCase = hasEvidence && filingPack !== null && !actionBusy;
   const canDryRunSync = hasEvidence && caseDrafted && !actionBusy;
   const canRunLive =
     hasEvidence && dryRunDone && hasAdminKey && hasTargets && !actionBusy;
@@ -64,6 +153,8 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     setCaseDrafted(false);
     setDryRunDone(false);
     setLiveHoldDone(false);
+    setRecallRun(null);
+    setFilingPack(null);
     setError(null);
   }, [evidence]);
 
@@ -167,6 +258,44 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     });
   }
 
+  async function runRecallRoom() {
+    if (!evidence) {
+      return;
+    }
+    const result = await runAction("recall-room-run", {
+      method: "POST",
+      path: "/api/recall-room/run",
+      body: {
+        complaint_text: evidence.inputs.complaint_text,
+        shipment_csv: evidence.inputs.shipment_csv,
+        recovered_shipment_csv: evidence.inputs.recovered_shipment_csv,
+        run_live_band: false,
+      },
+    });
+    if (result && result.status >= 200 && result.status < 300) {
+      setRecallRun(result.body as RecallRoomRunResponse);
+      setFilingPack(null);
+    }
+  }
+
+  async function generateFilingPack() {
+    if (!evidence) {
+      return;
+    }
+    const result = await runAction("filing-pack", {
+      method: "POST",
+      path: "/api/filing-pack",
+      body: {
+        complaint_text: evidence.inputs.complaint_text,
+        shipment_csv: evidence.inputs.shipment_csv,
+        recovered_shipment_csv: evidence.inputs.recovered_shipment_csv,
+      },
+    });
+    if (result && result.status >= 200 && result.status < 300) {
+      setFilingPack(result.body as FilingPackResponse);
+    }
+  }
+
   async function runEnterpriseSync(dryRun: boolean) {
     if (!evidence) {
       return;
@@ -210,6 +339,8 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   }
 
   const isCreating = busyAction === "create-case";
+  const isRecallRoom = busyAction === "recall-room-run";
+  const isFilingPack = busyAction === "filing-pack";
   const isDryRunSync = busyAction === "enterprise-sync-dry-run";
   const isLiveSync = busyAction === "enterprise-sync-live";
   const isActionSuccess =
@@ -236,6 +367,12 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
     if (actionName === "create-case") {
       return responseText || "Recall plan is ready for the case.";
     }
+    if (actionName === "recall-room-run") {
+      return "Recall room run is bound to the current source packet and Band evidence.";
+    }
+    if (actionName === "filing-pack") {
+      return "Multi-jurisdiction filing pack is ready for human review.";
+    }
     if (actionName === "enterprise-sync-dry-run") {
       return (
         responseText ||
@@ -260,6 +397,12 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
   function actionTitle(actionName: string) {
     if (actionName === "create-case") {
       return "Built recall plan";
+    }
+    if (actionName === "recall-room-run") {
+      return "Ran recall room";
+    }
+    if (actionName === "filing-pack") {
+      return "Generated filing pack";
     }
     if (actionName === "enterprise-sync-dry-run") {
       return "Safety check completed";
@@ -323,9 +466,35 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
                 </div>
               </article>
               <article
-                className={`write-flow-step ${actionStepState(caseDrafted)}`}
+                className={`write-flow-step ${actionStepState(recallRun !== null)}`}
               >
                 <span>2</span>
+                <div>
+                  <strong>Run recall room</strong>
+                  <small>
+                    {recallRun
+                      ? "Room is bound to current evidence and Band proof."
+                      : "Turns the source packet into a specialist room."}
+                  </small>
+                </div>
+              </article>
+              <article
+                className={`write-flow-step ${actionStepState(filingPack !== null)}`}
+              >
+                <span>3</span>
+                <div>
+                  <strong>Generate filing pack</strong>
+                  <small>
+                    {filingPack
+                      ? "Draft filings are ready for human review."
+                      : "Creates regulator and notice drafts from one evidence set."}
+                  </small>
+                </div>
+              </article>
+              <article
+                className={`write-flow-step ${actionStepState(caseDrafted)}`}
+              >
+                <span>4</span>
                 <div>
                   <strong>Build a recall plan</strong>
                   <small>
@@ -338,7 +507,7 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
               <article
                 className={`write-flow-step ${actionStepState(dryRunDone)}`}
               >
-                <span>3</span>
+                <span>5</span>
                 <div>
                   <strong>Run safety check</strong>
                   <small>
@@ -351,7 +520,7 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
               <article
                 className={`write-flow-step ${actionStepState(liveHoldDone)}`}
               >
-                <span>4</span>
+                <span>6</span>
                 <div>
                   <strong>Request live hold</strong>
                   <small>
@@ -378,6 +547,20 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
         <div className="write-action-grid">
           <button
             type="button"
+            disabled={!canRunRecallRoom}
+            onClick={runRecallRoom}
+          >
+            {isRecallRoom ? "Running room..." : "Run recall room"}
+          </button>
+          <button
+            type="button"
+            disabled={!canGenerateFilingPack}
+            onClick={generateFilingPack}
+          >
+            {isFilingPack ? "Preparing filings..." : "Generate filing pack"}
+          </button>
+          <button
+            type="button"
             disabled={!canCreateCase}
             onClick={createCaseRecord}
           >
@@ -399,10 +582,82 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
           </button>
         </div>
         <p className="write-console-copy">
-          You can run the first two actions without an approval code. The live
-          hold button stays locked until the dry-run passes and an approval code
-          is present.
+          Run the room and filing pack first. The live hold button stays locked
+          until the dry-run passes and an approval code is present.
         </p>
+
+        {recallRun ? (
+          <section className="judge-artifact-grid">
+            <article className="judge-artifact-card">
+              <span>Recall room run</span>
+              <strong>{recallRun.run.room.room_id}</strong>
+              <p>{recallRun.run.disclosure}</p>
+              <div className="artifact-metrics">
+                <code>run {shortHash(recallRun.run.run_hash)}</code>
+                <code>room {shortHash(recallRun.run.room.room_hash)}</code>
+                <code>band {recallRun.run.band.participant_count} agents</code>
+              </div>
+              <div className="artifact-event-list">
+                {recallRun.run.room.events.map((event) => (
+                  <div key={event.id}>
+                    <span>{event.stage.replaceAll("_", " ")}</span>
+                    <strong>{event.agent}</strong>
+                    <p>{event.message}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
+            <article className="judge-artifact-card">
+              <span>Band binding</span>
+              <strong>{recallRun.run.band.mode.replaceAll("_", " ")}</strong>
+              <p>
+                Room {recallRun.run.band.room_id} /{" "}
+                {recallRun.run.band.proof_mode.replaceAll("_", " ")}
+              </p>
+              <div className="artifact-metrics">
+                {recallRun.run.band.message_ids.slice(0, 4).map((messageId) => (
+                  <code key={messageId}>{shortHash(messageId)}</code>
+                ))}
+              </div>
+              {recallRun.run.band.live_error ? (
+                <small className="artifact-warning">
+                  Live Band check: {recallRun.run.band.live_error.detail}
+                </small>
+              ) : null}
+            </article>
+          </section>
+        ) : null}
+
+        {filingPack ? (
+          <section className="judge-artifact-card filing-pack-card">
+            <div className="artifact-card-head">
+              <div>
+                <span>Filing pack</span>
+                <strong>
+                  {filingPack.filing_pack.source_summary.product} /{" "}
+                  {filingPack.filing_pack.source_summary.lot}
+                </strong>
+              </div>
+              <code>{shortHash(filingPack.filing_pack.pack_hash)}</code>
+            </div>
+            <p>{filingPack.filing_pack.disclosure}</p>
+            <div className="filing-grid">
+              {filingPack.filing_pack.filings.map((filing) => (
+                <article key={filing.id}>
+                  <span>{filing.status.replaceAll("_", " ")}</span>
+                  <strong>{filing.label}</strong>
+                  <p>{filing.authority}</p>
+                  <small>
+                    {filing.deadline_hours
+                      ? `${filing.deadline_hours}h target`
+                      : "screening route"}{" "}
+                    / {filing.required_human_action}
+                  </small>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <div className="write-auth-grid">
           <fieldset className="write-target-grid">
@@ -468,4 +723,8 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
       </section>
     </section>
   );
+}
+
+function shortHash(value: string) {
+  return `${value.slice(0, 10)}...`;
 }
