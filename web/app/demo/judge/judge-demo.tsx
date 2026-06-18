@@ -138,6 +138,7 @@ function cloneSteps() {
 export default function JudgeDemo({ apiBase }: { apiBase: string }) {
   const [scenarioId, setScenarioId] = useState(scenarios[0].id);
   const [approvalKey, setApprovalKey] = useState("");
+  const [breakCoverage, setBreakCoverage] = useState(false);
   const [steps, setSteps] = useState<DemoStep[]>(cloneSteps);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +192,15 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     getPathString(proof, ["band", "captured_run", "room_id"]) ??
     getPathString(roomRun, ["band", "captured_room_id"]) ??
     "pending";
+  const roomEvents = getPathArray(roomRun, ["run", "room", "events"]);
+  const bandMessageIds = getPathArray(roomRun, ["run", "band", "message_ids"]);
+  const liveStatus = asRecord(
+    getPathValue(roomRun, ["run", "band", "live_status"]),
+  );
+  const liveRunnable = getBoolean(liveStatus, "runnable");
+  const liveConfigured = getBoolean(liveStatus, "configured");
+  const finalCoverage = getNumber(finalTraceability, "coverage_percent") ?? 0;
+  const signOffBlockedByCoverage = evidence !== null && finalCoverage < 100;
   const regulatorTargets = getPathArray(regulatorDispatch, [
     "regulator_dispatch",
     "targets",
@@ -214,6 +224,16 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     setProof(null);
   }
 
+  function scenarioInputs() {
+    return {
+      complaint_text: scenario.complaint_text,
+      shipment_csv: scenario.shipment_csv,
+      recovered_shipment_csv: breakCoverage
+        ? scenario.shipment_csv
+        : scenario.recovered_shipment_csv,
+    };
+  }
+
   async function runDemo() {
     setRunning(true);
     setError(null);
@@ -226,30 +246,26 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     setProof(null);
 
     try {
+      const inputs = scenarioInputs();
+
       updateStep("evidence", "running");
       const nextEvidence = await postJson(`${apiBase}/source-evidence`, {
-        complaint_text: scenario.complaint_text,
-        shipment_csv: scenario.shipment_csv,
-        recovered_shipment_csv: scenario.recovered_shipment_csv,
+        ...inputs,
       });
       setEvidence(nextEvidence);
       updateStep("evidence", "complete");
 
       updateStep("room", "running");
       const nextRoomRun = await postJson(`${apiBase}/recall-room/run`, {
-        complaint_text: scenario.complaint_text,
-        shipment_csv: scenario.shipment_csv,
-        recovered_shipment_csv: scenario.recovered_shipment_csv,
-        run_live_band: false,
+        ...inputs,
+        run_live_band: true,
       });
       setRoomRun(nextRoomRun);
       updateStep("room", "complete");
 
       updateStep("filing", "running");
       const nextFilingPack = await postJson(`${apiBase}/filing-pack`, {
-        complaint_text: scenario.complaint_text,
-        shipment_csv: scenario.shipment_csv,
-        recovered_shipment_csv: scenario.recovered_shipment_csv,
+        ...inputs,
       });
       setFilingPack(nextFilingPack);
       updateStep("filing", "complete");
@@ -258,9 +274,7 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
       const nextRegulatorDispatch = await postJson(
         `${apiBase}/regulator-filing`,
         {
-          complaint_text: scenario.complaint_text,
-          shipment_csv: scenario.shipment_csv,
-          recovered_shipment_csv: scenario.recovered_shipment_csv,
+          ...inputs,
           dry_run: true,
           targets: ["cpsc", "eu", "regional"],
         },
@@ -269,21 +283,37 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
       updateStep("regulator", "complete");
 
       updateStep("signature", "running");
-      const nextSignature = await runSignatureGate({
-        apiBase,
-        approvalKey: approvalKey.trim(),
-        sourceHash: getPathString(nextEvidence, ["packet", "audit_hash"]),
-        roomHash:
-          getPathString(nextRoomRun, ["run", "run_hash"]) ??
-          getPathString(nextRoomRun, ["recall_room_run", "run_hash"]) ??
-          getPathString(nextRoomRun, ["room_run", "run_hash"]) ??
-          getString(nextRoomRun, "run_hash"),
-        filingHash:
-          getPathString(nextFilingPack, ["filing_pack", "pack_hash"]) ??
-          getString(nextFilingPack, "pack_hash"),
-      });
-      setESignature(nextSignature.body);
-      updateStep("signature", nextSignature.signed ? "complete" : "gated");
+      const nextFinalCoverage =
+        getPathNumber(nextEvidence, [
+          "packet",
+          "final_traceability",
+          "coverage_percent",
+        ]) ?? 0;
+      if (nextFinalCoverage < 100) {
+        setESignature({
+          mode: "blocked_by_traceability",
+          disclosure:
+            "Human sign-off stayed closed because recovered evidence did not restore 100% traceability.",
+          final_coverage_percent: nextFinalCoverage,
+        });
+        updateStep("signature", "gated");
+      } else {
+        const nextSignature = await runSignatureGate({
+          apiBase,
+          approvalKey: approvalKey.trim(),
+          sourceHash: getPathString(nextEvidence, ["packet", "audit_hash"]),
+          roomHash:
+            getPathString(nextRoomRun, ["run", "run_hash"]) ??
+            getPathString(nextRoomRun, ["recall_room_run", "run_hash"]) ??
+            getPathString(nextRoomRun, ["room_run", "run_hash"]) ??
+            getString(nextRoomRun, "run_hash"),
+          filingHash:
+            getPathString(nextFilingPack, ["filing_pack", "pack_hash"]) ??
+            getString(nextFilingPack, "pack_hash"),
+        });
+        setESignature(nextSignature.body);
+        updateStep("signature", nextSignature.signed ? "complete" : "gated");
+      }
 
       updateStep("packet", "running");
       const nextProof = await fetchJson(`${apiBase}/submission-proof`);
@@ -319,6 +349,9 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
         "SAP and Oracle tenant writes require explicit admin authorization.",
         "Human sign-off is accountable to a named operator, not the software.",
       ],
+      adversarial_mode: breakCoverage
+        ? "coverage_intentionally_broken"
+        : "recovered_coverage",
     };
     const blob = new Blob([JSON.stringify(artifact, null, 2)], {
       type: "application/json",
@@ -327,6 +360,41 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = `recallops-${scenario.id}-audit-packet.json`;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  }
+
+  function downloadBandProof() {
+    if (!roomRun) {
+      return;
+    }
+    const artifact = {
+      proof_kind: "recallops_band_room_proof",
+      generated_at: new Date().toISOString(),
+      scenario: scenario.id,
+      adversarial_mode: breakCoverage
+        ? "coverage_intentionally_broken"
+        : "recovered_coverage",
+      source_audit_hash: sourceHash,
+      room_run_hash: roomHash,
+      band: {
+        mode: bandMode,
+        room_id: capturedRoom,
+        participant_count: bandParticipants,
+        message_ids: bandMessageIds,
+        live_configured: liveConfigured,
+        live_runnable: liveRunnable,
+      },
+      transcript: roomEvents,
+      raw_room_run: roomRun,
+    };
+    const blob = new Blob([JSON.stringify(artifact, null, 2)], {
+      type: "application/json",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `recallops-${scenario.id}-band-room-proof.json`;
     anchor.click();
     window.URL.revokeObjectURL(url);
   }
@@ -374,9 +442,23 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
               value={approvalKey}
             />
           </label>
+          <label className={styles.breakToggle}>
+            <input
+              checked={breakCoverage}
+              onChange={(event) =>
+                setBreakCoverage(event.currentTarget.checked)
+              }
+              type="checkbox"
+            />
+            <span>
+              Break shipment coverage to prove the hold path. Recovered CSV is
+              withheld, final traceability stays below 100%, and human sign-off
+              remains closed.
+            </span>
+          </label>
           <div className={styles.actions}>
             <button disabled={running} onClick={runDemo} type="button">
-              {running ? "Running scenario..." : "Run guided demo"}
+              {running ? "Running scenario..." : "Run fresh Band room demo"}
             </button>
             <button
               disabled={!evidence && !proof}
@@ -384,6 +466,13 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
               type="button"
             >
               Download audit packet
+            </button>
+            <button
+              disabled={!roomRun}
+              onClick={downloadBandProof}
+              type="button"
+            >
+              Download Band proof
             </button>
           </div>
         </article>
@@ -437,6 +526,11 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
             deterministic, then anchors it to participant counts, room IDs, and
             the downloadable proof packet.
           </p>
+          <p>
+            The default path attempts a fresh Band room first. If provider
+            state, credentials, or cooldowns prevent that, the UI displays the
+            captured fallback instead of pretending it was live.
+          </p>
         </div>
         <div className={styles.bandStats}>
           <div>
@@ -451,6 +545,64 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
             <span>Captured room</span>
             <code>{capturedRoom}</code>
           </div>
+          <div>
+            <span>Live readiness</span>
+            <strong>
+              {liveConfigured === null
+                ? "pending"
+                : liveConfigured
+                  ? liveRunnable
+                    ? "runnable"
+                    : "configured"
+                  : "not configured"}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.transcriptPanel}>
+        <div>
+          <p className={styles.kicker}>Live room transcript</p>
+          <h2>Visible handoffs, not hidden orchestration.</h2>
+          <p>
+            This feed is generated from the selected scenario. The hold event
+            appears when traceability is incomplete; the recovery event only
+            clears when the recovered CSV restores coverage.
+          </p>
+        </div>
+        <div className={styles.transcriptFeed}>
+          {roomEvents.length > 0 ? (
+            roomEvents.map((event, index) => {
+              const eventRecord = asRecord(event);
+              return (
+                <article key={`${getString(eventRecord, "id")}-${index}`}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>
+                      {getString(eventRecord, "agent") ?? "RecallOps agent"}
+                    </strong>
+                    <code>
+                      {(
+                        getString(eventRecord, "stage") ?? "room_event"
+                      ).replaceAll("_", " ")}
+                    </code>
+                    <p>{getString(eventRecord, "message") ?? "Room event"}</p>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <article>
+              <span>01</span>
+              <div>
+                <strong>Waiting for room run</strong>
+                <code>pending</code>
+                <p>
+                  Run the guided demo to stream the room handoff chain here.
+                </p>
+              </div>
+            </article>
+          )}
         </div>
       </section>
 
@@ -489,6 +641,18 @@ export default function JudgeDemo({ apiBase }: { apiBase: string }) {
           )}
         </div>
       </section>
+
+      {signOffBlockedByCoverage ? (
+        <section className={styles.holdPanel}>
+          <p className={styles.kicker}>Adversarial hold proven</p>
+          <h2>Human sign-off stayed closed.</h2>
+          <p>
+            Final coverage is {finalCoverage}%, so RecallOps keeps the case in
+            review and leaves regulator submission in draft-only mode. Disable
+            "Break shipment coverage" and run again to show recovery to 100%.
+          </p>
+        </section>
+      ) : null}
 
       <section className={styles.scriptPanel}>
         <p className={styles.kicker}>Two-minute narration</p>
@@ -594,6 +758,11 @@ function getString(record: JsonRecord | null | undefined, key: string) {
 function getNumber(record: JsonRecord | null | undefined, key: string) {
   const value = record?.[key];
   return typeof value === "number" ? value : null;
+}
+
+function getBoolean(record: JsonRecord | null | undefined, key: string) {
+  const value = record?.[key];
+  return typeof value === "boolean" ? value : null;
 }
 
 function getPathString(value: unknown, path: string[]) {
