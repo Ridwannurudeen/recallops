@@ -102,11 +102,19 @@ export default function Home() {
             source-linked command room.
           </p>
           <div className="hero-actions-v2">
-            <a className="primary-action" href="/demo/bat-4421">
-              Run BAT-4421
-            </a>
-            <a className="secondary-action" href="/app">
+            <a className="primary-action" href="/app">
               Open command room
+            </a>
+            <a
+              className="secondary-action"
+              href="https://youtu.be/15Nj38uSZNI"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Watch 3-minute demo
+            </a>
+            <a className="secondary-action" href="/demo/bat-4421">
+              Run BAT-4421
             </a>
           </div>
           <a className="quiet-link" href="/proof">
@@ -114,6 +122,9 @@ export default function Home() {
           </a>
           <p className="trust-line">
             Source-grounded / Human-approved / ERP-gated
+          </p>
+          <p className="track-line">
+            Built for Track 3: Regulated & High-Stakes Workflows
           </p>
         </div>
 
@@ -137,6 +148,41 @@ export default function Home() {
             <p>{item.detail}</p>
           </article>
         ))}
+      </section>
+
+      <section className="clean-section judge-shortcut-section">
+        <div>
+          <p className="section-kicker">Judging RecallOps?</p>
+          <h2>Use this path to see the Track 3 workflow quickly.</h2>
+          <p>
+            The fastest evaluation is to watch the short demo, open the command
+            room, run an incomplete shipment case, confirm approval is blocked,
+            then inspect the proof packet.
+          </p>
+        </div>
+        <ol>
+          <li>Watch the 3-minute demo video.</li>
+          <li>Open the command room and analyze a recall case.</li>
+          <li>Confirm incomplete traceability blocks approval.</li>
+          <li>Add recovered shipment evidence and rerun analysis.</li>
+          <li>Inspect the audit packet and receipts.</li>
+        </ol>
+        <div className="judge-shortcut-actions">
+          <a
+            className="primary-action"
+            href="https://youtu.be/15Nj38uSZNI"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Watch demo video
+          </a>
+          <a className="secondary-action" href="/app">
+            Open command room
+          </a>
+          <a className="secondary-action" href="/proof">
+            Inspect proof packet
+          </a>
+        </div>
       </section>
 
       <section className="clean-section clean-problem">
