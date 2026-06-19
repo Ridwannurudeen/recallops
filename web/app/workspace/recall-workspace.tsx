@@ -2021,17 +2021,35 @@ function parseShipmentCsv(csvText: string): ShipmentRow[] {
 }
 
 function parseComplaint(text: string) {
-  const first =
-    text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find(Boolean) ?? "";
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const first = lines[0] ?? "";
   const parts = first.split("|").map((part) => part.trim());
   const parsed: Record<string, string> = { complaintId: parts[0] };
   for (const part of parts.slice(1)) {
     const [key, ...rest] = part.split(":");
     if (key && rest.length) {
       parsed[key.trim().toLowerCase()] = rest.join(":").trim();
+    }
+  }
+  for (const line of lines) {
+    const [key, ...rest] = line.split(":");
+    if (!key || rest.length === 0) {
+      continue;
+    }
+    const normalizedKey = key.trim().toLowerCase();
+    const value = rest.join(":").trim();
+    if (normalizedKey === "complaint id") {
+      parsed.complaintId = value;
+    } else if (
+      normalizedKey === "product" ||
+      normalizedKey === "lot" ||
+      normalizedKey === "defect" ||
+      normalizedKey === "severity"
+    ) {
+      parsed[normalizedKey] = value;
     }
   }
   return {
