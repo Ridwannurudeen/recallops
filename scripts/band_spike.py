@@ -16,6 +16,8 @@ from band.core.simple_adapter import SimpleAdapter
 from band.core.types import HistoryProvider, PlatformMessage
 from band.runtime.tools import AgentTools
 
+from recallops.partner_ai import generate_agent_line
+
 DEFAULT_REST_URL = "https://app.band.ai"
 DEFAULT_WS_URL = "wss://app.band.ai/api/v1/socket/websocket"
 PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000"
@@ -55,6 +57,28 @@ class SpikeIncident:
 
 class ConfigError(ValueError):
     pass
+
+
+def _incident_facts(incident: SpikeIncident) -> str:
+    return (
+        f"product={incident.product}; lot={incident.lot}; defect={incident.defect}; "
+        f"severity={incident.severity}; complaints={incident.complaint_count}; "
+        f"shipped_units={incident.shipped_units}; "
+        f"initial_coverage={incident.initial_coverage_percent}%; "
+        f"untraced_units={incident.untraced_units}; recovered_units={incident.recovered_units}; "
+        f"final_coverage={incident.final_coverage_percent}%"
+    )
+
+
+async def _agent_line(*, role: str, instruction: str, incident: SpikeIncident) -> str:
+    line = await asyncio.to_thread(
+        generate_agent_line,
+        role=role,
+        instruction=instruction,
+        facts=_incident_facts(incident),
+        fallback="",
+    )
+    return f" {line}" if line else ""
 
 
 class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
@@ -103,11 +127,17 @@ class EvidenceSpikeAdapter(SimpleAdapter[HistoryProvider]):
         traceability = _participant_mention(
             _find_configured_participant(participants, self.traceability_id)
         )
+        line = await _agent_line(
+            role="Evidence Agent",
+            instruction="Summarize the confirmed incident facts for the recall room.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 f"LIVE_EVIDENCE_ACK extracted {self.incident.complaint_count} "
                 f"{self.incident.defect} complaint(s) for {self.incident.lot}. "
                 "RECALLOPS_TRACEABILITY Please map shipped units, open stock, and gaps."
+                f"{line}"
             ),
             mentions=[commander, traceability],
         )
@@ -160,11 +190,17 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
             _find_configured_participant(participants, self.commander_id)
         )
         risk = _participant_mention(_find_configured_participant(participants, self.risk_id))
+        line = await _agent_line(
+            role="Traceability Agent",
+            instruction="Report the shipment coverage gap and untraced units.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 f"LIVE_TRACEABILITY_GAP mapped {self.incident.shipped_units:,} shipped units, "
                 f"but {self.incident.untraced_units} units are still untraced. "
                 "RECALLOPS_RISK Please review recall readiness."
+                f"{line}"
             ),
             mentions=[commander, risk],
         )
@@ -188,11 +224,17 @@ class TraceabilitySpikeAdapter(SimpleAdapter[HistoryProvider]):
                 "recovered_units": self.incident.recovered_units,
             },
         )
+        line = await _agent_line(
+            role="Traceability Agent",
+            instruction="Confirm the recovered coverage after the re-plan.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 f"LIVE_TRACEABILITY_RESOLVED recovered the missing source file; coverage is "
                 f"{self.incident.final_coverage_percent}%. "
                 "RECALLOPS_APPROVAL Please clear the regulated recall path."
+                f"{line}"
             ),
             mentions=[commander, risk],
         )
@@ -254,11 +296,17 @@ class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
                 "untraced_units": self.incident.untraced_units,
             },
         )
+        line = await _agent_line(
+            role="Regulatory/Risk Officer",
+            instruction="Explain why a human-review hold is required while units are untraced.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 f"LIVE_RISK_VETO customer notice is blocked while "
                 f"{self.incident.untraced_units} units remain untraced. "
                 "RECALLOPS_REPLAN Traceability must close the distributor gap."
+                f"{line}"
             ),
             mentions=[commander, traceability],
         )
@@ -277,10 +325,16 @@ class RiskSpikeAdapter(SimpleAdapter[HistoryProvider]):
             message_type="task",
             metadata={"spike": "recallops", "stage": "risk_approved", "approved": True},
         )
+        line = await _agent_line(
+            role="Regulatory/Risk Officer",
+            instruction="State the approval rationale now that coverage is complete.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 f"LIVE_RISK_APPROVED {self.incident.lot} coverage is complete; "
                 "RECALLOPS_COMMS draft regulator, customer, and warehouse notices."
+                f"{line}"
             ),
             mentions=[commander, communications],
         )
@@ -317,10 +371,16 @@ class CommunicationsSpikeAdapter(SimpleAdapter[HistoryProvider]):
             message_type="task",
             metadata={"spike": "recallops", "stage": "notice_drafted", "notices": 3},
         )
+        line = await _agent_line(
+            role="Communications Agent",
+            instruction="Summarize the notices prepared for regulator, customers, and warehouse.",
+            incident=self.incident,
+        )
         await tools.send_message(
             content=(
                 "SPIKE_DONE LIVE_COMMS_NOTICE drafted regulator notice, customer stop-use notice, "
                 f"and warehouse quarantine order for {self.incident.lot}."
+                f"{line}"
             ),
             mentions=[commander],
         )

@@ -1,7 +1,7 @@
 import pytest
 
 from recallops.approval import build_approval_receipt, verify_approval_receipt
-from recallops.partner_ai import partner_ai_status, run_partner_ai
+from recallops.partner_ai import generate_agent_line, partner_ai_status, run_partner_ai
 from recallops.source_evidence import (
     DEFAULT_SHIPMENT_CSV,
     build_source_evidence_packet,
@@ -148,3 +148,39 @@ def test_partner_ai_uses_configured_providers(
     assert status["providers"]["ai_ml_api"]["used"] is True
     assert status["providers"]["featherless"]["used"] is True
     assert len(status["providers"]["ai_ml_api"]["response_hash"]) == 64
+
+
+def test_generate_agent_line_falls_back_without_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("FEATHERLESS_API_KEY", raising=False)
+    monkeypatch.delenv("AIML_API_KEY", raising=False)
+    monkeypatch.delenv("AI_ML_API_KEY", raising=False)
+
+    line = generate_agent_line(
+        role="Evidence Agent",
+        instruction="Summarize the incident.",
+        facts="lot=BAT-4421; severity=critical",
+        fallback="FALLBACK",
+    )
+
+    assert line == "FALLBACK"
+
+
+def test_generate_agent_line_uses_provider_and_strips_markers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("FEATHERLESS_API_KEY", "test-featherless-key")
+    monkeypatch.setattr(
+        "recallops.partner_ai._chat_completion",
+        lambda **_: "Coverage gap is critical and RECALLOPS_RISK must review.",
+    )
+
+    line = generate_agent_line(
+        role="Traceability Agent",
+        instruction="Report the gap.",
+        facts="untraced_units=864",
+        fallback="FALLBACK",
+    )
+
+    assert line != "FALLBACK"
+    assert "RECALLOPS_RISK" not in line
+    assert "Coverage gap is critical" in line

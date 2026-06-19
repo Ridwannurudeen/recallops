@@ -260,6 +260,7 @@ async def test_run_spike_executes_five_agent_live_chain(
     monkeypatch.setattr(band_spike, "Agent", FakeAgent)
     monkeypatch.setattr(band_spike, "AsyncRestClient", lambda **_: object())
     monkeypatch.setattr(band_spike, "AgentTools", FakeTools)
+    monkeypatch.setattr(band_spike, "generate_agent_line", lambda **_: "")
 
     result = await band_spike.run_spike(
         SpikeConfig(
