@@ -25,7 +25,33 @@ type Traceability = {
   regions: number;
 };
 
+type PartnerAiProvider = {
+  provider: string;
+  configured: boolean;
+  used: boolean;
+  status: string;
+  model: string;
+  role: string;
+  response_hash?: string;
+  output?: Record<string, unknown>;
+  error?: string;
+};
+
+type PartnerAiProof = {
+  mode: string;
+  disclosure: string;
+  used_count: number;
+  providers: Record<string, PartnerAiProvider>;
+};
+
+type SourceInputs = {
+  complaint_text: string;
+  shipment_csv: string;
+  recovered_shipment_csv: string;
+};
+
 type EvidenceResponse = {
+  inputs: SourceInputs;
   packet: {
     incident_id: string;
     facts: { key: string; value: string | number; citation_id: string }[];
@@ -40,6 +66,7 @@ type EvidenceResponse = {
       status: string;
     }[];
     missing_sources: string[];
+    partner_ai: PartnerAiProof;
     audit_hash: string;
   };
 };
@@ -131,6 +158,9 @@ type RunReport = {
   signatureReady: boolean;
   sourceHash: string | null;
   roomHash: string | null;
+  partnerAiMode: string;
+  partnerAiUsedCount: number;
+  partnerAiProviders: string;
   boundaryChecks: string[];
   nextAction: string;
 };
@@ -160,6 +190,7 @@ type IncidentReportContext = {
   sourceHash: string | null;
   roomHash: string | null;
   filingHash: string | null;
+  partnerAi: PartnerAiProof | null;
   signatureReady: boolean;
   signatureMode: string;
 };
@@ -238,6 +269,7 @@ export default function RecallWorkspace({
     string | null
   >(null);
   const [approvingReceipt, setApprovingReceipt] = useState(false);
+  const [usePartnerAi, setUsePartnerAi] = useState(true);
   const [activeTab, setActiveTab] = useState<
     "case" | "tasks" | "drafts" | "proof"
   >("case");
@@ -332,6 +364,9 @@ export default function RecallWorkspace({
     0;
   const regulatorTargets = result?.regulator.regulator_dispatch?.targets ?? [];
   const filingHash = result?.filing.filing_pack?.pack_hash ?? sourceHash;
+  const partnerAi = result?.evidence.packet.partner_ai ?? null;
+  const partnerAiUsedCount = partnerAi?.used_count ?? 0;
+  const partnerAiProviderSummary = summarizePartnerAi(partnerAi);
   const signatureMode =
     getString(asRecord(result?.signatureGate), "mode") ??
     getString(asRecord(result?.signatureGate), "proof_kind") ??
@@ -365,6 +400,7 @@ export default function RecallWorkspace({
         sourceHash,
         roomHash,
         filingHash,
+        partnerAi,
         signatureReady,
         signatureMode,
       })
@@ -500,10 +536,51 @@ export default function RecallWorkspace({
         "Posting the complaint and shipment ledger to the live source-evidence engine.",
         "running",
       );
-      const evidence = (await postJson(
-        `${apiBase}/source-evidence`,
-        body,
-      )) as EvidenceResponse;
+      if (usePartnerAi) {
+        await trackLiveEvent(
+          "AI/ML API",
+          "partner reasoning",
+          "Calling AI/ML API and Featherless once through the spend-gated source-evidence step.",
+          "running",
+        );
+      }
+      let evidence: EvidenceResponse;
+      try {
+        evidence = (await postJson(`${apiBase}/source-evidence`, {
+          ...body,
+          use_partner_ai: usePartnerAi,
+        })) as EvidenceResponse;
+      } catch (exc) {
+        if (!usePartnerAi) {
+          throw exc;
+        }
+        const message =
+          exc instanceof Error
+            ? exc.message
+            : "Partner AI source evidence was gated.";
+        await trackLiveEvent(
+          "AI/ML API",
+          "provider path gated",
+          `${message} Retrying deterministic source evidence.`,
+          "gated",
+        );
+        evidence = (await postJson(
+          `${apiBase}/source-evidence`,
+          body,
+        )) as EvidenceResponse;
+      }
+      if (usePartnerAi) {
+        await trackLiveEvent(
+          "AI/ML API",
+          evidence.packet.partner_ai.used_count > 0
+            ? "provider hashes sealed"
+            : "provider path gated",
+          evidence.packet.partner_ai.used_count > 0
+            ? `Recorded ${evidence.packet.partner_ai.used_count} provider response hash(es): ${summarizePartnerAi(evidence.packet.partner_ai)}.`
+            : `No provider response was used: ${summarizePartnerAi(evidence.packet.partner_ai)}. Deterministic parsing remains the proof source.`,
+          evidence.packet.partner_ai.used_count > 0 ? "complete" : "gated",
+        );
+      }
       await trackLiveEvent(
         "Traceability",
         "coverage math",
@@ -619,6 +696,8 @@ export default function RecallWorkspace({
           roomHash: nextRoomHash,
           filingHash:
             filing.filing_pack?.pack_hash ?? evidence.packet.audit_hash,
+          sourceInputs: evidence.inputs,
+          partnerAi: evidence.packet.partner_ai,
         });
         signatureGate = signatureResult.body;
         await trackLiveEvent(
@@ -717,6 +796,9 @@ export default function RecallWorkspace({
         signatureReady: isRunSigned,
         sourceHash: evidence.packet.audit_hash,
         roomHash: roomHashForSummary,
+        partnerAiMode: evidence.packet.partner_ai.mode,
+        partnerAiUsedCount: evidence.packet.partner_ai.used_count,
+        partnerAiProviders: summarizePartnerAi(evidence.packet.partner_ai),
         nextAction:
           evidence.packet.final_traceability.coverage_percent === 100
             ? "Everything is ready for human legal/regulatory review. Add approval code to create the final gate receipt or export artifacts for handoff."
@@ -763,6 +845,11 @@ export default function RecallWorkspace({
         signatureReady: false,
         sourceHash: null,
         roomHash: null,
+        partnerAiMode: usePartnerAi ? "requested" : "off",
+        partnerAiUsedCount: 0,
+        partnerAiProviders: usePartnerAi
+          ? "partner run did not complete"
+          : "partner run disabled",
         nextAction:
           "Capture the exact error shown above, correct the input, and run again. If the issue repeats, compare the uploaded payload with backend API expectations.",
         boundaryChecks: [
@@ -824,6 +911,8 @@ export default function RecallWorkspace({
         sourceHash: sourceHashForApproval,
         roomHash: nextRoomHash,
         filingHash: filingHashForApproval,
+        sourceInputs: result.evidence.inputs,
+        partnerAi: result.evidence.packet.partner_ai,
       });
 
       if (!signatureResult.signed) {
@@ -1011,6 +1100,7 @@ export default function RecallWorkspace({
       customerNotice,
       distributorHold,
       evidence: result.evidence,
+      partnerAi: result.evidence.packet.partner_ai,
       recallRoomRun: result.roomRun,
       filingPack: result.filing,
       regulatorDispatch: result.regulator,
@@ -1075,6 +1165,7 @@ export default function RecallWorkspace({
         sourceHash,
         roomHash,
         filingHash,
+        partnerAi,
         signatureReady,
         signatureMode,
       }),
@@ -1104,6 +1195,7 @@ export default function RecallWorkspace({
         sourceHash,
         roomHash,
         filingHash,
+        partnerAi,
         signatureReady,
         signatureMode,
       }),
@@ -1147,6 +1239,17 @@ export default function RecallWorkspace({
             >
               {busy ? "Recomputing..." : "Add recovered file and rerun"}
             </button>
+            <button
+              aria-pressed={usePartnerAi}
+              disabled={busy}
+              onClick={() => {
+                clearRunState();
+                setUsePartnerAi((current) => !current);
+              }}
+              type="button"
+            >
+              {usePartnerAi ? "AI/ML partner on" : "AI/ML partner off"}
+            </button>
           </div>
           {error ? <strong>{error}</strong> : null}
           {validationError ? <small>{validationError}</small> : null}
@@ -1172,8 +1275,10 @@ export default function RecallWorkspace({
             <strong>{result ? urgentTasks.length : "-"}</strong>
           </div>
           <div>
-            <span>Regions</span>
-            <strong>{result ? globalChecklist.length : "-"}</strong>
+            <span>AI/ML API</span>
+            <strong>
+              {result ? `${partnerAiUsedCount}/2` : usePartnerAi ? "on" : "off"}
+            </strong>
           </div>
         </article>
       </section>
@@ -1194,6 +1299,7 @@ export default function RecallWorkspace({
               <article
                 data-active={
                   currentActor === role.actor ||
+                  (currentActor === "AI/ML API" && role.actor === "Evidence") ||
                   (currentActor === "Band" && role.actor === "Traceability") ||
                   (currentActor === "Proof desk" &&
                     role.actor === "Recall owner")
@@ -1326,6 +1432,14 @@ export default function RecallWorkspace({
                 Current actor sequence includes evidence, room, filing,
                 regulator dry-run, and gate checks.
               </p>
+            </article>
+            <article>
+              <span>AI/ML partner evidence</span>
+              <strong>
+                {runReport?.partnerAiUsedCount ?? partnerAiUsedCount} provider
+                call(s)
+              </strong>
+              <p>{runReport?.partnerAiProviders ?? partnerAiProviderSummary}</p>
             </article>
             <article>
               <span>Proof and approvals</span>
@@ -1758,6 +1872,11 @@ export default function RecallWorkspace({
                 <strong>{signatureReady ? "sealed" : "closed"}</strong>
                 <p>{signatureMode.replaceAll("_", " ")}</p>
               </article>
+              <article>
+                <span>AI/ML API evidence</span>
+                <strong>{partnerAiUsedCount} provider call(s)</strong>
+                <p>{partnerAiProviderSummary}</p>
+              </article>
             </div>
             <div className={styles.transcriptFeed}>
               {roomEvents.length > 0 ? (
@@ -1916,12 +2035,16 @@ async function runSignatureGate({
   sourceHash,
   roomHash,
   filingHash,
+  sourceInputs,
+  partnerAi,
 }: {
   apiBase: string;
   approvalKey: string;
   sourceHash: string;
   roomHash: string;
   filingHash: string;
+  sourceInputs: SourceInputs;
+  partnerAi: PartnerAiProof;
 }): Promise<{ signed: boolean; body: JsonRecord }> {
   const response = await fetch(`${apiBase}/esignature-approval`, {
     method: "POST",
@@ -1937,6 +2060,10 @@ async function runSignatureGate({
       source_audit_hash: sourceHash,
       recall_room_run_hash: roomHash,
       filing_pack_hash: filingHash,
+      complaint_text: sourceInputs.complaint_text,
+      shipment_csv: sourceInputs.shipment_csv,
+      recovered_shipment_csv: sourceInputs.recovered_shipment_csv,
+      partner_ai_proof: partnerAi,
     }),
   });
   const body = asRecord((await response.json()) as unknown);
@@ -2379,6 +2506,24 @@ function getPathValue(value: unknown, path: string[]) {
   return current;
 }
 
+function summarizePartnerAi(partnerAi: PartnerAiProof | null | undefined) {
+  if (!partnerAi) {
+    return "not run";
+  }
+  const providers = Object.values(partnerAi.providers).map((provider) => {
+    const status = provider.used
+      ? "used"
+      : provider.status.replaceAll("_", " ");
+    const hash = provider.response_hash
+      ? ` hash ${shortValue(provider.response_hash)}`
+      : "";
+    return `${provider.provider}: ${status}${hash}`;
+  });
+  return providers.length > 0
+    ? providers.join("; ")
+    : partnerAi.mode.replaceAll("_", " ");
+}
+
 function shortValue(value: string | null) {
   if (!value) {
     return "pending";
@@ -2436,6 +2581,7 @@ function buildIncidentReportSections({
   sourceHash,
   roomHash,
   filingHash,
+  partnerAi,
   signatureReady,
   signatureMode,
 }: IncidentReportContext): IncidentReportSection[] {
@@ -2495,6 +2641,15 @@ function buildIncidentReportSections({
           ? "complete"
           : "review",
       body: `${report.roomParticipants} participant(s) were recorded and ${liveEvents.length} live event(s) were streamed. Source hash ${shortValue(sourceHash)}, room hash ${shortValue(roomHash)}, filing hash ${shortValue(filingHash)}.`,
+    },
+    {
+      label: "ai/ml",
+      title:
+        report.partnerAiUsedCount > 0
+          ? `${report.partnerAiUsedCount} partner provider response(s) recorded`
+          : "Partner AI path is disclosed",
+      status: report.partnerAiUsedCount > 0 ? "complete" : "gated",
+      body: `${partnerAi?.mode ?? report.partnerAiMode}. ${summarizePartnerAi(partnerAi) || report.partnerAiProviders}.`,
     },
     {
       label: "approval",
@@ -2564,6 +2719,7 @@ function buildDetailedRunReportText(context: IncidentReportContext) {
     `- Source hash: ${context.sourceHash ?? "pending"}`,
     `- Room hash: ${context.roomHash ?? "pending"}`,
     `- Filing hash: ${context.filingHash ?? "pending"}`,
+    `- AI/ML API: ${context.report.partnerAiUsedCount} provider call(s); ${context.report.partnerAiProviders}`,
     `- Signature gate: ${context.signatureReady ? "sealed" : "closed"} (${context.signatureMode.replaceAll("_", " ")})`,
     "",
     "Boundaries:",

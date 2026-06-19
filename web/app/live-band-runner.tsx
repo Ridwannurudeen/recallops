@@ -97,8 +97,8 @@ export default function LiveBandRunner({ apiBase }: { apiBase: string }) {
   return (
     <section className="live-runner">
       <div>
-        <p className="kicker">fresh Band drill</p>
-        <h2>Run a new room</h2>
+        <p className="kicker">provider-gated Band drill</p>
+        <h2>Attach a new provider room</h2>
       </div>
       <div className="runner-status">
         <span>{stateLabel}</span>
@@ -109,12 +109,12 @@ export default function LiveBandRunner({ apiBase }: { apiBase: string }) {
         ) : null}
       </div>
       <button type="button" disabled={buttonDisabled} onClick={runDrill}>
-        {running ? "running" : "run live drill"}
+        {running ? "running" : "request provider drill"}
       </button>
       {error ? <p className="runner-error">{error}</p> : null}
       {latestRun ? (
         <div className="fresh-proof">
-          <span>latest fresh run</span>
+          <span>latest provider run</span>
           <strong>{latestRun.room_id}</strong>
           <dl>
             <div>

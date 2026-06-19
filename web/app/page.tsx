@@ -17,6 +17,10 @@ const productSchema = {
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   url: "https://recallops.gudman.xyz",
+  sameAs: [
+    "https://github.com/Ridwannurudeen/recallops",
+    "https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops",
+  ],
   description:
     "Product-recall command system that coordinates evidence, traceability, accountable human approval, ERP-ready actions, and verifiable receipts.",
   featureList: [
@@ -120,6 +124,14 @@ export default function Home() {
           <a className="quiet-link" href="/proof">
             Inspect the audit packet
           </a>
+          <a
+            className="quiet-link"
+            href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops"
+            target="_blank"
+            rel="noreferrer"
+          >
+            View lablab submission
+          </a>
           <p className="trust-line">
             Source-grounded / Human-approved / ERP-gated
           </p>
@@ -157,7 +169,7 @@ export default function Home() {
           <p>
             The fastest evaluation is to watch the short demo, open the command
             room, run an incomplete shipment case, confirm approval is blocked,
-            then inspect the proof packet.
+            then inspect the proof packet and public lablab listing.
           </p>
         </div>
         <ol>
@@ -181,6 +193,14 @@ export default function Home() {
           </a>
           <a className="secondary-action" href="/proof">
             Inspect proof packet
+          </a>
+          <a
+            className="secondary-action"
+            href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops"
+            target="_blank"
+            rel="noreferrer"
+          >
+            lablab page
           </a>
         </div>
       </section>
@@ -279,7 +299,7 @@ export default function Home() {
           <p className="section-kicker">Start</p>
           <h2>Use the command room when you need to test a real case.</h2>
           <p>
-            Create a case, add shipment rows, watch the live execution stream,
+            Create a case, add shipment rows, watch the execution stream,
             resolve blockers, and download the report and audit packet.
           </p>
         </div>

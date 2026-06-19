@@ -107,3 +107,40 @@ def test_live_drill_persists_fresh_band_run(
     assert status["latest_run"] == proof
     latest_path = tmp_path / "runs" / "latest.json"
     assert json.loads(latest_path.read_text(encoding="utf-8")) == proof
+
+
+def test_live_drill_status_normalizes_legacy_fresh_band_copy(tmp_path: Path) -> None:
+    run_dir = tmp_path / "runs"
+    run_dir.mkdir()
+    settings = live_drill.LiveDrillSettings(
+        enabled=True,
+        config_path=tmp_path / "agent_config.yaml",
+        run_dir=run_dir,
+        cooldown_seconds=0,
+        daily_limit=5,
+        timeout_seconds=1,
+    )
+    legacy_proof = {
+        "completed_at": "2026-06-19T02:36:06Z",
+        "captured_band_run": {
+            "stage_evidence": [
+                {
+                    "stage": "room_created",
+                    "label": "Commander message",
+                    "band_message_id": "message-1",
+                    "proves": "Commander created a fresh Band room and recruited Evidence.",
+                }
+            ]
+        },
+    }
+    (run_dir / "latest.json").write_text(json.dumps(legacy_proof), encoding="utf-8")
+
+    status = live_drill.live_drill_status(settings)
+    latest_run = status["latest_run"]
+
+    assert isinstance(latest_run, dict)
+    captured_run = latest_run["captured_band_run"]
+    assert isinstance(captured_run, dict)
+    assert captured_run["stage_evidence"][0]["proves"] == (
+        "Commander created a new provider Band room and recruited Evidence."
+    )

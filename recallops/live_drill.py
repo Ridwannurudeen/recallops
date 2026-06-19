@@ -15,6 +15,9 @@ from scripts.band_spike import (
     run_spike,
 )
 
+LEGACY_FRESH_ROOM_PROOF = "Commander created a fresh Band room and recruited Evidence."
+PROVIDER_ROOM_PROOF = "Commander created a new provider Band room and recruited Evidence."
+
 
 @dataclass(frozen=True)
 class LiveDrillSettings:
@@ -76,13 +79,13 @@ async def run_live_drill(
     active_settings = settings or live_drill_settings()
     status = live_drill_status(active_settings)
     if not active_settings.enabled:
-        raise LiveDrillError(503, "Live Band drill is disabled on this deployment.")
+        raise LiveDrillError(503, "Provider Band drill is disabled on this deployment.")
     if not active_settings.config_path.exists():
-        raise LiveDrillError(503, "Live Band drill is missing server-side Band credentials.")
+        raise LiveDrillError(503, "Provider Band drill is missing server-side Band credentials.")
     if status["cooldown_remaining_seconds"] != 0:
-        raise LiveDrillError(429, "Live Band drill is cooling down.")
+        raise LiveDrillError(429, "Provider Band drill is cooling down.")
     if int(status["runs_today"]) >= active_settings.daily_limit:
-        raise LiveDrillError(429, "Live Band drill daily limit reached.")
+        raise LiveDrillError(429, "Provider Band drill daily limit reached.")
 
     active_settings.run_dir.mkdir(parents=True, exist_ok=True)
     lock_fd = _acquire_lock(active_settings)
@@ -112,7 +115,7 @@ async def run_live_drill(
         _write_live_drill(active_settings, proof)
         return proof
     except ConfigError as exc:
-        raise LiveDrillError(503, "Live Band drill server config is invalid.") from exc
+        raise LiveDrillError(503, "Provider Band drill server config is invalid.") from exc
     finally:
         os.close(lock_fd)
         _lock_path(active_settings).unlink(missing_ok=True)
@@ -123,7 +126,7 @@ def latest_live_drill(settings: LiveDrillSettings | None = None) -> dict[str, ob
     latest_path = active_settings.run_dir / "latest.json"
     if not latest_path.exists():
         return None
-    return json.loads(latest_path.read_text(encoding="utf-8"))
+    return _normalize_live_drill(json.loads(latest_path.read_text(encoding="utf-8")))
 
 
 async def _run_spike_once(
@@ -160,7 +163,7 @@ def _stage_evidence(result: dict[str, Any]) -> list[dict[str, str]]:
             "stage": "room_created",
             "label": "Commander message",
             "band_message_id": str(result["commander_message_id"]),
-            "proves": "Commander created a fresh Band room and recruited Evidence.",
+            "proves": PROVIDER_ROOM_PROOF,
         },
         {
             "stage": "evidence_extracted",
@@ -209,6 +212,36 @@ def _write_live_drill(settings: LiveDrillSettings, proof: dict[str, object]) -> 
     (settings.run_dir / "latest.json").write_text(payload, encoding="utf-8")
 
 
+def _normalize_live_drill(proof: dict[str, object]) -> dict[str, object]:
+    captured_run = proof.get("captured_band_run")
+    if not isinstance(captured_run, dict):
+        return proof
+
+    stage_evidence = captured_run.get("stage_evidence")
+    if not isinstance(stage_evidence, list):
+        return proof
+
+    normalized_stage_evidence: list[object] = []
+    changed = False
+    for item in stage_evidence:
+        if isinstance(item, dict) and item.get("proves") == LEGACY_FRESH_ROOM_PROOF:
+            normalized_stage_evidence.append({**item, "proves": PROVIDER_ROOM_PROOF})
+            changed = True
+        else:
+            normalized_stage_evidence.append(item)
+
+    if not changed:
+        return proof
+
+    return {
+        **proof,
+        "captured_band_run": {
+            **captured_run,
+            "stage_evidence": normalized_stage_evidence,
+        },
+    }
+
+
 def _runs_today(settings: LiveDrillSettings) -> int:
     if not settings.run_dir.exists():
         return 0
@@ -240,7 +273,7 @@ def _acquire_lock(settings: LiveDrillSettings) -> int:
     try:
         return os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError as exc:
-        raise LiveDrillError(409, "Live Band drill is already running.") from exc
+        raise LiveDrillError(409, "Provider Band drill is already running.") from exc
 
 
 def _lock_path(settings: LiveDrillSettings) -> Path:

@@ -7,6 +7,7 @@
     <a href="https://recallops.gudman.xyz/"><img alt="Live app" src="https://img.shields.io/badge/live-app-0f766e"></a>
     <a href="https://youtu.be/15Nj38uSZNI"><img alt="Demo video" src="https://img.shields.io/badge/demo-video-red"></a>
     <img alt="Track 3" src="https://img.shields.io/badge/Track%203-Regulated%20%26%20High--Stakes%20Workflows-d97706">
+    <a href="https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops"><img alt="lablab submission" src="https://img.shields.io/badge/lablab-submission-111827"></a>
     <a href="https://recallops.gudman.xyz/slides"><img alt="Slide deck" src="https://img.shields.io/badge/slides-PDF-334155"></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
   </p>
@@ -33,14 +34,16 @@
 - Command room: https://recallops.gudman.xyz/app
 - Proof packet: https://recallops.gudman.xyz/proof
 - Slide deck: https://recallops.gudman.xyz/slides
+- lablab project page: https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops
 
 Best test path:
 
 1. Open the command room.
 2. Upload an incomplete shipment CSV.
-3. Confirm RecallOps blocks approval because traceability is incomplete.
-4. Upload the recovered shipment data.
-5. Rerun the analysis and inspect the audit packet.
+3. Keep AI/ML partner mode on and run the analysis.
+4. Confirm RecallOps blocks approval because traceability is incomplete.
+5. Upload the recovered shipment data.
+6. Rerun the analysis and inspect the audit packet.
 
 ## Overview
 
@@ -86,17 +89,17 @@ It fits this track because product recalls require review, traceability, escalat
 
 ## Features
 
-| Area               | What RecallOps does                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------- |
-| Case intake        | Accepts complaint details and shipment CSV data.                                                              |
-| Source evidence    | Extracts product, lot, defect, severity, shipment totals, regions, and missing records.                       |
-| Traceability       | Calculates shipment coverage and identifies untraced units.                                                   |
-| Decision readiness | Blocks approval when required traceability or evidence is incomplete.                                         |
-| Agent command room | Shows structured specialist-agent work across evidence, traceability, risk, communications, and coordination. |
-| Human approval     | Keeps final recall authorization with a named human recall owner.                                             |
-| Notice preparation | Drafts customer, distributor, regulator, and quarantine communications.                                       |
-| ERP actions        | Prepares SAP and Oracle dry-run payloads while keeping live writes gated.                                     |
-| Proof packet       | Produces source hashes, run hashes, receipts, proof exports, and verification data.                           |
+| Area               | What RecallOps does                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Case intake        | Accepts complaint details and shipment CSV data.                                                                        |
+| Source evidence    | Extracts product, lot, defect, severity, shipment totals, regions, and missing records.                                 |
+| Traceability       | Calculates shipment coverage and identifies untraced units.                                                             |
+| Decision readiness | Blocks approval when required traceability or evidence is incomplete.                                                   |
+| Agent command room | Selects specialist work from evidence, traceability gaps, jurisdiction rules, partner AI state, and approval readiness. |
+| Human approval     | Keeps final recall authorization with a named human recall owner.                                                       |
+| Notice preparation | Drafts customer, distributor, regulator, and quarantine communications.                                                 |
+| ERP actions        | Prepares SAP and Oracle dry-run payloads while keeping live writes gated.                                               |
+| Proof packet       | Produces source hashes, run hashes, receipts, proof exports, and verification data.                                     |
 
 ## How It Works
 
@@ -164,7 +167,7 @@ The agents do not secretly approve a recall. They assemble evidence, expose gaps
 | --------------------- | -------------------------------------------------------------------------------------- |
 | Frontend              | Next.js, React, TypeScript                                                             |
 | Backend               | FastAPI, Python                                                                        |
-| Agent coordination    | Band room integration and deterministic fallback proof                                 |
+| Agent coordination    | Captured Band room proof, provider-gated runs, and deterministic replay                |
 | Evidence engine       | CSV parsing, complaint parsing, traceability math, jurisdiction rules                  |
 | Proof model           | SHA-256 source digests, run hashes, receipts, audit packet exports                     |
 | Integrations          | SAP dry-run payloads, Oracle dry-run payloads, regulator filing drafts                 |
@@ -173,21 +176,23 @@ The agents do not secretly approve a recall. They assemble evidence, expose gaps
 
 ## Key Routes and APIs
 
-| Method | Route                      | Purpose                                  |
-| ------ | -------------------------- | ---------------------------------------- |
-| `GET`  | `/`                        | Product landing page                     |
-| `GET`  | `/app`                     | Main command room workspace              |
-| `GET`  | `/demo/bat-4421`           | Guided BAT-4421 replay                   |
-| `GET`  | `/proof`                   | Audit packet and verification explorer   |
-| `GET`  | `/integrations`            | Integration status and boundaries        |
-| `GET`  | `/security`                | Security and trust boundaries            |
-| `GET`  | `/docs`                    | Developer and API documentation          |
-| `POST` | `/api/source-evidence`     | Analyze complaint and shipment evidence  |
-| `POST` | `/api/recall-room/run`     | Run source-bound recall room workflow    |
-| `POST` | `/api/filing-pack`         | Generate regulator filing drafts         |
-| `POST` | `/api/esignature-approval` | Seal human approval receipt              |
-| `POST` | `/api/enterprise-sync`     | Prepare ERP dry-run or gated live action |
-| `GET`  | `/api/verify`              | Verify deterministic proof digest        |
+| Method | Route                      | Purpose                                                                      |
+| ------ | -------------------------- | ---------------------------------------------------------------------------- |
+| `GET`  | `/`                        | Product landing page                                                         |
+| `GET`  | `/app`                     | Main command room workspace                                                  |
+| `GET`  | `/demo/bat-4421`           | Guided BAT-4421 replay                                                       |
+| `GET`  | `/proof`                   | Audit packet and verification explorer                                       |
+| `GET`  | `/integrations`            | Integration status and boundaries                                            |
+| `GET`  | `/security`                | Security and trust boundaries                                                |
+| `GET`  | `/docs`                    | Developer and API documentation                                              |
+| `POST` | `/api/source-evidence`     | Analyze complaint and shipment evidence                                      |
+| `GET`  | `/api/partner-ai/status`   | Inspect AI/ML API and Featherless readiness                                  |
+| `GET`  | `/api/spend-limits`        | Inspect partner-AI cooldown and daily run guard                              |
+| `POST` | `/api/recall-room/run`     | Run source-bound recall room workflow; provider Band is attempted by default |
+| `POST` | `/api/filing-pack`         | Generate regulator filing drafts                                             |
+| `POST` | `/api/esignature-approval` | Seal server-recomputed human approval receipt                                |
+| `POST` | `/api/enterprise-sync`     | Prepare ERP dry-run or gated live action                                     |
+| `GET`  | `/api/verify`              | Verify deterministic proof digest                                            |
 
 ## Project Structure
 
@@ -261,12 +266,14 @@ RecallOps is intentionally explicit about what is live, captured, deterministic,
 
 - Public SAP and Oracle paths prepare dry-run payloads unless a real tenant and admin authorization are configured.
 - Public regulator dispatch is a draft or dry-run unless real submission gates are configured and authorized.
-- Band room proof may use captured reference data when a fresh provider run is unavailable.
+- Band room proof labels captured room evidence, provider-gated runs, and deterministic replay separately. POST room runs attempt provider Band by default and disclose fallback status.
 - Optional partner-AI calls are not the source of truth. Deterministic parsing and proof receipts remain verifiable.
+- Protected approval receipts are issued only after the server recomputes source readiness, filing hash, and accepted room-run hash for the submitted case context.
 - The approval receipt is attributable audit evidence, not a claim that the product is certified for 21 CFR Part 11.
 
 ## Submission Assets
 
+- lablab project page: https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops
 - Demo video: https://youtu.be/15Nj38uSZNI
 - Slide deck: https://recallops.gudman.xyz/slides
 - Live app: https://recallops.gudman.xyz/

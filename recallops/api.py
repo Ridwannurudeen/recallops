@@ -70,7 +70,7 @@ class SourceEvidenceRequest(BaseModel):
 
 
 class RecallRoomRunRequest(SourceEvidenceRequest):
-    run_live_band: bool = False
+    run_live_band: bool = True
 
 
 class FilingPackRequest(SourceEvidenceRequest):
@@ -82,7 +82,7 @@ class RegulatorFilingRequest(FilingPackRequest):
     targets: tuple[Literal["cpsc", "eu", "regional"], ...] = ("cpsc", "eu", "regional")
 
 
-class ESignatureApprovalRequest(BaseModel):
+class ESignatureApprovalRequest(SourceEvidenceRequest):
     approver: str
     decision: Literal["approved", "rejected"] = "approved"
     reason: str
@@ -90,14 +90,16 @@ class ESignatureApprovalRequest(BaseModel):
     recall_room_run_hash: str
     filing_pack_hash: str
     previous_hash: str = "0" * 64
+    partner_ai_proof: dict[str, object] | None = None
 
 
-class ApprovalReceiptRequest(BaseModel):
+class ApprovalReceiptRequest(SourceEvidenceRequest):
     approver: str
     decision: Literal["approved", "rejected"] = "approved"
     reason: str
     source_audit_hash: str
     previous_hash: str = "0" * 64
+    partner_ai_proof: dict[str, object] | None = None
 
 
 class SubmissionProofRequest(BaseModel):
@@ -448,13 +450,14 @@ def esignature_approval(
             provided_admin_key=x_recallops_approval_key,
             authorization=authorization,
         )
+        approval_context = _verified_approval_context(request)
         receipt = build_esignature_receipt(
             approver=request.approver,
             decision=request.decision,
             reason=request.reason,
-            source_audit_hash=request.source_audit_hash,
+            source_audit_hash=approval_context["source_audit_hash"],
             recall_room_run_hash=request.recall_room_run_hash,
-            filing_pack_hash=request.filing_pack_hash,
+            filing_pack_hash=approval_context["filing_pack_hash"],
             previous_hash=request.previous_hash,
             identity=identity,
         )
@@ -467,9 +470,11 @@ def esignature_approval(
         "receipt": receipt.to_dict(),
         "verification": verify_esignature_receipt(receipt),
         "identity": identity,
+        "server_context": approval_context,
         "disclosure": (
             "Attributable e-signature receipt with server-verified identity, "
-            "signature meaning, source hash, room-run hash, and filing-pack hash."
+            "server-recomputed approval readiness, source hash, room-run hash, "
+            "and filing-pack hash."
         ),
     }
 
@@ -578,11 +583,12 @@ def identity_approval_receipt(
             provided_admin_key=x_recallops_approval_key,
             authorization=authorization,
         )
+        approval_context = _verified_approval_context(request, require_room_hash=False)
         receipt = build_approval_receipt(
             approver=request.approver,
             decision=request.decision,
             reason=request.reason,
-            source_audit_hash=request.source_audit_hash,
+            source_audit_hash=approval_context["source_audit_hash"],
             previous_hash=request.previous_hash,
             identity=identity,
         )
@@ -595,7 +601,11 @@ def identity_approval_receipt(
         "receipt": receipt.to_dict(),
         "verification": verify_approval_receipt(receipt),
         "identity": identity,
-        "disclosure": "Identity approval is server-verified, then sealed into the receipt hash.",
+        "server_context": approval_context,
+        "disclosure": (
+            "Identity approval is server-verified and bound to server-recomputed "
+            "case readiness before the receipt hash is sealed."
+        ),
     }
 
 
@@ -694,11 +704,12 @@ def case_detail(case_id: str) -> dict[str, object]:
 @app.post("/api/approval-receipt")
 def approval_receipt(request: ApprovalReceiptRequest) -> dict[str, object]:
     try:
+        approval_context = _verified_approval_context(request, require_room_hash=False)
         receipt = build_approval_receipt(
             approver=request.approver,
             decision=request.decision,
             reason=request.reason,
-            source_audit_hash=request.source_audit_hash,
+            source_audit_hash=approval_context["source_audit_hash"],
             previous_hash=request.previous_hash,
         )
     except ValueError as exc:
@@ -707,7 +718,11 @@ def approval_receipt(request: ApprovalReceiptRequest) -> dict[str, object]:
     return {
         "receipt": receipt.to_dict(),
         "verification": verify_approval_receipt(receipt),
-        "disclosure": "Receipt hash covers the approval payload; it is not a digital signature.",
+        "server_context": approval_context,
+        "disclosure": (
+            "Receipt hash covers the server-recomputed approval-ready source context; "
+            "it is not a digital signature."
+        ),
     }
 
 
@@ -760,6 +775,72 @@ def packet_download() -> Response:
         media_type="application/json",
         headers={"Content-Disposition": 'attachment; filename="recallops-bat-4421-packet.json"'},
     )
+
+
+def _verified_approval_context(
+    request: ESignatureApprovalRequest | ApprovalReceiptRequest,
+    *,
+    require_room_hash: bool = True,
+) -> dict[str, object]:
+    complaint_text = request.complaint_text or DEFAULT_COMPLAINT_TEXT
+    shipment_csv = request.shipment_csv or DEFAULT_SHIPMENT_CSV
+    recovered_shipment_csv = request.recovered_shipment_csv or DEFAULT_RECOVERED_SHIPMENT_CSV
+    source_packet = build_source_evidence_packet(
+        complaint_text=complaint_text,
+        shipment_csv=shipment_csv,
+        recovered_shipment_csv=recovered_shipment_csv,
+        partner_ai=request.partner_ai_proof,
+    )
+    if request.source_audit_hash != source_packet.audit_hash:
+        raise ValueError("Source audit hash does not match the server-recomputed case.")
+
+    rule_assessment = assess_rules(source_packet)
+    if request.decision == "approved" and rule_assessment["approval_ready"] is not True:
+        raise ValueError("Server-recomputed case is not approval-ready.")
+
+    dispatch_receipts = build_dispatch_receipts(source_packet)
+    filing_pack = build_filing_pack(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        dispatch_receipts=dispatch_receipts,
+    )
+    filing_pack_hash = str(filing_pack["pack_hash"])
+    submitted_filing_hash = getattr(request, "filing_pack_hash", None)
+    if submitted_filing_hash is not None and submitted_filing_hash != filing_pack_hash:
+        raise ValueError("Filing pack hash does not match the server-recomputed case.")
+
+    live_status = live_drill_status()
+    recall_room_run = build_recall_room_run(
+        source_packet=source_packet,
+        rule_assessment=rule_assessment,
+        live_band_status=live_status,
+    )
+    accepted_room_hashes = [str(recall_room_run["run_hash"])]
+    latest_run = live_status.get("latest_run")
+    if isinstance(latest_run, dict) and isinstance(latest_run.get("captured_band_run"), dict):
+        fresh_room_run = build_recall_room_run(
+            source_packet=source_packet,
+            rule_assessment=rule_assessment,
+            live_band_status=live_status,
+            fresh_band_run=latest_run,
+        )
+        accepted_room_hashes.append(str(fresh_room_run["run_hash"]))
+
+    submitted_room_hash = getattr(request, "recall_room_run_hash", None)
+    if require_room_hash and submitted_room_hash not in accepted_room_hashes:
+        raise ValueError("Recall room run hash does not match the server-recomputed case.")
+
+    return {
+        "approval_ready": rule_assessment["approval_ready"],
+        "source_audit_hash": source_packet.audit_hash,
+        "filing_pack_hash": filing_pack_hash,
+        "accepted_recall_room_run_hashes": accepted_room_hashes,
+        "submitted_recall_room_run_hash": submitted_room_hash,
+        "rule_mode": rule_assessment["mode"],
+        "source_verification": verify_source_evidence_digest(source_packet),
+        "recall_room_verification": verify_recall_room_run(recall_room_run),
+        "filing_pack_verification": verify_filing_pack(filing_pack),
+    }
 
 
 def _submission_proof(*, run_partner_ai_proof: bool) -> dict[str, object]:
