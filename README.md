@@ -1,4 +1,4 @@
-Ôªø<div align="center">
+<div align="center">
   <h1>RecallOps</h1>
   <p><strong>Band-native recall command room with source evidence, human sign-off, regulator drafts, and downloadable proof.</strong></p>
   <p>RecallOps turns Band into a regulated operating room: five specialist agents coordinate evidence, traceability, risk holds, filing drafts, and audit receipts while the final recall action stays owned by a named human.</p>
@@ -12,11 +12,11 @@
   </p>
 
   <p>
-    <a href="#why-recallops-exists">Why</a> ¬∑
-    <a href="#what-it-does">What it does</a> ¬∑
-    <a href="#see-it-in-action">Demo</a> ¬∑
-    <a href="#how-it-works">How it works</a> ¬∑
-    <a href="#quickstart">Quickstart</a> ¬∑
+    <a href="#why-recallops-exists">Why</a> ∑
+    <a href="#what-it-does">What it does</a> ∑
+    <a href="#see-it-in-action">Demo</a> ∑
+    <a href="#how-it-works">How it works</a> ∑
+    <a href="#quickstart">Quickstart</a> ∑
     <a href="#honest-limitations">Limits</a>
   </p>
 </div>
@@ -27,7 +27,7 @@
 
 Product recalls fail in the gaps between systems. Complaints sit in support tools, shipment rows sit in spreadsheets, regulatory review happens in meetings, ERP holds are drafted elsewhere, and the final approval trail often becomes a chain of screenshots and email fragments.
 
-A regulated buyer cannot accept ‚Äúthe AI approved the recall.‚Äù The accountable action must stay with a qualified human. What the team needs is a source-grounded room where agents can gather facts, challenge unsafe action, recover missing traceability, prepare filing drafts, and leave a proof packet behind.
+A regulated buyer cannot accept ìthe AI approved the recall.î The accountable action must stay with a qualified human. What the team needs is a source-grounded room where agents can gather facts, challenge unsafe action, recover missing traceability, prepare filing drafts, and leave a proof packet behind.
 
 RecallOps uses Band as the coordination layer and wraps it with recall-specific controls: traceability math, jurisdiction rules, filing packs, e-signature gates, ERP dry-runs, and SHA-256 receipts.
 
@@ -43,7 +43,7 @@ RecallOps uses Band as the coordination layer and wraps it with recall-specific 
     <td><strong>Visible room transcript</strong><br />The room feed shows agent, stage, and message handoffs: Evidence, Traceability, Regulatory/Risk, Communications, and QA sign-off gate.</td>
   </tr>
   <tr>
-    <td><strong>Adversarial coverage toggle</strong><br />‚ÄúBreak shipment coverage‚Äù withholds the recovered CSV. Final coverage stays below 100%, the hold path stays active, and human sign-off remains closed.</td>
+    <td><strong>Adversarial coverage toggle</strong><br />ìBreak shipment coverageî withholds the recovered CSV. Final coverage stays below 100%, the hold path stays active, and human sign-off remains closed.</td>
     <td><strong>Downloadable proof</strong><br />The demo exports a full audit packet plus a Band-room proof JSON with room mode, room ID, participant count, message IDs, source hash, run hash, and transcript.</td>
   </tr>
   <tr>
@@ -232,4 +232,4 @@ cd web; npm run dev -- --port 3068                  # local frontend
 
 License: hackathon prototype, source available for review.
 
-Live: https://recallops.gudman.xyz ¬∑ Source: https://github.com/Ridwannurudeen/recallops ¬∑ Primary demo: https://recallops.gudman.xyz/demo/judge
+Live: https://recallops.gudman.xyz ∑ Source: https://github.com/Ridwannurudeen/recallops ∑ Primary demo: https://recallops.gudman.xyz/demo/judge
