@@ -231,6 +231,22 @@ To enable live partner-AI reasoning (the AI/ML Risk Adapter), create a gitignore
 
 Without keys the adapter stays in deterministic mode and the run discloses `ai_advisory.used = false`. Live advisory output is surfaced for human review only; deterministic parsing and rule checks remain the source of truth and the approval gate.
 
+On the server (systemd), do not ship a `.env`. Put the keys in a root-only environment file and reference it from the unit, then restart only the RecallOps service:
+
+```ini
+# /etc/recallops.env  (chmod 600, root-owned)
+AIML_API_KEY=...
+FEATHERLESS_API_KEY=...
+RECALLOPS_PARTNER_AI_DAILY_LIMIT=25
+```
+
+```ini
+# in the RecallOps systemd unit [Service] section
+EnvironmentFile=/etc/recallops.env
+```
+
+The partner-AI path is spend-gated (default 10s cooldown, 25 runs/day) so the public endpoint cannot run up provider cost; tune `RECALLOPS_PARTNER_AI_DAILY_LIMIT` and `RECALLOPS_PARTNER_AI_COOLDOWN_SECONDS` as needed.
+
 ### Frontend
 
 ```powershell
