@@ -327,7 +327,7 @@ export default function Bat4421Replay({
             ))}
           </div>
           <div className="digest-card">
-            <span>Source to fact digest</span>
+            <span>Illustrative step digest</span>
             <code>{shortHash(step.digest, 10)}</code>
           </div>
         </article>
@@ -364,7 +364,9 @@ export default function Bat4421Replay({
         <article className="replay-panel decision-panel-live">
           <div className="replay-panel-head">
             <p>Decision Control</p>
-            <ProofLabel status="GATED">human approval</ProofLabel>
+            <ProofLabel status="DETERMINISTIC">
+              unsigned human receipt
+            </ProofLabel>
           </div>
           <div className={`veto-card veto-card-${step.decision.toLowerCase()}`}>
             <span>{step.tag}</span>

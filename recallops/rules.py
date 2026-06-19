@@ -49,7 +49,7 @@ RULES: tuple[JurisdictionRule, ...] = (
 def assess_rules(packet: SourceEvidencePacket) -> dict[str, object]:
     severity = _fact(packet, "severity").lower()
     initial_blockers = []
-    if packet.initial_traceability.coverage_percent < 100:
+    if packet.initial_traceability.untraced_units > 0:
         initial_blockers.append(
             {
                 "id": "TRACEABILITY-BELOW-100",
@@ -60,11 +60,14 @@ def assess_rules(packet: SourceEvidencePacket) -> dict[str, object]:
             }
         )
     final_blockers = []
-    if packet.final_traceability.coverage_percent < 100:
+    if packet.final_traceability.untraced_units > 0:
         final_blockers.append(
             {
                 "id": "FINAL-TRACEABILITY-INCOMPLETE",
-                "reason": "Final recall approval requires 100% shipment traceability.",
+                "reason": (
+                    f"Final recall approval requires 100% shipment traceability; "
+                    f"{packet.final_traceability.untraced_units} units remain untraced."
+                ),
             }
         )
 
