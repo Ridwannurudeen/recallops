@@ -1,4 +1,4 @@
-﻿import Bat4421Replay from "./bat-4421-replay";
+import Bat4421Replay from "./bat-4421-replay";
 import {
   accountableHuman,
   apiBase,

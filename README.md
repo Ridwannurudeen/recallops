@@ -5,23 +5,40 @@
 
   <p>
     <a href="https://recallops.gudman.xyz/"><img alt="Live app" src="https://img.shields.io/badge/live-app-0f766e"></a>
-    <a href="https://youtu.be/15Nj38uSZNI"><img alt="Demo video" src="https://img.shields.io/badge/demo-video-red"></a>
+    <a href="https://youtu.be/15Nj38uSZNI"><img alt="Demo video" src="https://img.shields.io/badge/demo-video-red"></a>`r`n    <img alt="Track 3" src="https://img.shields.io/badge/Track%203-Regulated%20%26%20High--Stakes%20Workflows-d97706">
     <a href="https://recallops.gudman.xyz/slides"><img alt="Slide deck" src="https://img.shields.io/badge/slides-PDF-334155"></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
   </p>
 
   <p>
-    <a href="#overview">Overview</a> ·
-    <a href="#live-demo">Live Demo</a> ·
-    <a href="#features">Features</a> ·
-    <a href="#how-it-works">How It Works</a> ·
-    <a href="#tech-stack">Tech Stack</a> ·
-    <a href="#run-locally">Run Locally</a> ·
+    <a href="#overview">Overview</a> ï¿½
+    <a href="#live-demo">Live Demo</a> ï¿½
+    <a href="#features">Features</a> ï¿½
+    <a href="#how-it-works">How It Works</a> ï¿½
+    <a href="#tech-stack">Tech Stack</a> ï¿½
+    <a href="#run-locally">Run Locally</a> ï¿½
     <a href="#license">License</a>
   </p>
 </div>
 
 ![RecallOps command room](docs/recallops-command-room.png)
+
+## For Judges
+
+- Track: **Track 3: Regulated & High-Stakes Workflows**
+- Demo video: https://youtu.be/15Nj38uSZNI
+- Live app: https://recallops.gudman.xyz/
+- Command room: https://recallops.gudman.xyz/app
+- Proof packet: https://recallops.gudman.xyz/proof
+- Slide deck: https://recallops.gudman.xyz/slides
+
+Best test path:
+
+1. Open the command room.
+2. Upload an incomplete shipment CSV.
+3. Confirm RecallOps blocks approval because traceability is incomplete.
+4. Upload the recovered shipment data.
+5. Rerun the analysis and inspect the audit packet.
 
 ## Overview
 
@@ -67,17 +84,17 @@ It fits this track because product recalls require review, traceability, escalat
 
 ## Features
 
-| Area | What RecallOps does |
-|---|---|
-| Case intake | Accepts complaint details and shipment CSV data. |
-| Source evidence | Extracts product, lot, defect, severity, shipment totals, regions, and missing records. |
-| Traceability | Calculates shipment coverage and identifies untraced units. |
-| Decision readiness | Blocks approval when required traceability or evidence is incomplete. |
+| Area               | What RecallOps does                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Case intake        | Accepts complaint details and shipment CSV data.                                                              |
+| Source evidence    | Extracts product, lot, defect, severity, shipment totals, regions, and missing records.                       |
+| Traceability       | Calculates shipment coverage and identifies untraced units.                                                   |
+| Decision readiness | Blocks approval when required traceability or evidence is incomplete.                                         |
 | Agent command room | Shows structured specialist-agent work across evidence, traceability, risk, communications, and coordination. |
-| Human approval | Keeps final recall authorization with a named human recall owner. |
-| Notice preparation | Drafts customer, distributor, regulator, and quarantine communications. |
-| ERP actions | Prepares SAP and Oracle dry-run payloads while keeping live writes gated. |
-| Proof packet | Produces source hashes, run hashes, receipts, proof exports, and verification data. |
+| Human approval     | Keeps final recall authorization with a named human recall owner.                                             |
+| Notice preparation | Drafts customer, distributor, regulator, and quarantine communications.                                       |
+| ERP actions        | Prepares SAP and Oracle dry-run payloads while keeping live writes gated.                                     |
+| Proof packet       | Produces source hashes, run hashes, receipts, proof exports, and verification data.                           |
 
 ## How It Works
 
@@ -135,40 +152,57 @@ The agents do not secretly approve a recall. They assemble evidence, expose gaps
 
 ![RecallOps command room](docs/recallops-command-room.png)
 
+## For Judges
+
+- Track: **Track 3: Regulated & High-Stakes Workflows**
+- Demo video: https://youtu.be/15Nj38uSZNI
+- Live app: https://recallops.gudman.xyz/
+- Command room: https://recallops.gudman.xyz/app
+- Proof packet: https://recallops.gudman.xyz/proof
+- Slide deck: https://recallops.gudman.xyz/slides
+
+Best test path:
+
+1. Open the command room.
+2. Upload an incomplete shipment CSV.
+3. Confirm RecallOps blocks approval because traceability is incomplete.
+4. Upload the recovered shipment data.
+5. Rerun the analysis and inspect the audit packet.
+
 ### Existing demo cover
 
 ![RecallOps demo cover](docs/cover.png)
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js, React, TypeScript |
-| Backend | FastAPI, Python |
-| Agent coordination | Band room integration and deterministic fallback proof |
-| Evidence engine | CSV parsing, complaint parsing, traceability math, jurisdiction rules |
-| Proof model | SHA-256 source digests, run hashes, receipts, audit packet exports |
-| Integrations | SAP dry-run payloads, Oracle dry-run payloads, regulator filing drafts |
+| Layer                 | Technology                                                                             |
+| --------------------- | -------------------------------------------------------------------------------------- |
+| Frontend              | Next.js, React, TypeScript                                                             |
+| Backend               | FastAPI, Python                                                                        |
+| Agent coordination    | Band room integration and deterministic fallback proof                                 |
+| Evidence engine       | CSV parsing, complaint parsing, traceability math, jurisdiction rules                  |
+| Proof model           | SHA-256 source digests, run hashes, receipts, audit packet exports                     |
+| Integrations          | SAP dry-run payloads, Oracle dry-run payloads, regulator filing drafts                 |
 | Optional AI providers | Featherless AI and AI/ML API, with deterministic parsing as the public source of truth |
-| Deployment | VPS, nginx, systemd |
+| Deployment            | VPS, nginx, systemd                                                                    |
 
 ## Key Routes and APIs
 
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/` | Product landing page |
-| `GET` | `/app` | Main command room workspace |
-| `GET` | `/demo/bat-4421` | Guided BAT-4421 replay |
-| `GET` | `/proof` | Audit packet and verification explorer |
-| `GET` | `/integrations` | Integration status and boundaries |
-| `GET` | `/security` | Security and trust boundaries |
-| `GET` | `/docs` | Developer and API documentation |
-| `POST` | `/api/source-evidence` | Analyze complaint and shipment evidence |
-| `POST` | `/api/recall-room/run` | Run source-bound recall room workflow |
-| `POST` | `/api/filing-pack` | Generate regulator filing drafts |
-| `POST` | `/api/esignature-approval` | Seal human approval receipt |
-| `POST` | `/api/enterprise-sync` | Prepare ERP dry-run or gated live action |
-| `GET` | `/api/verify` | Verify deterministic proof digest |
+| Method | Route                      | Purpose                                  |
+| ------ | -------------------------- | ---------------------------------------- |
+| `GET`  | `/`                        | Product landing page                     |
+| `GET`  | `/app`                     | Main command room workspace              |
+| `GET`  | `/demo/bat-4421`           | Guided BAT-4421 replay                   |
+| `GET`  | `/proof`                   | Audit packet and verification explorer   |
+| `GET`  | `/integrations`            | Integration status and boundaries        |
+| `GET`  | `/security`                | Security and trust boundaries            |
+| `GET`  | `/docs`                    | Developer and API documentation          |
+| `POST` | `/api/source-evidence`     | Analyze complaint and shipment evidence  |
+| `POST` | `/api/recall-room/run`     | Run source-bound recall room workflow    |
+| `POST` | `/api/filing-pack`         | Generate regulator filing drafts         |
+| `POST` | `/api/esignature-approval` | Seal human approval receipt              |
+| `POST` | `/api/enterprise-sync`     | Prepare ERP dry-run or gated live action |
+| `GET`  | `/api/verify`              | Verify deterministic proof digest        |
 
 ## Project Structure
 
