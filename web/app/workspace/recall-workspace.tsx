@@ -947,7 +947,8 @@ export default function RecallWorkspace({
   }
 
   async function uploadShipmentCsv(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) {
       return;
     }
@@ -959,12 +960,13 @@ export default function RecallWorkspace({
         exc instanceof Error ? exc.message : "Shipment CSV could not be read.",
       );
     } finally {
-      event.currentTarget.value = "";
+      input.value = "";
     }
   }
 
   async function uploadComplaintFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.currentTarget.files?.[0];
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) {
       return;
     }
@@ -980,7 +982,7 @@ export default function RecallWorkspace({
     } catch {
       setError("Complaint file could not be read.");
     } finally {
-      event.currentTarget.value = "";
+      input.value = "";
     }
   }
 
