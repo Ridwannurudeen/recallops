@@ -5,7 +5,13 @@ import SiteNav from "../site-nav";
 const groupedEndpoints = [
   {
     label: "Run a case",
-    paths: ["/api/source-evidence", "/api/recall-room/run", "/api/filing-pack"],
+    paths: [
+      "/api/source-evidence",
+      "/api/partner-ai/status",
+      "/api/spend-limits",
+      "/api/recall-room/run",
+      "/api/filing-pack",
+    ],
   },
   {
     label: "Approve and sync",

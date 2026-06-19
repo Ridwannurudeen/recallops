@@ -244,6 +244,10 @@ export default function SourceEvidenceCockpit({
           decision: "approved",
           reason,
           source_audit_hash: packet.audit_hash,
+          complaint_text: inputs.complaint_text,
+          shipment_csv: inputs.shipment_csv,
+          recovered_shipment_csv: inputs.recovered_shipment_csv,
+          partner_ai_proof: packet.partner_ai,
         }),
       });
       const body = await response.json();

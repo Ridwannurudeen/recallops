@@ -18,6 +18,7 @@ def build_source_room(
     initial_blockers = rule_assessment["initial_blockers"]
     final_blockers = rule_assessment["final_blockers"]
     next_deadline = rule_assessment["next_deadline"]
+    coordination_plan = _coordination_plan(source_packet, rule_assessment)
 
     hold_message = (
         f"Regulatory/Risk raises a human-review hold: {initial_blockers[0]['reason']}"
@@ -121,6 +122,7 @@ def build_source_room(
         "source_audit_hash": source_packet.audit_hash,
         "approval_ready": rule_assessment["approval_ready"],
         "next_deadline": next_deadline,
+        "coordination_plan": coordination_plan,
         "events": events,
         "room_hash": room_hash,
     }
@@ -147,18 +149,20 @@ def build_recall_room_run(
         "proof_kind": "source_packet_to_recall_room_run",
         "mode": "parameterized_room_with_band_binding",
         "disclosure": (
-            "The room events are derived from the current source packet. When live Band "
-            "runtime is available, a fresh Band run can be attached; otherwise the packet "
-            "binds to captured Band room evidence and declares the fallback."
+            "The room events are derived from the current source packet. When provider Band "
+            "runtime is configured, a provider run can be attached; otherwise the packet "
+            "binds to captured Band room evidence and labels deterministic replay."
         ),
         "incident_id": source_packet.incident_id,
         "source_audit_hash": source_packet.audit_hash,
         "rule_mode": rule_assessment["mode"],
         "approval_ready": rule_assessment["approval_ready"],
         "room": room,
+        "coordination_plan": room["coordination_plan"],
         "band": band_binding,
         "causality_chain": [
             "source evidence parsed",
+            "specialists selected from source risk and traceability gaps",
             "traceability coverage computed",
             "human-review hold evaluated",
             "jurisdiction rules applied",
@@ -166,7 +170,7 @@ def build_recall_room_run(
             "human approval gate prepared",
         ],
     }
-    run_hash = _hash_payload(run_payload)
+    run_hash = _hash_payload(_stable_run_payload(run_payload))
     run = {**run_payload, "run_hash": run_hash}
     return {**run, "verification": verify_recall_room_run(run)}
 
@@ -175,7 +179,7 @@ def verify_recall_room_run(run: dict[str, object]) -> dict[str, str | bool]:
     payload = dict(run)
     expected_hash = str(payload.pop("run_hash"))
     payload.pop("verification", None)
-    actual_hash = _hash_payload(payload)
+    actual_hash = _hash_payload(_stable_run_payload(payload))
     return {
         "ok": actual_hash == expected_hash,
         "algorithm": "sha256",
@@ -200,6 +204,69 @@ def spike_incident_payload(source_packet: SourceEvidencePacket) -> dict[str, obj
             - source_packet.initial_traceability.traced_units
         ),
         "final_coverage_percent": source_packet.final_traceability.coverage_percent,
+    }
+
+
+def _coordination_plan(
+    source_packet: SourceEvidencePacket,
+    rule_assessment: dict[str, object],
+) -> dict[str, object]:
+    initial = source_packet.initial_traceability
+    final = source_packet.final_traceability
+    facts = {fact.key: fact.value for fact in source_packet.facts}
+    initial_blockers = rule_assessment["initial_blockers"]
+    next_deadline = rule_assessment["next_deadline"]
+    partner_ai = source_packet.partner_ai
+    partner_ai_used = int(partner_ai.get("used_count", 0)) if isinstance(partner_ai, dict) else 0
+    selected_roles: list[dict[str, object]] = [
+        {
+            "agent": "Evidence",
+            "selected": True,
+            "reason": "Complaint facts and source citations are required for every recall run.",
+        },
+        {
+            "agent": "Traceability",
+            "selected": initial.untraced_units > 0 or final.coverage_percent < 100,
+            "reason": (
+                f"{initial.untraced_units} initially untraced units require shipment coverage work."
+            ),
+        },
+        {
+            "agent": "Regulatory/Risk",
+            "selected": bool(initial_blockers) or str(facts["severity"]) == "critical",
+            "reason": "Critical severity or traceability blockers require a human-review hold.",
+        },
+        {
+            "agent": "Rules",
+            "selected": isinstance(next_deadline, dict),
+            "reason": "Jurisdiction deadlines are only recruited when matched regions trigger rules.",
+        },
+        {
+            "agent": "Communications",
+            "selected": final.coverage_percent == 100,
+            "reason": "Notices are drafted only after recovered evidence closes the shipment scope.",
+        },
+        {
+            "agent": "AI/ML Risk Adapter",
+            "selected": partner_ai_used > 0,
+            "reason": "Partner provider outputs are reviewed only when the spend-gated AI path ran.",
+        },
+    ]
+    selected = [role for role in selected_roles if role["selected"] is True]
+    return {
+        "mode": "source_driven_specialist_recruitment",
+        "selection_inputs": {
+            "severity": facts["severity"],
+            "initial_coverage_percent": initial.coverage_percent,
+            "final_coverage_percent": final.coverage_percent,
+            "initial_blocker_count": len(initial_blockers)
+            if isinstance(initial_blockers, list)
+            else 0,
+            "partner_ai_used_count": partner_ai_used,
+        },
+        "selected_specialists": selected,
+        "candidate_specialists": selected_roles,
+        "sequence": [str(role["agent"]) for role in selected],
     }
 
 
@@ -259,6 +326,15 @@ def _message_ids(run: dict[str, object]) -> list[str]:
         )
         if run.get(key)
     ]
+
+
+def _stable_run_payload(payload: dict[str, object]) -> dict[str, object]:
+    stable = json.loads(json.dumps(_to_plain(payload), sort_keys=True))
+    band = stable.get("band")
+    if isinstance(band, dict):
+        band.pop("live_status", None)
+    stable.pop("verification", None)
+    return stable
 
 
 def _hash_payload(payload: object) -> str:

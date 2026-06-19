@@ -10,7 +10,7 @@ import SiteNav from "../site-nav";
 
 const thirtySecondPitch = [
   "RecallOps is a proof-carrying command room for product recalls.",
-  "A judge can edit source evidence, watch traceability gaps become human review gates, inspect the captured Band room proof, and verify the final packet hash.",
+  "A judge can run AI/ML-assisted source evidence, watch traceability gaps become human review gates, inspect the captured Band room proof, and verify the final packet hash.",
   "The important boundary is explicit: public demos can prepare regulator filing packs and ERP payloads, but real regulator submission and tenant writes stay gated behind configured endpoints, approval identity, and admin authorization.",
 ];
 
@@ -26,6 +26,12 @@ const statusCards = [
     label: "Band room evidence",
     headline:
       "BAT-4421 includes captured room, participant, handoff, hold, and notice IDs.",
+  },
+  {
+    status: "GATED" as const,
+    label: "AI/ML API proof lane",
+    headline:
+      "The command room can call AI/ML API and Featherless once, then records provider status and response hashes in the run report.",
   },
   {
     status: "DETERMINISTIC" as const,
@@ -64,14 +70,14 @@ const demoScript = [
   {
     step: "00:30",
     title: "Run the guided judge demo",
-    copy: "Pick a scenario, run the live evidence-room-filing flow, inspect Band proof, and download the audit packet.",
+    copy: "Run the source evidence, room, filing, and proof flow, then inspect the captured Band proof and packet hash.",
     href: "/demo/bat-4421?mode=guided",
     action: "Run BAT-4421",
   },
   {
     step: "01:20",
     title: "Open the command room",
-    copy: "Open the command room, edit the BAT-4421 evidence, recompute traceability, and show the coverage gap becoming a review gate.",
+    copy: "Open the command room, keep AI/ML partner mode on, recompute traceability, and show provider status plus the coverage gate.",
     href: "/app",
     action: "Open command room",
   },
@@ -114,12 +120,19 @@ const judgeLinks = [
     href: "/docs",
     copy: "Endpoint index for the proof bundle, source evidence, filing pack, Band proof, SAP/Oracle checks, and verify route.",
   },
+  {
+    label: "lablab page",
+    href: "https://lablab.ai/ai-hackathons/band-of-agents-hackathon/gudman/recallops",
+    copy: "Public hackathon listing with Track 3 category, project summary, repository, presentation, and demo links.",
+  },
 ];
 
 const featuredEndpoints = docsEndpoints.filter((endpoint) =>
   [
     "/api/submission-proof",
     "/api/source-evidence",
+    "/api/partner-ai/status",
+    "/api/spend-limits",
     "/api/recall-room/run",
     "/api/filing-pack",
     "/api/regulator-filing/status",

@@ -257,9 +257,9 @@ export const integrationClaims: {
   {
     name: "Band",
     status: "CAPTURED",
-    headline: "Five-agent room proof captured from the Band spike.",
+    headline: "Five-agent Band room proof is captured and labeled.",
     detail:
-      "The deterministic BAT-4421 packet references captured room, participant, handoff, hold, and notice IDs.",
+      "The deterministic BAT-4421 packet references captured room, participant, handoff, hold, and notice IDs without presenting them as a new provider run.",
   },
   {
     name: "SAP",
@@ -286,7 +286,7 @@ export const integrationClaims: {
     name: "Regulator filing",
     status: "DRY RUN",
     headline:
-      "Multi-jurisdiction filing packets are prepared from live evidence.",
+      "Multi-jurisdiction filing packets are prepared from source evidence.",
     detail:
       "CPSC, EU Safety Gate, and regional authority payloads are generated from the same source packet while live external submission stays gated.",
   },
@@ -336,13 +336,24 @@ export const docsEndpoints = [
   },
   {
     method: "GET",
+    path: "/api/partner-ai/status",
+    purpose: "Configured AI/ML API and Featherless provider readiness.",
+  },
+  {
+    method: "GET",
+    path: "/api/spend-limits",
+    purpose: "Cooldown, daily limit, lock, and latest partner-AI run status.",
+  },
+  {
+    method: "GET",
     path: "/api/recall-room/run",
     purpose: "Default source-packet-to-room run with Band proof binding.",
   },
   {
     method: "POST",
     path: "/api/recall-room/run",
-    purpose: "Run a recall room from edited evidence and optional live Band.",
+    purpose:
+      "Run a recall room from edited evidence and optional provider Band binding.",
   },
   {
     method: "GET",

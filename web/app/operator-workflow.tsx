@@ -402,6 +402,10 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
         source_audit_hash: evidence.packet.audit_hash,
         recall_room_run_hash: recallRun.run.run_hash,
         filing_pack_hash: filingPack.filing_pack.pack_hash,
+        complaint_text: evidence.inputs.complaint_text,
+        shipment_csv: evidence.inputs.shipment_csv,
+        recovered_shipment_csv: evidence.inputs.recovered_shipment_csv,
+        partner_ai_proof: evidence.packet.partner_ai,
       },
     });
     if (result && result.status >= 200 && result.status < 300) {
@@ -704,7 +708,7 @@ export default function OperatorWorkflow({ apiBase }: { apiBase: string }) {
             onChange={(event) => setRunLiveBand(event.currentTarget.checked)}
           />
           <span>
-            Attempt fresh live Band run when server-side credentials allow it
+            Attach a provider Band run when server-side credentials allow it
           </span>
         </label>
         <div className="write-action-grid">

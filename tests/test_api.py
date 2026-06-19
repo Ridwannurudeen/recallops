@@ -143,7 +143,44 @@ def test_source_evidence_recompute_generates_parameterized_room() -> None:
     assert body["room"]["approval_ready"] is True
     assert "Harbor Sensor" in body["room"]["events"][0]["message"]
     assert "50% with 100 untraced units" in body["room"]["events"][1]["message"]
+    assert body["room"]["coordination_plan"]["mode"] == "source_driven_specialist_recruitment"
+    assert "Traceability" in body["room"]["coordination_plan"]["sequence"]
     assert len(body["room"]["room_hash"]) == 64
+
+
+def test_recall_room_run_attempts_live_band_by_default(monkeypatch) -> None:
+    async def fake_run_live_drill(**_: object) -> dict[str, object]:
+        return {
+            "proof_kind": "fresh_live_band_run",
+            "started_at": "2026-06-19T12:00:00Z",
+            "completed_at": "2026-06-19T12:00:03Z",
+            "captured_band_run": {
+                "proof_mode": "fresh_band_five_agent_run",
+                "captured_at": "2026-06-19T12:00:03Z",
+                "room_id": "fresh-room-default",
+                "participant_count": 5,
+                "context_items": 8,
+                "commander_event_id": "fresh-event",
+                "commander_message_id": "fresh-commander",
+                "evidence_ack_id": "fresh-evidence",
+                "traceability_gap_id": "fresh-gap",
+                "risk_veto_id": "fresh-veto",
+                "traceability_resolved_id": "fresh-resolved",
+                "risk_approved_id": "fresh-approved",
+                "communications_notice_id": "fresh-notice",
+                "stage_evidence": [],
+            },
+        }
+
+    monkeypatch.setattr("recallops.api.run_live_drill", fake_run_live_drill)
+
+    response = post("/api/recall-room/run", {})
+
+    assert response.status_code == 200
+    run = response.json()["run"]
+    assert run["band"]["mode"] == "fresh_live_band_run_attached"
+    assert run["band"]["room_id"] == "fresh-room-default"
+    assert run["verification"]["ok"] is True
 
 
 def test_recall_room_run_binds_source_packet_to_band_reference() -> None:
@@ -273,6 +310,31 @@ def test_esignature_approval_requires_verified_identity(monkeypatch) -> None:
     assert receipt["recall_room_run_hash"] == room["run_hash"]
     assert receipt["filing_pack_hash"] == filing["pack_hash"]
     assert approved.json()["verification"]["ok"] is True
+    assert approved.json()["server_context"]["approval_ready"] is True
+
+
+def test_esignature_approval_rejects_mismatched_source_hash(monkeypatch) -> None:
+    monkeypatch.setenv("RECALLOPS_APPROVAL_ADMIN_KEY", "approval-key")
+    source = get("/api/source-evidence").json()["packet"]
+    room = get("/api/recall-room/run").json()["run"]
+    filing = get("/api/filing-pack").json()["filing_pack"]
+
+    response = post_with_headers(
+        "/api/esignature-approval",
+        {
+            "approver": "QA Director",
+            "decision": "approved",
+            "reason": "I reviewed traceability, filing pack, and ERP dry-run.",
+            "source_audit_hash": "a" * 64,
+            "recall_room_run_hash": room["run_hash"],
+            "filing_pack_hash": filing["pack_hash"],
+        },
+        {"x-recallops-approval-key": "approval-key"},
+    )
+
+    assert source["audit_hash"] != "a" * 64
+    assert response.status_code == 400
+    assert "Source audit hash" in response.json()["detail"]
 
 
 def test_source_evidence_recompute_rejects_bad_csv() -> None:
