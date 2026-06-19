@@ -1,22 +1,24 @@
-<div align="center">
+﻿<div align="center">
   <h1>RecallOps</h1>
   <p><strong>Run the recall. Prove the decision.</strong></p>
   <p>RecallOps is a product-recall command system for high-stakes incidents where evidence, traceability, escalation, human approval, and audit proof must stay connected.</p>
 
   <p>
     <a href="https://recallops.gudman.xyz/"><img alt="Live app" src="https://img.shields.io/badge/live-app-0f766e"></a>
-    <a href="https://youtu.be/15Nj38uSZNI"><img alt="Demo video" src="https://img.shields.io/badge/demo-video-red"></a>`r`n    <img alt="Track 3" src="https://img.shields.io/badge/Track%203-Regulated%20%26%20High--Stakes%20Workflows-d97706">
+    <a href="https://youtu.be/15Nj38uSZNI"><img alt="Demo video" src="https://img.shields.io/badge/demo-video-red"></a>
+    <img alt="Track 3" src="https://img.shields.io/badge/Track%203-Regulated%20%26%20High--Stakes%20Workflows-d97706">
     <a href="https://recallops.gudman.xyz/slides"><img alt="Slide deck" src="https://img.shields.io/badge/slides-PDF-334155"></a>
     <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue"></a>
   </p>
 
   <p>
-    <a href="#overview">Overview</a> �
-    <a href="#live-demo">Live Demo</a> �
-    <a href="#features">Features</a> �
-    <a href="#how-it-works">How It Works</a> �
-    <a href="#tech-stack">Tech Stack</a> �
-    <a href="#run-locally">Run Locally</a> �
+    <a href="#for-judges">For Judges</a> ·
+    <a href="#overview">Overview</a> ·
+    <a href="#live-demo">Live Demo</a> ·
+    <a href="#features">Features</a> ·
+    <a href="#how-it-works">How It Works</a> ·
+    <a href="#tech-stack">Tech Stack</a> ·
+    <a href="#run-locally">Run Locally</a> ·
     <a href="#license">License</a>
   </p>
 </div>
@@ -152,24 +154,7 @@ The agents do not secretly approve a recall. They assemble evidence, expose gaps
 
 ![RecallOps command room](docs/recallops-command-room.png)
 
-## For Judges
-
-- Track: **Track 3: Regulated & High-Stakes Workflows**
-- Demo video: https://youtu.be/15Nj38uSZNI
-- Live app: https://recallops.gudman.xyz/
-- Command room: https://recallops.gudman.xyz/app
-- Proof packet: https://recallops.gudman.xyz/proof
-- Slide deck: https://recallops.gudman.xyz/slides
-
-Best test path:
-
-1. Open the command room.
-2. Upload an incomplete shipment CSV.
-3. Confirm RecallOps blocks approval because traceability is incomplete.
-4. Upload the recovered shipment data.
-5. Rerun the analysis and inspect the audit packet.
-
-### Existing demo cover
+### Demo cover
 
 ![RecallOps demo cover](docs/cover.png)
 
