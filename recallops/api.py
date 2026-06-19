@@ -8,7 +8,12 @@ from pydantic import BaseModel
 
 from recallops import build_recall_packet, verify_packet_digest
 from recallops.approval import build_approval_receipt, verify_approval_receipt
-from recallops.cases import create_case_record, get_case_record, list_case_records
+from recallops.cases import (
+    create_case_record,
+    get_case_record,
+    list_case_records,
+    record_receipt,
+)
 from recallops.enterprise import (
     EnterpriseSyncError,
     enterprise_sync_status,
@@ -461,6 +466,13 @@ def esignature_approval(
             previous_hash=request.previous_hash,
             identity=identity,
         )
+        audit_record = record_receipt(
+            kind="esignature",
+            receipt_hash=receipt.signature_hash,
+            previous_hash=receipt.previous_hash,
+            source_audit_hash=receipt.source_audit_hash,
+            payload=receipt.to_dict(),
+        )
     except IdentityError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except ValueError as exc:
@@ -471,6 +483,7 @@ def esignature_approval(
         "verification": verify_esignature_receipt(receipt),
         "identity": identity,
         "server_context": approval_context,
+        "audit_record": audit_record,
         "disclosure": (
             "Attributable e-signature receipt with server-verified identity, "
             "server-recomputed approval readiness, source hash, room-run hash, "
@@ -592,6 +605,13 @@ def identity_approval_receipt(
             previous_hash=request.previous_hash,
             identity=identity,
         )
+        audit_record = record_receipt(
+            kind="identity_approval",
+            receipt_hash=receipt.receipt_hash,
+            previous_hash=receipt.previous_hash,
+            source_audit_hash=receipt.source_audit_hash,
+            payload=receipt.to_dict(),
+        )
     except IdentityError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except ValueError as exc:
@@ -602,6 +622,7 @@ def identity_approval_receipt(
         "verification": verify_approval_receipt(receipt),
         "identity": identity,
         "server_context": approval_context,
+        "audit_record": audit_record,
         "disclosure": (
             "Identity approval is server-verified and bound to server-recomputed "
             "case readiness before the receipt hash is sealed."
@@ -712,6 +733,13 @@ def approval_receipt(request: ApprovalReceiptRequest) -> dict[str, object]:
             source_audit_hash=approval_context["source_audit_hash"],
             previous_hash=request.previous_hash,
         )
+        audit_record = record_receipt(
+            kind="approval",
+            receipt_hash=receipt.receipt_hash,
+            previous_hash=receipt.previous_hash,
+            source_audit_hash=receipt.source_audit_hash,
+            payload=receipt.to_dict(),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -719,6 +747,7 @@ def approval_receipt(request: ApprovalReceiptRequest) -> dict[str, object]:
         "receipt": receipt.to_dict(),
         "verification": verify_approval_receipt(receipt),
         "server_context": approval_context,
+        "audit_record": audit_record,
         "disclosure": (
             "Receipt hash covers the server-recomputed approval-ready source context; "
             "it is not a digital signature."

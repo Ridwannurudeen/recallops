@@ -86,6 +86,58 @@ def get_case_record(case_id: str) -> dict[str, object] | None:
     return payload
 
 
+def record_receipt(
+    *,
+    kind: str,
+    receipt_hash: str,
+    previous_hash: str,
+    source_audit_hash: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    recorded_at = _now()
+    with _connect() as connection:
+        _ensure_receipt_schema(connection)
+        already = connection.execute(
+            "select 1 from recall_receipts where receipt_hash = ?",
+            (receipt_hash,),
+        ).fetchone()
+        if already is not None:
+            raise ValueError("Receipt already recorded; replay rejected.")
+        if previous_hash != "0" * 64:
+            prior = connection.execute(
+                "select 1 from recall_receipts where receipt_hash = ?",
+                (previous_hash,),
+            ).fetchone()
+            if prior is None:
+                raise ValueError("Previous hash does not match any recorded receipt.")
+        try:
+            connection.execute(
+                """
+                insert into recall_receipts(
+                  receipt_hash, previous_hash, kind, source_audit_hash, recorded_at, payload_json
+                )
+                values (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    receipt_hash,
+                    previous_hash,
+                    kind,
+                    source_audit_hash,
+                    recorded_at,
+                    json.dumps(payload, sort_keys=True),
+                ),
+            )
+        except sqlite3.IntegrityError as exc:
+            raise ValueError("Receipt already recorded; replay rejected.") from exc
+    return {
+        "recorded": True,
+        "kind": kind,
+        "receipt_hash": receipt_hash,
+        "previous_hash": previous_hash,
+        "recorded_at": recorded_at,
+    }
+
+
 def _connect() -> sqlite3.Connection:
     path = case_db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -101,6 +153,21 @@ def _ensure_schema(connection: sqlite3.Connection) -> None:
             case_id text primary key,
             created_at text not null,
             source_audit_hash text not null,
+            payload_json text not null
+        )
+        """
+    )
+
+
+def _ensure_receipt_schema(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        create table if not exists recall_receipts (
+            receipt_hash text primary key,
+            previous_hash text not null,
+            kind text not null,
+            source_audit_hash text not null,
+            recorded_at text not null,
             payload_json text not null
         )
         """

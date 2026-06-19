@@ -160,6 +160,7 @@ def build_recall_room_run(
         "room": room,
         "coordination_plan": room["coordination_plan"],
         "band": band_binding,
+        "ai_advisory": _ai_advisory(source_packet),
         "causality_chain": [
             "source evidence parsed",
             "specialists selected from source risk and traceability gaps",
@@ -312,6 +313,33 @@ def _band_binding(
     }
 
 
+def _ai_advisory(source_packet: SourceEvidencePacket) -> dict[str, object]:
+    partner = source_packet.partner_ai
+    if not isinstance(partner, dict):
+        return {"agent": "AI/ML Risk Adapter", "used": False, "mode": "unavailable"}
+    providers = partner.get("providers")
+    providers = providers if isinstance(providers, dict) else {}
+    risk = providers.get("ai_ml_api")
+    risk = risk if isinstance(risk, dict) else {}
+    evidence = providers.get("featherless")
+    evidence = evidence if isinstance(evidence, dict) else {}
+    used = int(partner.get("used_count", 0)) > 0
+    return {
+        "agent": "AI/ML Risk Adapter",
+        "used": used,
+        "mode": partner.get("mode"),
+        "disclosure": (
+            "Advisory LLM analysis surfaced for human review only; deterministic parsing "
+            "and rule checks remain the source of truth and the approval gate. This block is "
+            "excluded from the run hash so the proof stays reproducible."
+        ),
+        "risk_analysis": risk.get("output") if used else None,
+        "evidence_analysis": evidence.get("output") if used else None,
+        "risk_response_hash": risk.get("response_hash") if used else None,
+        "evidence_response_hash": evidence.get("response_hash") if used else None,
+    }
+
+
 def _message_ids(run: dict[str, object]) -> list[str]:
     return [
         str(run[key])
@@ -333,6 +361,7 @@ def _stable_run_payload(payload: dict[str, object]) -> dict[str, object]:
     band = stable.get("band")
     if isinstance(band, dict):
         band.pop("live_status", None)
+    stable.pop("ai_advisory", None)
     stable.pop("verification", None)
     return stable
 

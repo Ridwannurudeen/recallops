@@ -367,6 +367,34 @@ export default function RecallWorkspace({
   const partnerAi = result?.evidence.packet.partner_ai ?? null;
   const partnerAiUsedCount = partnerAi?.used_count ?? 0;
   const partnerAiProviderSummary = summarizePartnerAi(partnerAi);
+  const aiRiskLevel = getPathString(result?.roomRun, [
+    "run",
+    "ai_advisory",
+    "risk_analysis",
+    "risk_level",
+  ]);
+  const aiRiskDecision = getPathString(result?.roomRun, [
+    "run",
+    "ai_advisory",
+    "risk_analysis",
+    "decision",
+  ]);
+  const aiEvidenceSummary = getPathString(result?.roomRun, [
+    "run",
+    "ai_advisory",
+    "evidence_analysis",
+    "evidence_summary",
+  ]);
+  const aiAdvisorySummary =
+    aiRiskLevel || aiRiskDecision || aiEvidenceSummary
+      ? `Advisory: ${[
+          aiRiskLevel ? `risk ${aiRiskLevel}` : null,
+          aiRiskDecision,
+          aiEvidenceSummary,
+        ]
+          .filter(Boolean)
+          .join("; ")}`
+      : null;
   const signatureMode =
     getString(asRecord(result?.signatureGate), "mode") ??
     getString(asRecord(result?.signatureGate), "proof_kind") ??
@@ -1873,9 +1901,10 @@ export default function RecallWorkspace({
                 <p>{signatureMode.replaceAll("_", " ")}</p>
               </article>
               <article>
-                <span>AI/ML API evidence</span>
+                <span>AI/ML Risk Adapter</span>
                 <strong>{partnerAiUsedCount} provider call(s)</strong>
                 <p>{partnerAiProviderSummary}</p>
+                {aiAdvisorySummary ? <p>{aiAdvisorySummary}</p> : null}
               </article>
             </div>
             <div className={styles.transcriptFeed}>

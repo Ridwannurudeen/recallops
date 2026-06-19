@@ -45,6 +45,17 @@ def test_source_parser_rejects_invalid_shipment_status() -> None:
         build_source_evidence_packet(shipment_csv=bad_csv)
 
 
+def test_source_parser_rejects_duplicate_shipment_sources() -> None:
+    dup_csv = (
+        "source,distributor,region,customers,units,status\n"
+        "SHIP-1,Hub,US-West,10,100,traced\n"
+        "SHIP-1,Hub,EU-North,10,100,missing\n"
+    )
+
+    with pytest.raises(ValueError, match="repeats source"):
+        build_source_evidence_packet(shipment_csv=dup_csv)
+
+
 def test_approval_receipt_hashes_source_packet() -> None:
     packet = build_source_evidence_packet()
     receipt = build_approval_receipt(

@@ -64,7 +64,7 @@ The `Break shipment coverage` toggle proves the negative path. It withholds reco
 
 ## Verification status
 
-- Backend test suite: 74 passing tests.
+- Backend test suite: 83 passing tests.
 - Frontend typecheck: passing.
 - Frontend production build: passing.
 - VPS build and restart: passing.

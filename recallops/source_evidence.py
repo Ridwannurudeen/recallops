@@ -201,8 +201,12 @@ def _parse_shipments(
 
     shipments: list[SourceShipment] = []
     citations: list[Citation] = []
+    seen_sources: set[str] = set()
     for row_number, row in enumerate(reader, start=2):
         source = str(row["source"]).strip()
+        if source in seen_sources:
+            raise ValueError(f"Shipment row {row_number} repeats source {source}.")
+        seen_sources.add(source)
         status = str(row["status"]).strip().lower()
         if status not in {"traced", "missing"}:
             raise ValueError(f"Shipment row {row_number} has unsupported status {status}.")

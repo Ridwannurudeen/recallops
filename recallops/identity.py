@@ -212,7 +212,7 @@ def _oidc_ready() -> bool:
 
 
 def _approval_key() -> str:
-    return os.getenv(APPROVAL_KEY_ENV) or os.getenv("RECALLOPS_ADMIN_ACTION_KEY", "")
+    return os.getenv(APPROVAL_KEY_ENV, "")
 
 
 def _with_identity_hash(identity: dict[str, object]) -> dict[str, object]:

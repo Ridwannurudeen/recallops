@@ -223,6 +223,14 @@ uv sync --extra dev
 .venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098
 ```
 
+To enable live partner-AI reasoning (the AI/ML Risk Adapter), create a gitignored `.env` with `AIML_API_KEY` and/or `FEATHERLESS_API_KEY` and start with `--env-file .env`:
+
+```powershell
+.venv\Scripts\uvicorn.exe recallops.api:app --host 127.0.0.1 --port 8098 --env-file .env
+```
+
+Without keys the adapter stays in deterministic mode and the run discloses `ai_advisory.used = false`. Live advisory output is surfaced for human review only; deterministic parsing and rule checks remain the source of truth and the approval gate.
+
 ### Frontend
 
 ```powershell
@@ -267,6 +275,9 @@ RecallOps is intentionally explicit about what is live, captured, deterministic,
 - Public SAP and Oracle paths prepare dry-run payloads unless a real tenant and admin authorization are configured.
 - Public regulator dispatch is a draft or dry-run unless real submission gates are configured and authorized.
 - Band room proof labels captured room evidence, provider-gated runs, and deterministic replay separately. POST room runs attempt provider Band by default and disclose fallback status.
+- The five specialist roles are coordinated deterministically: room messages are rule-driven templates, and the captured Band run uses marker-triggered scripted responses, not autonomous LLM reasoning. The role sequence is selected from source evidence (coverage gaps, severity, jurisdiction), not decided by the agents themselves.
+- The live provider Band path is disabled by default. It runs only when `RECALLOPS_ENABLE_LIVE_DRILL=1` is set with valid Band credentials; otherwise the packet binds to a captured Band run and labels deterministic replay. The public demo serves the captured/deterministic modes.
+- Human approval uses a dedicated `RECALLOPS_APPROVAL_ADMIN_KEY` that is separate from the enterprise/regulator `RECALLOPS_ADMIN_ACTION_KEY`, or verified OIDC when configured.
 - Optional partner-AI calls are not the source of truth. Deterministic parsing and proof receipts remain verifiable.
 - Protected approval receipts are issued only after the server recomputes source readiness, filing hash, and accepted room-run hash for the submitted case context.
 - The approval receipt is attributable audit evidence, not a claim that the product is certified for 21 CFR Part 11.
