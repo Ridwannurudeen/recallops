@@ -50,6 +50,41 @@ def run_partner_ai(
     return _partner_summary(ai_ml_api, featherless)
 
 
+def generate_agent_line(
+    *,
+    role: str,
+    instruction: str,
+    facts: str,
+    fallback: str = "",
+    provider: str = "featherless",
+) -> str:
+    result = _provider_result(provider)
+    if result["configured"] is not True:
+        return fallback
+    system_prompt = (
+        f"You are the RecallOps {role} in a product-recall command room. In one or two short "
+        "sentences, state your finding using only the provided facts. Be concise and "
+        "professional. Do not include routing markers, @mentions, or formatting."
+    )
+    user_prompt = f"Facts:\n{facts}\n\nTask: {instruction}"
+    try:
+        content = _chat_completion(
+            base_url=str(result["base_url"]),
+            api_key=str(result["api_key"]),
+            model=str(result["model"]),
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
+    except PartnerAIError:
+        return fallback
+    safe = " ".join(
+        word
+        for word in content.split()
+        if not word.startswith(("RECALLOPS_", "LIVE_")) and word != "SPIKE_DONE"
+    )
+    return _truncate(safe, 240) if safe else fallback
+
+
 def _partner_summary(
     ai_ml_api: dict[str, object],
     featherless: dict[str, object],
