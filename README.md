@@ -12,13 +12,13 @@
   </p>
 
   <p>
-    <a href="#for-judges">For Judges</a> ?
-    <a href="#overview">Overview</a> ?
-    <a href="#live-demo">Live Demo</a> ?
-    <a href="#features">Features</a> ?
-    <a href="#how-it-works">How It Works</a> ?
-    <a href="#tech-stack">Tech Stack</a> ?
-    <a href="#run-locally">Run Locally</a> ?
+    <a href="#for-judges">For Judges</a> |
+    <a href="#overview">Overview</a> |
+    <a href="#live-demo">Live Demo</a> |
+    <a href="#features">Features</a> |
+    <a href="#how-it-works">How It Works</a> |
+    <a href="#tech-stack">Tech Stack</a> |
+    <a href="#run-locally">Run Locally</a> |
     <a href="#license">License</a>
   </p>
 </div>
