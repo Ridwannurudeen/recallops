@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
   <h1>RecallOps</h1>
   <p><strong>Run the recall. Prove the decision.</strong></p>
   <p>RecallOps is a product-recall command system for high-stakes incidents where evidence, traceability, escalation, human approval, and audit proof must stay connected.</p>
@@ -12,13 +12,13 @@
   </p>
 
   <p>
-    <a href="#for-judges">For Judges</a> ·
-    <a href="#overview">Overview</a> ·
-    <a href="#live-demo">Live Demo</a> ·
-    <a href="#features">Features</a> ·
-    <a href="#how-it-works">How It Works</a> ·
-    <a href="#tech-stack">Tech Stack</a> ·
-    <a href="#run-locally">Run Locally</a> ·
+    <a href="#for-judges">For Judges</a> ?
+    <a href="#overview">Overview</a> ?
+    <a href="#live-demo">Live Demo</a> ?
+    <a href="#features">Features</a> ?
+    <a href="#how-it-works">How It Works</a> ?
+    <a href="#tech-stack">Tech Stack</a> ?
+    <a href="#run-locally">Run Locally</a> ?
     <a href="#license">License</a>
   </p>
 </div>
@@ -239,7 +239,9 @@ curl -X POST https://recallops.gudman.xyz/api/source-evidence \
   -H "content-type: application/json" \
   -d '{
     "complaint_text":"C-KET-9001 | product: Smart kettle | lot: KET-9001 | defect: Battery overheating during normal use | severity: critical",
-    "shipment_csv":"source,distributor,region,customers,units,status\nshipment-ledger.csv,NorthLine Distribution,United States,40,800,traced\nkestrel-distributor.csv,Kestrel Retail Group,European Union,20,200,missing"
+    "shipment_csv":"source,distributor,region,customers,units,status
+shipment-ledger.csv,NorthLine Distribution,United States,40,800,traced
+kestrel-distributor.csv,Kestrel Retail Group,European Union,20,200,missing"
   }'
 ```
 
