@@ -202,7 +202,14 @@ async def test_run_spike_executes_five_agent_live_chain(
             assert message_type == "task"
             event_counter += 1
             item_id = f"event-{event_counter}"
-            context.append({"id": item_id, "content": content})
+            context.append(
+                {
+                    "id": item_id,
+                    "content": content,
+                    "sender_id": self.sender_id,
+                    "message_type": message_type,
+                }
+            )
             calls.append(f"event.send:{metadata['stage']}")
             return SimpleNamespace(id=item_id)
 
@@ -210,7 +217,14 @@ async def test_run_spike_executes_five_agent_live_chain(
             nonlocal message_counter
             message_counter += 1
             item_id = f"message-{message_counter}"
-            context.append({"id": item_id, "content": content})
+            context.append(
+                {
+                    "id": item_id,
+                    "content": content,
+                    "sender_id": self.sender_id,
+                    "message_type": "text",
+                }
+            )
             calls.append(f"message.send:{self.sender_id}")
             sender = all_participants[self.sender_id]
 
@@ -257,6 +271,9 @@ async def test_run_spike_executes_five_agent_live_chain(
                 return agent_id
         return None
 
+    # Pin the scripted Communications adapter so this offline chain never
+    # depends on an ambient Anthropic key or makes a network call.
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(band_spike, "Agent", FakeAgent)
     monkeypatch.setattr(band_spike, "AsyncRestClient", lambda **_: object())
     monkeypatch.setattr(band_spike, "AgentTools", FakeTools)
@@ -287,6 +304,8 @@ async def test_run_spike_executes_five_agent_live_chain(
     assert result["traceability_resolved_id"] == "message-5"
     assert result["risk_approved_id"] == "message-6"
     assert result["communications_notice_id"] == "message-7"
+    assert result["communications_framework"] == "simple_adapter"
+    assert isinstance(result["band_tool_coverage"], dict)
     assert "participant.add:traceability-id" in calls
     assert "participant.add:risk-id" in calls
     assert "participant.add:communications-id" in calls

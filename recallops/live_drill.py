@@ -153,6 +153,8 @@ def _fresh_band_proof(result: dict[str, Any], *, captured_at: str) -> dict[str, 
         "traceability_resolved_id": str(result["traceability_resolved_id"]),
         "risk_approved_id": str(result["risk_approved_id"]),
         "communications_notice_id": str(result["communications_notice_id"]),
+        "communications_framework": result.get("communications_framework", "simple_adapter"),
+        "band_tool_coverage": result.get("band_tool_coverage", {}),
         "stage_evidence": _stage_evidence(result),
     }
 

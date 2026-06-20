@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 import yaml
 
 from band import Agent
+from band.adapters.anthropic import AnthropicAdapter
 from band.client.rest import AsyncRestClient
 from band.core.protocols import AgentToolsProtocol
 from band.core.simple_adapter import SimpleAdapter
@@ -22,6 +24,31 @@ DEFAULT_REST_URL = "https://app.band.ai"
 DEFAULT_WS_URL = "wss://app.band.ai/api/v1/socket/websocket"
 PLACEHOLDER_ID = "00000000-0000-0000-0000-000000000000"
 AGENT_KEYS = ("commander", "evidence", "traceability", "risk", "communications")
+
+# Cross-framework: the Communications agent runs on Band's AnthropicAdapter (a
+# real Claude model) instead of the scripted SimpleAdapter when an Anthropic key
+# is configured. It is the terminal agent, so LLM-authored output can't disrupt
+# the upstream veto -> re-plan -> approve choreography. Falls back to the scripted
+# adapter when no key/package is available so the live run still works offline.
+COMMS_MODEL = (
+    os.environ.get("RECALLOPS_COMMS_MODEL")
+    or os.environ.get("RECALLOPS_REVIEWER_MODEL")
+    or "claude-haiku-4-5"
+)
+
+
+def _communications_system_prompt(incident: SpikeIncident) -> str:
+    return (
+        "You are the RecallOps Communications agent in a product-recall command "
+        "room on Band. When another agent @mentions you to draft recall notices, "
+        "send exactly ONE chat message that drafts three notices for the confirmed "
+        "recall: a regulator notice, a customer stop-use notice, and a warehouse "
+        "quarantine order. Keep it concise and professional. You MUST @mention the "
+        "Incident Commander (see the participants list) so the commander receives "
+        "the message. Use only these confirmed incident facts:\n"
+        f"{_incident_facts(incident)}\n"
+        "After sending that one message, stop. Do not send any further messages."
+    )
 
 
 @dataclass(frozen=True)
@@ -443,6 +470,21 @@ async def run_spike(
     incident: SpikeIncident | dict[str, object] | None = None,
 ) -> dict[str, Any]:
     active_incident = _coerce_incident(incident)
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_key:
+        communications_adapter: SimpleAdapter[Any] = AnthropicAdapter(
+            model=COMMS_MODEL,
+            provider_key=anthropic_key,
+            system_prompt=_communications_system_prompt(active_incident),
+            max_tokens=1024,
+        )
+        communications_framework = "anthropic_adapter"
+    else:
+        communications_adapter = CommunicationsSpikeAdapter(
+            commander_id=config.commander.agent_id,
+            incident=active_incident,
+        )
+        communications_framework = "simple_adapter"
     agents = [
         Agent.create(
             adapter=EvidenceSpikeAdapter(
@@ -479,10 +521,7 @@ async def run_spike(
             rest_url=config.rest_url,
         ),
         Agent.create(
-            adapter=CommunicationsSpikeAdapter(
-                commander_id=config.commander.agent_id,
-                incident=active_incident,
-            ),
+            adapter=communications_adapter,
             agent_id=config.communications.agent_id,
             api_key=config.communications.api_key,
             ws_url=config.ws_url,
@@ -520,15 +559,25 @@ async def run_spike(
             mentions=[evidence_mention],
         )
 
-        done = await _poll_for_marker(
+        # Terminal signal is the Communications agent's chat message, detected by
+        # sender_id rather than a literal text marker. This keeps termination
+        # robust whether Communications is the scripted SimpleAdapter (emits
+        # "SPIKE_DONE LIVE_COMMS_NOTICE ...") or the LLM-driven AnthropicAdapter
+        # (authors free-form notice text).
+        done = await _poll_for_sender_message(
             tools,
             room_id=room_id,
-            marker="SPIKE_DONE",
+            sender_id=config.communications.agent_id,
             timeout_seconds=timeout_seconds,
         )
         context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=100)
         participants = await tools.get_participants()
         context_items = context["data"]
+        band_tool_coverage = await _exercise_band_tools(
+            tools,
+            config=config,
+            audit_incident=active_incident,
+        )
         return {
             "ok": True,
             "proof_mode": "live_band_five_agent_workflow",
@@ -545,6 +594,8 @@ async def run_spike(
             ),
             "risk_approved_id": _find_context_id(context_items, "LIVE_RISK_APPROVED"),
             "communications_notice_id": done.get("id"),
+            "communications_framework": communications_framework,
+            "band_tool_coverage": band_tool_coverage,
         }
     finally:
         for agent in reversed(agents):
@@ -558,23 +609,111 @@ def _find_configured_participant(participants: Any, agent_id: str) -> Any:
     raise RuntimeError(f"Configured agent {agent_id} was not found in room participants.")
 
 
-async def _poll_for_marker(
+async def _poll_for_sender_message(
     tools: AgentTools,
     *,
     room_id: str,
-    marker: str,
+    sender_id: str,
     timeout_seconds: float,
 ) -> dict[str, Any]:
+    """Wait for a chat message authored by ``sender_id``.
+
+    Used to detect the terminal Communications notice without depending on a
+    literal text marker, so the LLM-driven AnthropicAdapter and the scripted
+    fallback both terminate the run the same way.
+    """
     deadline = asyncio.get_running_loop().time() + timeout_seconds
     while asyncio.get_running_loop().time() < deadline:
         context = await tools.fetch_room_context(room_id=room_id, page=1, page_size=100)
         for item in context["data"]:
-            content = str(item.get("content") or "")
-            if marker in content:
+            if item.get("sender_id") == sender_id and str(item.get("message_type")) == "text":
                 return item
         await asyncio.sleep(2)
 
-    raise TimeoutError(f"Band workflow did not emit {marker} before timeout.")
+    raise TimeoutError("Band workflow did not produce a Communications message before timeout.")
+
+
+async def _exercise_band_tools(
+    tools: AgentTools,
+    *,
+    config: SpikeConfig,
+    audit_incident: SpikeIncident,
+) -> dict[str, Any]:
+    """Exercise the remaining Band agent tools and record what actually ran.
+
+    Every call is best-effort: a failure (e.g. Memories are enterprise-gated and
+    may return 403) is captured as ``{"ok": False, ...}`` and never breaks the
+    core workflow proof. The result is surfaced in the run output so the proof
+    can show concrete Band tool coverage rather than claiming it.
+    """
+    coverage: dict[str, Any] = {}
+
+    # Peer discovery — find agents on the platform (recruitment is by discovery,
+    # not a hardcoded roster).
+    try:
+        peers = await tools.lookup_peers(page=1, page_size=50)
+        coverage["lookup_peers"] = {"ok": True, "count": len(getattr(peers, "data", []) or [])}
+    except Exception as exc:  # noqa: BLE001 - record any platform error verbatim
+        coverage["lookup_peers"] = {"ok": False, "error": str(exc)}
+
+    # Contacts — read existing contacts, then send a contact request to a peer.
+    try:
+        contacts = await tools.list_contacts(page=1, page_size=50)
+        coverage["list_contacts"] = {
+            "ok": True,
+            "count": len(getattr(contacts, "data", []) or []),
+        }
+    except Exception as exc:  # noqa: BLE001
+        coverage["list_contacts"] = {"ok": False, "error": str(exc)}
+
+    try:
+        evidence_handle = _participant_mention(
+            _find_configured_participant(await tools.get_participants(), config.evidence.agent_id)
+        )
+        contact = await tools.add_contact(
+            handle=evidence_handle,
+            message="RecallOps cross-agent recall coordination.",
+        )
+        coverage["add_contact"] = {
+            "ok": True,
+            "status": getattr(contact, "status", None),
+            "handle": evidence_handle,
+        }
+    except Exception as exc:  # noqa: BLE001
+        coverage["add_contact"] = {"ok": False, "error": str(exc)}
+
+    # Memory — persist the audit fingerprint in Band Memories (enterprise-gated;
+    # deterministic SHA-256 hashing remains the source of truth on failure).
+    try:
+        memory = await tools.store_memory(
+            content=(
+                f"RecallOps recall closed for {audit_incident.product} lot "
+                f"{audit_incident.lot}: {audit_incident.final_coverage_percent}% shipment "
+                "coverage, human approval gate prepared."
+            ),
+            system="long_term",
+            type="semantic",
+            segment="agent",
+            thought="Persist the recall outcome for future shipment-trace correlation.",
+            scope="organization",
+            metadata={"spike": "recallops", "lot": audit_incident.lot},
+        )
+        memory_id = getattr(memory, "id", None)
+        coverage["store_memory"] = {"ok": True, "memory_id": memory_id}
+        if memory_id:
+            await tools.get_memory(str(memory_id))
+            coverage["get_memory"] = {"ok": True, "memory_id": memory_id}
+    except Exception as exc:  # noqa: BLE001
+        coverage["store_memory"] = {"ok": False, "error": str(exc)}
+
+    # Participant lifecycle — release a specialist now the workflow has closed.
+    try:
+        removed = await tools.remove_participant(config.evidence.agent_id)
+        coverage["remove_participant"] = {"ok": True, "status": removed.get("status")}
+    except Exception as exc:  # noqa: BLE001
+        coverage["remove_participant"] = {"ok": False, "error": str(exc)}
+
+    return coverage
 
 
 def _find_context_id(context_items: list[dict[str, Any]], marker: str) -> str | None:

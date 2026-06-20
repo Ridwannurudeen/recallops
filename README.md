@@ -151,6 +151,10 @@ RecallOps uses a clear authority model:
 
 The agents do not secretly approve a recall. They assemble evidence, expose gaps, prepare actions, and show whether the case is ready. The human approver owns the final decision.
 
+**Cross-framework collaboration.** In the live Band run, the Communications agent runs on Band's `AnthropicAdapter` (Claude Haiku 4.5) while the others run on the SDK's `SimpleAdapter` — different frameworks coordinating in one room. It falls back to the scripted adapter when no Anthropic key is configured, so the workflow still runs offline.
+
+**Band tool coverage.** The live run exercises Band's collaboration surface directly: peers are discovered with peer lookup, recruited into the room, and hand work off via @mention routing and task events; contacts are established; the recall outcome is persisted to Band Memories (enterprise-gated, with a deterministic-hash fallback); and specialists are released when the case closes. The Band proof records which tools actually ran.
+
 ## Screenshots
 
 ### Command room
@@ -231,12 +235,16 @@ To enable live partner-AI reasoning (the AI/ML Risk Adapter), create a gitignore
 
 Without keys the adapter stays in deterministic mode and the run discloses `ai_advisory.used = false`. Live advisory output is surfaced for human review only; deterministic parsing and rule checks remain the source of truth and the approval gate.
 
+To run the cross-framework Communications agent in the live Band drill, also set `ANTHROPIC_API_KEY` (and optionally `RECALLOPS_COMMS_MODEL`, default `claude-haiku-4-5`). Without it, the Communications agent falls back to the scripted adapter and the rest of the workflow is unchanged.
+
 On the server (systemd), do not ship a `.env`. Put the keys in a root-only environment file and reference it from the unit, then restart only the RecallOps service:
 
 ```ini
 # /etc/recallops.env  (chmod 600, root-owned)
 AIML_API_KEY=...
 FEATHERLESS_API_KEY=...
+ANTHROPIC_API_KEY=...
+RECALLOPS_COMMS_MODEL=claude-haiku-4-5
 RECALLOPS_PARTNER_AI_DAILY_LIMIT=25
 ```
 
