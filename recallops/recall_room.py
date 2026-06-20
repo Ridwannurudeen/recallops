@@ -288,6 +288,8 @@ def _band_binding(
             "proof_mode": captured["proof_mode"],
             "participant_count": captured["participant_count"],
             "message_ids": _message_ids(captured),
+            "communications_framework": captured.get("communications_framework", "simple_adapter"),
+            "band_tool_coverage": captured.get("band_tool_coverage", {}),
             "live_status": live_band_status,
             "fresh_run": fresh_band_run,
             "source_room_id": room["room_id"],

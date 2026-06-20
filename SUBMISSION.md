@@ -46,9 +46,11 @@ The `Break shipment coverage` toggle proves the negative path. It withholds reco
 - POST recall-room runs attempt a provider Band room by default; if credentials, provider state, cooldown, or daily cap block the run, the response discloses the fallback mode.
 - Specialist recruitment is source-driven: traceability, risk, rules, communications, and AI/ML review are selected from coverage gaps, severity, jurisdiction matches, and partner-provider usage.
 - Agent handoffs are visible in the transcript panel.
+- Cross-framework: in the live Band run, the Communications agent runs on Band's `AnthropicAdapter` (Claude Haiku 4.5) and authors its notices with the LLM, while the other agents run on the SDK's `SimpleAdapter` — distinct frameworks collaborating in one room. It falls back to the scripted adapter when no Anthropic key is set.
+- The live run exercises Band's tool surface and records coverage in the proof: peer discovery (`lookup_peers`), dynamic recruitment (`add_participant`), @mention routing and task events (`send_message`/`send_event`), contacts (`list_contacts`/`add_contact`), Band Memories (`store_memory`/`get_memory`, enterprise-gated with a deterministic-hash fallback), and participant lifecycle (`remove_participant`).
 - Traceability gap creates a hold recommendation.
 - Recovered shipment evidence clears the hold only when coverage reaches 100%.
-- The Band proof export records room mode, room ID, participant count, message IDs, source hash, run hash, transcript, and raw room run.
+- The Band proof export records room mode, room ID, participant count, message IDs, the Communications framework, Band tool coverage, source hash, run hash, transcript, and raw room run.
 - The deployed demo labels captured Band proof and deterministic replay explicitly instead of presenting captured evidence as a new provider run.
 
 ## Agents
@@ -59,7 +61,7 @@ The `Break shipment coverage` toggle proves the negative path. It withholds reco
 | Evidence Agent          | Extracts product, defect, lot, severity, and cited complaint facts.                      |
 | Traceability Agent      | Computes coverage, missing units, affected customers, regions, and recovered sources.    |
 | Regulatory/Risk Officer | Raises or clears hold recommendations from evidence and jurisdiction rules.              |
-| Communications Agent    | Prepares regulator, customer, and warehouse notice drafts.                               |
+| Communications Agent    | Prepares regulator, customer, and warehouse notice drafts. Runs on Band's `AnthropicAdapter` (Claude Haiku 4.5) in live runs; scripted-adapter fallback offline. |
 | QA Director             | Human sign-off gate; the system cannot publicly sign without verified approval material. |
 
 ## Verification status
