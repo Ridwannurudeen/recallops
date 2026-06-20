@@ -636,6 +636,21 @@ export default function RecallWorkspace({
           `Room mode: ${(getPathString(roomRun, ["run", "band", "mode"]) ?? "captured_or_deterministic").replaceAll("_", " ")}; participants: ${getPathNumber(roomRun, ["run", "band", "participant_count"]) ?? 0}.`,
           "complete",
         );
+        const commsFramework = getPathString(roomRun, [
+          "run",
+          "band",
+          "communications_framework",
+        ]);
+        if (commsFramework) {
+          await trackLiveEvent(
+            "Band",
+            "cross-framework agent",
+            commsFramework === "anthropic_adapter"
+              ? "Communications ran on Band's AnthropicAdapter (Claude Haiku 4.5); other agents on the SDK SimpleAdapter — cross-framework collaboration in one room."
+              : "Communications ran on the scripted SimpleAdapter (no Anthropic key configured).",
+            "complete",
+          );
+        }
         for (const event of getPathArray(roomRun, ["run", "room", "events"])) {
           const record = asRecord(event);
           await trackLiveEvent(
@@ -1164,6 +1179,15 @@ export default function RecallWorkspace({
       band: {
         mode: roomMode,
         participant_count: roomParticipants,
+        communications_framework:
+          getPathString(result.roomRun, [
+            "run",
+            "band",
+            "communications_framework",
+          ]) ?? null,
+        band_tool_coverage: asRecord(
+          getPathValue(result.roomRun, ["run", "band", "band_tool_coverage"]),
+        ),
       },
       liveExecutionStream: liveEvents,
       transcript: roomEvents,
